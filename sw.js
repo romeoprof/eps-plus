@@ -1,7 +1,7 @@
 /* Fonctionnement hors connexion : réseau d'abord, copie locale si pas de réseau.
    Ajouter ici tout nouveau fichier de l'application, et changer VERSION. */
 const PREFIXE = 'eps-plus-';
-const VERSION = `${PREFIXE}9`;
+const VERSION = `${PREFIXE}10`;
 const FICHIERS = [
   './',
   'index.html',
@@ -52,7 +52,9 @@ const FICHIERS = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(FICHIERS)).then(() => self.skipWaiting()));
+  /* « reload » : la copie hors connexion est prise sur le site, jamais dans le cache du navigateur. */
+  const requetes = FICHIERS.map((f) => new Request(f, { cache: 'reload' }));
+  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(requetes)).then(() => self.skipWaiting()));
 });
 
 /* Le site partage son adresse avec les autres apps EPS (eps-cirque, etc.) :
@@ -69,12 +71,16 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET') return;
+  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== self.location.origin) return;
+  /* « no-cache » : chaque fichier est revérifié sur le site. Sans cela, le navigateur garde
+     jusqu'à 10 minutes d'anciens fichiers, qui peuvent bloquer une nouvelle version. */
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request.url, { cache: 'no-cache', credentials: 'same-origin' })
       .then((reponse) => {
-        const copie = reponse.clone();
-        caches.open(VERSION).then((c) => c.put(e.request, copie));
+        if (reponse.ok) {
+          const copie = reponse.clone();
+          caches.open(VERSION).then((c) => c.put(e.request, copie));
+        }
         return reponse;
       })
       .catch(() => caches.match(e.request)),

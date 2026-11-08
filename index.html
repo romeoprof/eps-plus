@@ -20,6 +20,29 @@
   <div id="retour-action" class="bulle" aria-live="polite"></div>
   <div id="message" class="bulle" aria-live="polite"></div>
   <div id="impression" hidden></div>
+  <script>
+    /* Si l'application n'a pas pu démarrer (fichiers d'une ancienne version) :
+       un rechargement automatique, puis un bouton plutôt qu'une page blanche. */
+    (function () {
+      var CLE = 'eps-rechargement';
+      var demarree = function () { return document.querySelector('#entete').children.length > 0; };
+      function secourir() {
+        if (demarree()) return;
+        var dejaEssaye = false;
+        try { dejaEssaye = sessionStorage.getItem(CLE) === '1'; sessionStorage.setItem(CLE, '1'); } catch (e) {}
+        if (!dejaEssaye) { setTimeout(function () { location.reload(); }, 1500); return; }
+        document.querySelector('#contenu').innerHTML =
+          '<div class="carte centre"><p>La mise à jour de l\'application n\'est pas terminée.</p>' +
+          '<button class="btn" onclick="location.reload()">Réessayer</button></div>';
+      }
+      window.addEventListener('error', function () { setTimeout(secourir, 500); });
+      window.addEventListener('load', function () {
+        setTimeout(function () {
+          if (demarree()) { try { sessionStorage.removeItem(CLE); } catch (e) {} }
+        }, 1500);
+      });
+    })();
+  </script>
   <script type="module" src="src/main.js"></script>
 </body>
 </html>
