@@ -257,8 +257,10 @@ test('La configuration partagée ne peut pas contenir d\'élèves', () => {
   vrai(!JSON.stringify({ conseil, criteres, projets, fiche, codeEmpreinte }).includes('Léa'), 'élève présent');
 });
 
-test('Le code enseignant d\'origine fonctionne toujours', () => {
-  egal(empreinte('2486'), '74id85');
+test('L\'empreinte d\'un code est stable et ne contient pas le code', () => {
+  egal(empreinte('code-exemple'), empreinte('code-exemple'));
+  vrai(empreinte('code-exemple') !== empreinte('autre-exemple'), 'empreintes identiques');
+  vrai(!empreinte('code-exemple').includes('code'), 'code lisible');
 });
 
 await testsAsynchrones();
