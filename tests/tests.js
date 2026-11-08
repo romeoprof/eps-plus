@@ -17,7 +17,9 @@ import {
   aCouru,
   allureFinale,
   annulerPassage,
+  avanceeSegment,
   bilanCoureur,
+  dureeSegmentPrevue,
   consigne,
   courseAvecDonnees,
   distanceFinaleValide,
@@ -393,6 +395,26 @@ test('Demi-fond : la course sur temps refuse les passages après la fin', () => 
   const c = courseEssai({ type: 'temps', duree: 60 });
   egal(enregistrerPassage(c, 0, aSeconde(c, 30)).accepte, true);
   egal(enregistrerPassage(c, 0, aSeconde(c, 61)), { accepte: false, raison: 'temps' });
+});
+
+test('Demi-fond : la barre avance à la vitesse du projet entre deux plots', () => {
+  // Plots de 120 m à 12 km/h : 36 s par plot
+  const c = courseEssai({ plots: 120, distance: 300 });
+  const coureur = c.coureurs[0];
+  coureur.cible = 12;
+  egal(Math.round(dureeSegmentPrevue(c, coureur)), 36);
+  egal(avanceeSegment(c, coureur, 0), 0);
+  egal(avanceeSegment(c, coureur, 18), 0.5); // mi-chemin : petit trait
+  egal(Math.round(avanceeSegment(c, coureur, 36) * 100), 100); // grand trait à l'heure du plot
+  // Après l'appui, la barre repart de zéro depuis ce plot
+  enregistrerPassage(c, 0, aSeconde(c, 40));
+  egal(avanceeSegment(c, coureur, 40), 0);
+  egal(avanceeSegment(c, coureur, 58), 0.5);
+  // Dernier segment de 60 m (240 m → 300 m) : deux fois plus court
+  enregistrerPassage(c, 0, aSeconde(c, 76));
+  egal(Math.round(dureeSegmentPrevue(c, coureur)), 18);
+  // Un élève en retard dépasse 1, un élève en avance ne reste pas à zéro
+  egal(avanceeSegment(c, coureur, 76 + 27), 1.5);
 });
 
 test('Demi-fond : la zone par défaut s\'appelle VMA et les % vont de 5 en 5', () => {

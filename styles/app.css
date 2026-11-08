@@ -484,7 +484,8 @@ body.sombre .badge-zone { color: #5eead4; }
 .barre-course { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; padding: 8px 14px; background: var(--carte); border: 2px solid var(--bordure); border-radius: 16px; }
 .barre-course-chrono { flex: 1 1 200px; }
 .barre-course-chrono b { display: block; color: var(--titre); font-size: 2.1rem; font-weight: 900; line-height: 1.1; font-variant-numeric: tabular-nums; }
-.bouton-depart { min-height: 56px; padding: 10px 34px; background: var(--vert); font-size: 1.15rem; }
+.bouton-depart { flex: 2 1 320px; min-height: 110px; padding: 16px 40px; background: var(--vert); border-radius: 20px; box-shadow: 0 5px 0 rgba(0, 0, 0, .25); font-size: 2.2rem; font-weight: 900; }
+.bouton-depart:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0, 0, 0, .25); }
 .fenetre-distances { max-width: 620px; max-height: 90vh; overflow: auto; }
 .liste-distances { margin-bottom: 14px; }
 .ligne-distance { display: grid; grid-template-columns: minmax(0, 1fr) auto 104px; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--gris); }
@@ -525,15 +526,18 @@ body.sombre .badge-zone { color: #5eead4; }
 .tc-plots { flex: none; text-align: center; line-height: 1; }
 .tc-plots b { display: block; font-size: 1.7rem; font-weight: 900; }
 .tc-plots small { color: inherit; font-size: .72rem; }
-.tc-barre { position: relative; display: block; height: 12px; background: rgba(255, 255, 255, .25); border-radius: 6px; }
-.tc-barre i { display: block; height: 100%; background: #fff; border-radius: 6px; }
-.tc-barre u { position: absolute; top: -3px; bottom: -3px; left: 0; width: 3px; background: #fde047; border-radius: 2px; }
+.tc-barre { position: relative; display: block; height: 18px; margin: 4px 0; background: rgba(255, 255, 255, .25); border-radius: 6px; }
+.tc-barre i { display: block; height: 100%; background: #fff; border-radius: 6px; transition: width .1s linear; }
+.tc-barre i.en-retard { background: #fde047; }
+.tc-barre u { position: absolute; width: 3px; background: #0f172a; border-radius: 2px; box-shadow: 0 0 0 1px rgba(255, 255, 255, .85); transform: translateX(-50%); }
+.tc-barre .trait-moitie { top: 4px; bottom: 4px; width: 2px; }
+.tc-barre .trait-plot { top: -5px; bottom: -5px; width: 5px; }
 .tc-infos { display: grid; flex: 1; grid-template-columns: 1fr 1fr; gap: 5px; }
 .tc-infos > span { padding: 4px 8px; background: rgba(255, 255, 255, .16); border-radius: 9px; }
 .tc-infos b { font-size: 1.05rem; font-weight: 900; }
 .tc-infos small { display: block; color: inherit; font-size: .72rem; opacity: .9; }
 .tc-bas { font-size: .82rem; font-weight: 700; }
-.grille-course.simple .tc-infos, .grille-course.simple .tc-barre { display: none; }
+.grille-course.simple .tc-infos { display: none; }
 .grille-course.simple .tuile-course { justify-content: center; min-height: 150px; }
 .grille-course.simple .tc-consigne { font-size: 1.05rem; }
 

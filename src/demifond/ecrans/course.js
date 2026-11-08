@@ -6,9 +6,11 @@ import { CONSIGNES } from '../contenu.js';
 import {
   allureFinale,
   annulerPassage,
+  avanceeSegment,
   consigne,
   distanceAuPlot,
   distanceFinaleValide,
+  dureeSegmentPrevue,
   enregistrerPassage,
   estArrive,
   plotsPrevus,
@@ -18,6 +20,9 @@ import {
   vitesseMoyenne,
 } from '../calculs.js';
 import { courseEnCours, reglagesDemifond } from '../etat.js';
+
+/* Place du grand trait sur la barre (en %) : l'espace après lui montre le retard. */
+const POSITION_PLOT = 80;
 
 let vueSimple = false;
 let contexteAudio = null;
@@ -72,8 +77,6 @@ function tuileCoureur(course, c, rang) {
   const etatActuel = etatCoureur(course, c);
   const n = c.passages.length;
   const projet = projetDe(course, c);
-  const distance = distanceAuPlot(course, n);
-  const progres = projet.distance ? Math.min(100, (distance / projet.distance) * 100) : 0;
   const prevus = course.type === 'distance' ? plotsPrevus(course) : Math.round(projet.distance / course.plots);
   const moyenne = vitesseMoyenne(course, c);
   const ecart = moyenne == null ? null : moyenne - c.cible;
@@ -84,7 +87,11 @@ function tuileCoureur(course, c, rang) {
       <span class="tc-consigne">${CONSIGNES[etatActuel]}</span>
       <span class="tc-plots"><b>${n}</b><small>plot${n > 1 ? 's' : ''}</small></span>
     </span>
-    <span class="tc-barre"><i style="width:${progres}%"></i><u id="df-repere-${rang}"></u></span>
+    <span class="tc-barre" aria-hidden="true">
+      <i id="df-avance-${rang}" style="width:0%"></i>
+      <u class="trait-moitie" style="left:${POSITION_PLOT / 2}%"></u>
+      <u class="trait-plot" style="left:${POSITION_PLOT}%"></u>
+    </span>
     <span class="tc-infos">
       <span><b>${kmh(vitesseInstantanee(course, c))}</b><small>km/h</small></span>
       <span><b>${kmh(moyenne)}</b><small>moyenne</small></span>
@@ -148,19 +155,23 @@ function actualiser() {
   }
   chrono.textContent = formatChrono(t);
   course.coureurs.forEach((c, rang) => {
-    const projet = projetDe(course, c);
-    const repere = document.querySelector(`#df-repere-${rang}`);
-    if (repere) repere.style.left = `${projet.temps ? Math.min(100, (t / projet.temps) * 100) : 0}%`;
+    if (estArrive(course, c)) return;
+    /* La barre avance à la vitesse du projet et atteint le grand trait à l'heure prévue au plot. */
+    const avancee = avanceeSegment(course, c, t);
+    const barre = document.querySelector(`#df-avance-${rang}`);
+    if (barre) {
+      barre.style.width = `${Math.min(100, avancee * POSITION_PLOT)}%`;
+      barre.classList.toggle('en-retard', avancee > 1);
+    }
     const prochain = document.querySelector(`#df-prochain-${rang}`);
-    if (prochain && !estArrive(course, c)) {
-      const dernier = c.passages.length ? c.passages[c.passages.length - 1] : 0;
-      const reste = Math.round(projet.parPlot - (t - dernier));
+    if (prochain) {
+      const reste = Math.round(dureeSegmentPrevue(course, c) * (1 - avancee));
       prochain.textContent = reste >= 0 ? `plot dans ${reste} s` : `retard ${-reste} s`;
     }
   });
 }
 
-setInterval(actualiser, 300);
+setInterval(actualiser, 100);
 
 const lireMetres = (texte) => {
   const propre = String(texte).trim().replace(',', '.');

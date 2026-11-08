@@ -47,6 +47,8 @@ Menu principal → Activités athlétiques → Demi-fond. Quatre onglets : Coure
 
 La consigne (SUPER, ACCÉLÈRE, RALENTIS) compare la vitesse du dernier segment au projet. L'objectif du bilan compare la vitesse moyenne au projet. Un passage impliquant plus de 30 km/h, ou moins d'une seconde après le précédent, est ignoré comme double appui. Les courses alimentent la Progression des élèves et le regroupement des tablettes.
 
+La barre de chaque coureur montre son avancée idéale entre deux plots : elle repart de zéro à chaque appui, passe le petit trait à mi-chemin et atteint le grand trait à l'heure prévue au plot, selon son % de VMA. Elle passe en jaune en cas de retard.
+
 Une course sur distance se termine avec le bouton « Terminer ». Une course sur temps s'arrête seule : une fenêtre demande la distance de chaque coureur depuis son dernier plot, puis l'allure de ce dernier morceau et la distance totale sont calculées.
 
 ## Regrouper les résultats sur la tablette enseignant

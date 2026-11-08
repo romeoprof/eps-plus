@@ -36,6 +36,21 @@ export function estArrive(course, coureur) {
 export const tempsCourse = (course, maintenant = Date.now()) =>
   course.depart ? ((course.finLe || maintenant) - course.depart) / 1000 : 0;
 
+/* Temps prévu pour atteindre le prochain plot à la vitesse du projet. */
+export function dureeSegmentPrevue(course, coureur) {
+  const n = coureur.passages.length;
+  const distance = distanceAuPlot(course, n + 1) - distanceAuPlot(course, n);
+  return coureur.cible ? distance / versMs(coureur.cible) : 0;
+}
+
+/* Avancée idéale depuis le dernier appui : 0 au dernier plot, 1 quand l'élève doit être au suivant. */
+export function avanceeSegment(course, coureur, temps) {
+  const duree = dureeSegmentPrevue(course, coureur);
+  const n = coureur.passages.length;
+  const depuis = temps - (n ? coureur.passages[n - 1] : 0);
+  return duree > 0 ? Math.max(0, depuis / duree) : 0;
+}
+
 /* Vitesse de chaque segment entre deux plots, du départ au dernier plot. */
 export function vitessesParSegment(course, coureur) {
   return coureur.passages.map((t, i) => {
