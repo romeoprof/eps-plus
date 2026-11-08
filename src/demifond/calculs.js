@@ -1,7 +1,10 @@
 /* Calculs du demi-fond, sans affichage. Vitesses en km/h, distances en m, temps en s. */
-import { INTERVALLE_MIN_S, VITESSE_MAX_KMH } from './contenu.js';
+import { INTERVALLE_MIN_S, REGLAGES_DEFAUT } from './contenu.js';
 
 const arrondi2 = (n) => Math.round(n * 100) / 100;
+/* Écarts comparés au dixième, comme à l'écran : un « -0,5 » affiché respecte une tolérance de 0,5. */
+const ecartAffiche = (vitesse, cible) => Math.round((vitesse - cible) * 10) / 10;
+const vitesseMaxDe = (course) => course.vitesseMax ?? REGLAGES_DEFAUT.vitesseMax;
 const versMs = (kmh) => kmh / 3.6;
 
 export const vitesseCible = (vma, pct) => (Number(vma) * Number(pct)) / 100;
@@ -82,7 +85,7 @@ export function distanceFinaleValide(course, coureur, metres) {
   if (!(metres >= 0)) return false;
   if (metres === 0) return true;
   const allure = allureFinale(course, coureur, metres);
-  return allure != null && allure <= VITESSE_MAX_KMH;
+  return allure != null && allure <= vitesseMaxDe(course);
 }
 
 const aDistanceFinale = (coureur) => coureur.distanceFinale != null;
@@ -106,7 +109,7 @@ export const avancementCourse = (course) =>
 
 export function consigne(vitesse, cible, tolerance) {
   if (vitesse == null) return 'attente';
-  const ecart = arrondi2(vitesse - cible);
+  const ecart = ecartAffiche(vitesse, cible);
   if (ecart > tolerance) return 'ralentis';
   if (ecart < -tolerance) return 'accelere';
   return 'super';
@@ -123,7 +126,7 @@ export function enregistrerPassage(course, rang, maintenant = Date.now()) {
   const precedent = n ? coureur.passages[n - 1] : 0;
   const ecoule = t - precedent;
   const distance = distanceAuPlot(course, n + 1) - distanceAuPlot(course, n);
-  if (ecoule < INTERVALLE_MIN_S || (distance / ecoule) * 3.6 > VITESSE_MAX_KMH) {
+  if (ecoule < INTERVALLE_MIN_S || (distance / ecoule) * 3.6 > vitesseMaxDe(course)) {
     return { accepte: false, raison: 'double' };
   }
   coureur.passages.push(Math.round(t * 10) / 10);
@@ -170,7 +173,7 @@ export function bilanCoureur(course, coureur) {
     ecart,
     ecartPct: ecart == null || !coureur.cible ? null : (ecart / coureur.cible) * 100,
     pctReel: moyenne == null || !coureur.vma ? null : (moyenne / coureur.vma) * 100,
-    atteint: ecart != null && Math.abs(ecart) <= course.tolerance,
+    atteint: ecart != null && Math.abs(ecartAffiche(moyenne, coureur.cible)) <= course.tolerance,
   };
 }
 

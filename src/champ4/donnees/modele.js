@@ -17,7 +17,8 @@ export const etatInitial = () => ({
   courses: [],
   courseEnCours: null,
   courseBilan: null,
-  prepCourse: { selection: [], pct: {}, type: 'distance', distance: 2000, duree: 720, plots: null, tolerance: null },
+  /* null = valeur réglée dans l'espace enseignant */
+  prepCourse: { selection: [], pct: {}, type: null, distance: null, duree: null, plots: null, tolerance: null },
   reglages: {
     conseil: true,
     criteres: {},

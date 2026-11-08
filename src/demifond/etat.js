@@ -2,7 +2,11 @@
 import { etat } from '../noyau/etat.js';
 import { REGLAGES_DEFAUT } from './contenu.js';
 
-export const reglagesDemifond = () => ({ ...REGLAGES_DEFAUT, ...etat.reglages.demifond });
+export const reglagesDemifond = () => ({
+  ...REGLAGES_DEFAUT,
+  ...etat.reglages.demifond,
+  consignes: { ...REGLAGES_DEFAUT.consignes, ...etat.reglages.demifond?.consignes },
+});
 
 export const coureurDe = (id) => etat.coureurs.find((c) => c.id === id);
 export const courseEnCours = () => etat.courses.find((c) => c.id === etat.courseEnCours);

@@ -397,6 +397,32 @@ test('Demi-fond : la course sur temps refuse les passages après la fin', () => 
   egal(enregistrerPassage(c, 0, aSeconde(c, 61)), { accepte: false, raison: 'temps' });
 });
 
+test('Demi-fond : la tolérance est appliquée à l\'appui', () => {
+  egal(consigne(10.9, 11.2, 0.5), 'super'); // 0,3 km/h en dessous
+  egal(consigne(11.5, 11.2, 0.5), 'super'); // 0,3 km/h au-dessus
+  egal(consigne(10.66, 11.2, 0.5), 'super'); // affiché -0,5 : respecte la tolérance
+  egal(consigne(10.64, 11.2, 0.5), 'accelere'); // affiché -0,6
+  egal(consigne(11.76, 11.2, 0.5), 'ralentis'); // affiché +0,6
+  egal(consigne(11.5, 11.2, 0.2), 'ralentis'); // une autre tolérance s'applique
+});
+
+test('Demi-fond : l\'objectif du bilan suit le même arrondi', () => {
+  const c = courseEssai({ tolerance: 0.5 });
+  enregistrerPassage(c, 0, aSeconde(c, 33.8)); // 100 m en 33,8 s = 10,65 km/h, écart affiché -0,5 ou -0,6
+  const b = bilanCoureur(c, c.coureurs[0]);
+  const ecart = Math.round((b.moyenne - 11.2) * 10) / 10;
+  egal(b.atteint, Math.abs(ecart) <= 0.5);
+});
+
+test('Demi-fond : la limite de double appui suit le réglage de la course', () => {
+  const c = courseEssai({ vitesseMax: 50 });
+  egal(enregistrerPassage(c, 0, aSeconde(c, 8)).accepte, true); // 45 km/h accepté
+  const d = courseEssai({ vitesseMax: 20 });
+  egal(enregistrerPassage(d, 0, aSeconde(d, 15)), { accepte: false, raison: 'double' }); // 24 km/h refusé
+  const ancienne = courseEssai();
+  egal(enregistrerPassage(ancienne, 0, aSeconde(ancienne, 8)), { accepte: false, raison: 'double' }); // 30 km/h par défaut
+});
+
 test('Demi-fond : la barre avance à la vitesse du projet entre deux plots', () => {
   // Plots de 120 m à 12 km/h : 36 s par plot
   const c = courseEssai({ plots: 120, distance: 300 });

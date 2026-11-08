@@ -2,7 +2,7 @@
 import { etat, sauver } from '../../noyau/etat.js';
 import { declarerActions, notifier, rafraichir, vue } from '../../noyau/interface.js';
 import { decimal, esc, formatChrono, uid } from '../../noyau/outils.js';
-import { PCT_DEFAUT, PCT_MAX, PCT_MIN, PCT_PAS } from '../contenu.js';
+import { PCT_MAX, PCT_MIN, PCT_PAS } from '../contenu.js';
 import { projetCoureur, vitesseCible, zoneDe } from '../calculs.js';
 import { coureurDe, courseEnCours, reglagesDemifond } from '../etat.js';
 
@@ -13,16 +13,16 @@ function parametres() {
   const r = reglagesDemifond();
   const p = etat.prepCourse;
   return {
-    type: p.type,
-    distance: p.distance,
-    duree: p.duree,
+    type: p.type ?? r.typeCourse,
+    distance: p.distance ?? r.distance,
+    duree: p.duree ?? r.duree,
     plots: p.plots ?? r.distancePlots,
     tolerance: p.tolerance ?? r.tolerance,
   };
 }
 
 const coureursChoisis = () => etat.prepCourse.selection.map(coureurDe).filter((c) => c?.vma);
-const pctDe = (id) => etat.prepCourse.pct[id] ?? PCT_DEFAUT;
+const pctDe = (id) => etat.prepCourse.pct[id] ?? reglagesDemifond().pctDefaut;
 const nombre = (texte) => parseFloat(String(texte).replace(',', '.'));
 
 declarerActions({
@@ -55,10 +55,11 @@ declarerActions({
     const coureurs = coureursChoisis();
     if (!coureurs.length) return notifier('Choisis au moins un coureur avec sa VMA.');
     const p = parametres();
-    const { zones } = reglagesDemifond();
+    const { zones, vitesseMax } = reglagesDemifond();
     const course = {
       id: uid(),
       ...p,
+      vitesseMax,
       depart: null,
       finLe: null,
       journal: [],

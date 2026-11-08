@@ -557,6 +557,8 @@ tr.ligne-choisie td { background: var(--bleu-pale); }
 .ligne-zone input { margin: 0; }
 .zone-nom { flex: 1; min-width: 0; }
 input.zone-borne { flex: none; width: 58px; padding: 10px 4px; text-align: center; }
+.alerte-zones { margin: 10px 0 0; padding: 8px 12px; background: rgba(234, 88, 12, .12); border-radius: 10px; color: #9a3412; font-size: .92rem; font-weight: 700; }
+body.sombre .alerte-zones { color: #fdba74; }
 
 @media (max-width: 560px) {
   .grille-course { grid-template-columns: 1fr 1fr; gap: 8px; }

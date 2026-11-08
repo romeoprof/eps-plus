@@ -2,7 +2,6 @@
 import { etat, sauver } from '../../noyau/etat.js';
 import { declarerActions, demander, notifier, rafraichir, vue } from '../../noyau/interface.js';
 import { avecSigne, decimal, esc, formatChrono } from '../../noyau/outils.js';
-import { CONSIGNES } from '../contenu.js';
 import {
   allureFinale,
   annulerPassage,
@@ -79,12 +78,15 @@ function tuileCoureur(course, c, rang) {
   const projet = projetDe(course, c);
   const prevus = course.type === 'distance' ? plotsPrevus(course) : Math.round(projet.distance / course.plots);
   const moyenne = vitesseMoyenne(course, c);
-  const ecart = moyenne == null ? null : moyenne - c.cible;
+  const instantanee = vitesseInstantanee(course, c);
+  /* Même écart que celui qui décide de la consigne : celui du dernier segment. */
+  const ecart = instantanee == null ? null : instantanee - c.cible;
+  const consignes = reglagesDemifond().consignes;
   const actif = course.depart && etatActuel !== 'fin';
   return `<button class="tuile-course etat-${etatActuel}" ${actif ? `data-plot="${rang}"` : 'disabled'} aria-label="Passage de plot pour ${esc(c.nom)}">
     <span class="tc-haut">
       <b class="tc-nom">${esc(c.nom)}</b>
-      <span class="tc-consigne">${CONSIGNES[etatActuel]}</span>
+      <span class="tc-consigne">${esc(consignes[etatActuel])}</span>
       <span class="tc-plots"><b>${n}</b><small>plot${n > 1 ? 's' : ''}</small></span>
     </span>
     <span class="tc-barre" aria-hidden="true">
@@ -93,7 +95,7 @@ function tuileCoureur(course, c, rang) {
       <u class="trait-plot" style="left:${POSITION_PLOT}%"></u>
     </span>
     <span class="tc-infos">
-      <span><b>${kmh(vitesseInstantanee(course, c))}</b><small>km/h</small></span>
+      <span><b>${kmh(instantanee)}</b><small>km/h</small></span>
       <span><b>${kmh(moyenne)}</b><small>moyenne</small></span>
       <span><b>${Math.max(0, prevus - n)}</b><small>restants</small></span>
       <span><b>${signe(ecart)}</b><small>écart</small></span>

@@ -10,6 +10,7 @@ import { vueEquipes } from './champ4/ecrans/equipes.js';
 import { vueMatch } from './champ4/ecrans/match.js';
 import { vuePoules } from './champ4/ecrans/poules.js';
 import { ONGLETS_DF, vueDemifond } from './demifond/ecrans/module.js';
+import { oublierChoixCourse } from './demifond/ecrans/reglages.js';
 
 const ONGLETS = [
   { id: 'equipes', libelle: '👥 Équipes', vue: vueEquipes },
@@ -27,6 +28,7 @@ async function mettreAJour() {
       const config = await reponse.json();
       if (config.version && config.version !== etat.configVersion) {
         Object.assign(etat.reglages, config.reglages);
+        if (config.reglages?.demifond) oublierChoixCourse();
         etat.configVersion = config.version;
         sauver();
         notifier('Configuration mise à jour ✔');

@@ -5,7 +5,7 @@ import { APSA } from '../contenu/apsa.js';
 import { exporterConfiguration, exporterElevesProteges } from '../donnees/export.js';
 import { importerEleves } from '../donnees/operations.js';
 import { aUnDefautChoisi, criteresApsa, listeEditable } from '../reglages.js';
-import { carteDemifond } from '../../demifond/ecrans/reglages.js';
+import { vueReglagesDemifond } from '../../demifond/ecrans/reglages.js';
 import { blocImportEleves } from './import-eleves.js';
 import { vueProgression } from './progression.js';
 import { vueRecolte } from './recolte.js';
@@ -315,7 +315,8 @@ export function vueEnseignant() {
   const a = esc(apsa);
   const onglet = (id, libelle) =>
     `<button role="tab" aria-selected="${pageEnseignant === id}" class="onglet ${pageEnseignant === id ? 'actif' : ''}" data-action="ens-page" data-page="${id}">${libelle}</button>`;
-  const navigation = `<div class="onglets marge-bas" role="tablist">${onglet('reglages', '⚙️ Réglages')}${onglet('progression', '📈 Progression des élèves')}${onglet('recolte', '🔄 Récupérer les données')}</div>`;
+  const navigation = `<div class="onglets marge-bas" role="tablist">${onglet('reglages', '⚙️ Réglages')}${onglet('demifond', '🏃 Demi-fond')}${onglet('progression', '📈 Progression')}${onglet('recolte', '🔄 Récupérer les données')}</div>`;
+  if (pageEnseignant === 'demifond') return navigation + vueReglagesDemifond();
   if (pageEnseignant === 'progression') return navigation + vueProgression();
   if (pageEnseignant === 'recolte') return navigation + vueRecolte();
   return `${navigation}
@@ -329,7 +330,6 @@ export function vueEnseignant() {
     <h2 class="titre-section">Réglages généraux</h2>
     <div class="grille-reglages">
       ${carteOptions()}
-      ${carteDemifond()}
       ${carteEleves()}
       ${carteEnvoiEleves()}
       ${carteSynchro()}
