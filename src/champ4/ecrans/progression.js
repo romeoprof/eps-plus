@@ -1,7 +1,9 @@
 /* Espace enseignant : progression d'un élève dans tous les sports. */
 import { etat } from '../../noyau/etat.js';
 import { declarerActions, rafraichir } from '../../noyau/interface.js';
-import { decimal, esc, pourcent } from '../../noyau/outils.js';
+import { avecSigne, decimal, esc, formatChrono, pourcent } from '../../noyau/outils.js';
+import { suiviDemifond } from '../../demifond/calculs.js';
+import { dateCourte } from '../../demifond/etat.js';
 import { APSA, NIVEAUX_PROJET } from '../contenu/apsa.js';
 import { bonusContrat, elevesSuivis, suiviEleve } from '../calculs/progression.js';
 import { nomCote } from '../reglages.js';
@@ -76,21 +78,50 @@ function carteSport(s) {
   </div>`;
 }
 
+const vitesse = (n) => (n == null ? '–' : decimal(n.toFixed(1)));
+
+/* Bloc Demi-fond : vitesse, respect du projet et régularité à chaque course. */
+function carteDemifond(df) {
+  const min = Math.min(...df.lignes.map((l) => l.moyenne));
+  const max = Math.max(...df.lignes.map((l) => l.moyenne));
+  const parts = df.lignes.map((l) => (max > min ? 0.15 + ((l.moyenne - min) / (max - min)) * 0.7 : 0.5));
+  const lignes = df.lignes
+    .map(
+      (l) => `<tr><td>${dateCourte(l.course.finLe)}</td><td>${vitesse(l.coureur.cible)}<br><small>${l.coureur.pct} % VMA</small></td><td><b>${vitesse(l.moyenne)}</b></td><td>${avecSigne(l.ecart)}</td><td>${l.distance} m</td><td>${formatChrono(l.temps)}</td><td>${l.regularite ?? '–'}</td><td>${l.atteint ? '✅' : '–'}</td></tr>`,
+    )
+    .join('');
+  const derniereVma = df.lignes[df.lignes.length - 1].coureur.vma;
+  return `<div class="carte">
+    <h2 class="carte-titre"><span class="icone-titre">🏃</span> Demi-fond <small>${pluriel(df.courses, 'course')} · VMA ${vitesse(derniereVma)} km/h</small></h2>
+    <p><b>Projet respecté : ${df.atteints} / ${df.courses}</b> · meilleure vitesse moyenne : ${vitesse(df.meilleure)} km/h${df.regulariteMoyenne == null ? '' : ` · régularité moyenne : ${df.regulariteMoyenne}/100`}</p>
+    <h4>Vitesse moyenne à chaque course (km/h)</h4>
+    ${courbe(parts, 'Vitesse moyenne à chaque course', df.lignes.map((l) => vitesse(l.moyenne)))}
+    <div class="defile"><table>
+      <tr><th>Date</th><th>Projet</th><th>Réalisé</th><th>Écart</th><th>Distance</th><th>Temps</th><th>Régularité</th><th>Objectif</th></tr>
+      ${lignes}
+    </table></div>
+  </div>`;
+}
+
 function vueEleve(eleve) {
   const suivi = suiviEleve(etat, eleve.id);
-  if (!suivi.rencontres) {
+  const df = suiviDemifond(etat, eleve.id);
+  if (!suivi.rencontres && !df.courses) {
     return `<div class="carte centre"><p class="aide">Aucun match observé pour ${esc(eleve.nom)} sur cette tablette.</p></div>`;
   }
   const tuile = (valeur, libelle) => `<div class="tuile-stat"><b>${valeur}</b><span>${libelle}</span></div>`;
+  const nbSports = suivi.sports.length + (df.courses ? 1 : 0);
   return `
     <div class="tuiles-stats">
-      ${tuile(suivi.sports.length, suivi.sports.length > 1 ? 'sports' : 'sport')}
-      ${tuile(suivi.rencontres, suivi.rencontres > 1 ? 'rencontres' : 'rencontre')}
-      ${tuile(`${suivi.victoires} / ${suivi.nuls} / ${suivi.defaites}`, 'V / N / D')}
-      ${tuile(`⭐ ${suivi.pointsContrat}`, 'points de contrat')}
-      ${etat.reglages.contratBonus ? tuile(`+${decimal(bonusContrat(suivi.pointsContrat, etat.reglages))}`, 'bonus de contrat') : ''}
+      ${tuile(nbSports, nbSports > 1 ? 'sports' : 'sport')}
+      ${suivi.rencontres ? tuile(suivi.rencontres, suivi.rencontres > 1 ? 'rencontres' : 'rencontre') : ''}
+      ${suivi.rencontres ? tuile(`${suivi.victoires} / ${suivi.nuls} / ${suivi.defaites}`, 'V / N / D') : ''}
+      ${suivi.pointsContrat ? tuile(`⭐ ${suivi.pointsContrat}`, 'points de contrat') : ''}
+      ${suivi.pointsContrat && etat.reglages.contratBonus ? tuile(`+${decimal(bonusContrat(suivi.pointsContrat, etat.reglages))}`, 'bonus de contrat') : ''}
+      ${df.courses ? tuile(`🏃 ${df.courses}`, df.courses > 1 ? 'courses' : 'course') : ''}
     </div>
-    ${suivi.sports.map(carteSport).join('')}`;
+    ${suivi.sports.map(carteSport).join('')}
+    ${df.courses ? carteDemifond(df) : ''}`;
 }
 
 export function vueProgression() {
@@ -114,7 +145,7 @@ export function vueProgression() {
             ${dansClasse.map((e) => `<option value="${esc(e.id)}" ${e.id === eleveChoisi ? 'selected' : ''}>${esc(e.nom)}</option>`).join('')}
           </select></div>
       </div>
-      <p class="aide">En sport collectif, l'élève reçoit les statistiques de son équipe. Sont comptés les matchs observés sur cette tablette et ceux récupérés des autres (onglet « Récupérer les données »).</p>
+      <p class="aide">En sport collectif, l'élève reçoit les statistiques de son équipe. Sont comptés les matchs et les courses de cette tablette, et ceux récupérés des autres (onglet « Récupérer les données »).</p>
     </div>
     ${eleve ? vueEleve(eleve) : ''}`;
 }

@@ -2,7 +2,8 @@
 import { etat, sauver } from '../../noyau/etat.js';
 import { declarerActions, notifier, rafraichir } from '../../noyau/interface.js';
 import { esc, partagerFichier } from '../../noyau/outils.js';
-import { creerFichierResultats, fusionnerResultats, lireFichierResultats } from '../donnees/fusion.js';
+import { courseAvecDonnees } from '../../demifond/calculs.js';
+import { aDesResultats, creerFichierResultats, fusionnerResultats, lireFichierResultats } from '../donnees/fusion.js';
 
 let compteRendu = [];
 
@@ -14,7 +15,7 @@ function nomDuFichier() {
 
 async function envoyer() {
   const champ = document.querySelector('#mot-de-passe-envoi');
-  if (!etat.matchs.some((m) => m.evenements.length)) return notifier('Aucun match observé sur cette tablette.');
+  if (!aDesResultats(etat)) return notifier('Aucun match ni aucune course sur cette tablette.');
   if (champ.value.length < 10) return notifier('Choisis un mot de passe de 10 caractères ou plus.');
   const contenu = await creerFichierResultats(etat, champ.value);
   champ.value = '';
@@ -50,10 +51,11 @@ declarerActions({ 'recolte-envoyer': envoyer, 'recolte-recuperer': recuperer });
 
 export function vueRecolte() {
   const observes = etat.matchs.filter((m) => m.evenements.length).length;
+  const courses = etat.courses.filter(courseAvecDonnees).length;
   return `
     <div class="carte"><h2 class="carte-titre">📤 Envoyer les résultats de cette tablette</h2>
       <p class="aide">À faire sur chaque tablette d'élèves. Le fichier est chiffré, puis tu l'envoies par Drive, Quick Share ou e-mail vers la tablette enseignant. Les résultats restent aussi sur cette tablette.</p>
-      <p><b>${observes} match${observes > 1 ? 's' : ''} observé${observes > 1 ? 's' : ''}</b> sur cette tablette.</p>
+      <p><b>${observes} match${observes > 1 ? 's' : ''} observé${observes > 1 ? 's' : ''} et ${courses} course${courses > 1 ? 's' : ''}</b> sur cette tablette.</p>
       <div class="rangee">
         <input id="mot-de-passe-envoi" class="etire" type="password" autocomplete="new-password" placeholder="Mot de passe (10 caractères ou plus)" aria-label="Mot de passe du fichier de résultats">
         <button class="btn" data-action="recolte-envoyer">📤 Créer et envoyer le fichier</button>

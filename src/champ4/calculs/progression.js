@@ -5,6 +5,11 @@ import { compte, libelleDe, pointsDe, score } from './match.js';
 
 export const elevesSuivis = (etat) => {
   const membres = new Set(etat.equipes.flatMap((t) => t.membres || []));
+  (etat.courses || []).forEach((course) =>
+    course.coureurs.forEach((c) => {
+      if (c.eleveId) membres.add(c.eleveId);
+    }),
+  );
   return etat.eleves.filter((e) => membres.has(e.id));
 };
 

@@ -4,6 +4,7 @@
  * La fusion n'efface rien et ne change aucun réglage de la tablette qui la reçoit.
  */
 import { chiffrer, dechiffrer } from '../../noyau/chiffrement.js';
+import { avancementCourse, courseAvecDonnees } from '../../demifond/calculs.js';
 import { lireSauvegarde } from './migration.js';
 
 const TYPE_RESULTATS = 'eps-resultats';
@@ -15,14 +16,43 @@ export function paquetResultats(etat, maintenant = Date.now()) {
   const equipes = etat.equipes.filter((t) => idsEquipes.has(t.id));
   const idsEleves = new Set(equipes.flatMap((t) => t.membres || []));
   const idsPoules = new Set(matchs.map((m) => m.pouleId).filter(Boolean));
+  const courses = (etat.courses || []).filter(courseAvecDonnees);
+  courses.forEach((course) =>
+    course.coureurs.forEach((c) => {
+      if (c.eleveId) idsEleves.add(c.eleveId);
+    }),
+  );
   return {
     type: TYPE_RESULTATS,
     exporteLe: maintenant,
     matchs,
+    courses,
     equipes,
     poules: etat.poules.filter((p) => idsPoules.has(p.id)),
     eleves: etat.eleves.filter((e) => idsEleves.has(e.id)),
   };
+}
+
+export const aDesResultats = (etat) =>
+  etat.matchs.some((m) => m.evenements.length) || (etat.courses || []).some(courseAvecDonnees);
+
+/* Une course reçue alors qu'elle tournait encore est close à l'heure de l'envoi. */
+function fusionnerCourses(etat, paquet, bilan) {
+  (paquet.courses || [])
+    .filter(courseAvecDonnees)
+    .forEach((brute) => {
+      const recue = brute.finLe ? brute : { ...brute, finLe: paquet.exporteLe || Date.now() };
+      const rang = etat.courses.findIndex((c) => c.id === recue.id);
+      if (rang < 0) {
+        etat.courses.push(recue);
+        bilan.ajoutes += 1;
+      } else if (avancementCourse(recue) > avancementCourse(etat.courses[rang])) {
+        etat.courses[rang] = recue;
+        bilan.misAJour += 1;
+      } else {
+        bilan.dejaPresents += 1;
+      }
+    });
 }
 
 /* La version reçue remplace la version locale seulement si elle est plus avancée. */
@@ -71,6 +101,7 @@ export function fusionnerResultats(etat, paquet) {
       bilan.dejaPresents += 1;
     }
   });
+  fusionnerCourses(etat, paquet, bilan);
   return bilan;
 }
 

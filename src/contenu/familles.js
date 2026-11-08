@@ -1,7 +1,7 @@
 /*
  * MENU PRINCIPAL : les activités rangées par famille.
  * Pour une activité du Champ 4, le nom doit être celui de champ4/contenu/apsa.js.
- * « bientot: true » affiche l'activité sans permettre de l'ouvrir.
+ * « module » ouvre un module à part, « bientot: true » affiche l'activité sans l'ouvrir.
  */
 export const FAMILLES = [
   {
@@ -20,6 +20,11 @@ export const FAMILLES = [
     titre: 'Sports de raquette',
     couleur: 'violet',
     activites: [{ nom: 'Badminton' }, { nom: 'Tennis de table' }],
+  },
+  {
+    titre: 'Activités athlétiques',
+    couleur: 'turquoise',
+    activites: [{ nom: 'Demi-fond', icone: '🏃', module: 'demifond' }],
   },
   {
     titre: "Activités d'expression",

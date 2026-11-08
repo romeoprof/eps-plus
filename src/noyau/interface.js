@@ -1,7 +1,7 @@
 /* Navigation, actions des boutons, messages et demandes de confirmation. */
 import { esc } from './outils.js';
 
-export const vue = { ecran: 'accueil', onglet: 'match' };
+export const vue = { ecran: 'accueil', onglet: 'match', ongletDF: 'coureurs' };
 
 let dessiner = () => {};
 export const definirDessin = (fonction) => {

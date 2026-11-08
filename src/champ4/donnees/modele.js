@@ -12,6 +12,12 @@ export const etatInitial = () => ({
   matchBilan: null,
   eleves: [],
   contrats: {}, // { idEleve: { apsa: clé du critère choisi } }
+  /* Demi-fond */
+  coureurs: [], // { id, eleveId, nom, classe, vma, archive }
+  courses: [],
+  courseEnCours: null,
+  courseBilan: null,
+  prepCourse: { selection: [], pct: {}, type: 'distance', distance: 2000, duree: 720, plots: null, tolerance: null },
   reglages: {
     conseil: true,
     criteres: {},
@@ -21,6 +27,7 @@ export const etatInitial = () => ({
     contratBonus: false, // bonus chiffré affiché dans la page Progression
     contratValeur: 1, // bonus par point marqué selon le contrat
     defauts: { criteres: {}, fiche: {}, projets: {} }, // valeurs choisies avec « Définir par défaut »
+    demifond: null, // tolérance, plots, sons et zones ; null = valeurs de demifond/contenu.js
   },
   configVersion: null,
   affichage: { sombre: false, grandsBoutons: false },

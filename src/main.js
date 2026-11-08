@@ -9,6 +9,7 @@ import { vueEnseignant } from './champ4/ecrans/enseignant.js';
 import { vueEquipes } from './champ4/ecrans/equipes.js';
 import { vueMatch } from './champ4/ecrans/match.js';
 import { vuePoules } from './champ4/ecrans/poules.js';
+import { ONGLETS_DF, vueDemifond } from './demifond/ecrans/module.js';
 
 const ONGLETS = [
   { id: 'equipes', libelle: '👥 Équipes', vue: vueEquipes },
@@ -58,6 +59,10 @@ declarerActions({
     sauver();
     rafraichir();
   },
+  'ouvrir-module': ({ module }) => {
+    vue.ecran = module;
+    rafraichir();
+  },
   'choisir-apsa': ({ apsa }) => {
     etat.apsa = apsa;
     etat.matchCourant = null;
@@ -86,8 +91,15 @@ function indicateurSauvegarde() {
 
 function dessinerEnTete() {
   const champ4 = vue.ecran === 'champ4';
-  const sousTitre = champ4 ? esc(etat.apsa) : vue.ecran === 'enseignant' ? 'Espace enseignant' : 'Saint-Joseph Auneau';
-  const icone = champ4 ? APSA[etat.apsa].icone : '🏅';
+  const demifond = vue.ecran === 'demifond';
+  const sousTitre = champ4
+    ? esc(etat.apsa)
+    : demifond
+      ? 'Demi-fond'
+      : vue.ecran === 'enseignant'
+        ? 'Espace enseignant'
+        : 'Saint-Joseph Auneau';
+  const icone = champ4 ? APSA[etat.apsa].icone : demifond ? '🏃' : '🏅';
   document.querySelector('#entete').innerHTML = `
     <div class="marque"><span class="marque-icone">${icone}</span><div><h1>EPS +</h1><small>${sousTitre}</small></div></div>
     <div class="commandes">
@@ -108,6 +120,11 @@ function dessinerNavigation() {
       <div class="onglets" role="tablist">${ONGLETS.map(
         (o) => `<button role="tab" aria-selected="${o.id === vue.onglet}" class="onglet ${o.id === vue.onglet ? 'actif' : ''}" data-action="onglet" data-onglet="${o.id}">${o.libelle}</button>`,
       ).join('')}</div>`;
+  } else if (vue.ecran === 'demifond') {
+    barre.innerHTML = `<button class="btn-retour" data-action="accueil">← Menu principal</button>
+      <div class="onglets" role="tablist">${ONGLETS_DF.map(
+        (o) => `<button role="tab" aria-selected="${o.id === vue.ongletDF}" class="onglet ${o.id === vue.ongletDF ? 'actif' : ''}" data-action="df-onglet" data-onglet="${o.id}">${o.libelle}</button>`,
+      ).join('')}</div>`;
   } else {
     barre.innerHTML = '';
   }
@@ -116,6 +133,7 @@ function dessinerNavigation() {
 function contenu() {
   if (vue.ecran === 'enseignant') return vueEnseignant();
   if (vue.ecran === 'accueil') return vueAccueil();
+  if (vue.ecran === 'demifond') return vueDemifond();
   return ONGLETS.find((o) => o.id === vue.onglet).vue();
 }
 
@@ -123,6 +141,8 @@ definirDessin(() => {
   if (vue.ecran === 'champ4' && !etat.apsa) vue.ecran = 'accueil';
   document.body.classList.toggle('sombre', etat.affichage.sombre);
   document.body.classList.toggle('grands', etat.affichage.grandsBoutons);
+  /* Pendant une course, on masque l'en-tête pour laisser la place aux coureurs. */
+  document.body.classList.toggle('en-course', vue.ecran === 'demifond' && vue.ongletDF === 'course' && !!etat.courseEnCours);
   dessinerEnTete();
   dessinerNavigation();
   document.querySelector('#contenu').innerHTML = contenu();
@@ -136,6 +156,11 @@ brancherEvenements();
 );
 
 if (etat.apsa) vue.ecran = 'champ4';
+/* Une course en cours reprend après un rechargement : le chrono part de l'heure de départ. */
+if (etat.courseEnCours) {
+  vue.ecran = 'demifond';
+  vue.ongletDF = 'course';
+}
 rafraichir();
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

@@ -11,7 +11,23 @@ import { lignesCsv, lireElevesProteges } from '../src/champ4/donnees/export.js';
 import { chiffrer } from '../src/noyau/chiffrement.js';
 import { lireSauvegarde, migrerV3 } from '../src/champ4/donnees/migration.js';
 import { etatInitial, nouveauMatch } from '../src/champ4/donnees/modele.js';
-import { importerEleves, reinitialiserBilans, supprimerEquipe } from '../src/champ4/donnees/operations.js';
+import { importerEleves, lireElevesCsv, reinitialiserBilans, supprimerEquipe } from '../src/champ4/donnees/operations.js';
+import { PCT_PAS, REGLAGES_DEFAUT } from '../src/demifond/contenu.js';
+import {
+  aCouru,
+  allureFinale,
+  annulerPassage,
+  bilanCoureur,
+  consigne,
+  courseAvecDonnees,
+  distanceFinaleValide,
+  enregistrerPassage,
+  estArrive,
+  projetCoureur,
+  suiviDemifond,
+  vitesseCible,
+  zoneDe,
+} from '../src/demifond/calculs.js';
 import { empreinte } from '../src/noyau/outils.js';
 
 const resultats = [];
@@ -291,6 +307,214 @@ test('Contrat : un match réinitialisé oublie son contrat', () => {
   etat.matchs = [enPoule];
   reinitialiserBilans(etat, 'Badminton');
   egal(enPoule.contrats, {});
+});
+
+/* Demi-fond */
+function courseEssai(autres = {}) {
+  return {
+    id: 'course1',
+    type: 'distance',
+    distance: 300,
+    duree: 720,
+    plots: 100,
+    tolerance: 0.5,
+    depart: 1000000,
+    finLe: null,
+    journal: [],
+    coureurs: [
+      { coureurId: 'e1', eleveId: 'e1', nom: 'Léa M.', classe: '5A', vma: 14, pct: 80, cible: 11.2, zone: 'Endurance active', passages: [] },
+      { coureurId: 'c9', eleveId: null, nom: 'Invité', classe: 'Sans classe', vma: 12, pct: 80, cible: 9.6, zone: '', passages: [] },
+    ],
+    ...autres,
+  };
+}
+const aSeconde = (course, s) => course.depart + s * 1000;
+
+test('Demi-fond : calcul du projet (VMA 14 à 80 %, 2 km, plots de 100 m)', () => {
+  const v = vitesseCible(14, 80);
+  egal(Math.round(v * 10) / 10, 11.2);
+  const p = projetCoureur(v, { type: 'distance', distance: 2000, duree: 0, plots: 100 });
+  egal(Math.round(p.temps), 643);
+  egal(Math.round(p.parPlot), 32);
+  const t = projetCoureur(v, { type: 'temps', distance: 0, duree: 720, plots: 100 });
+  egal(Math.round(t.distance), 2240);
+});
+
+test('Demi-fond : zones modifiables et consigne selon la tolérance de 0,5 km/h', () => {
+  const zones = [{ nom: 'Seuil', min: 85, max: 94 }];
+  egal(zoneDe(90, zones), 'Seuil');
+  egal(zoneDe(70, zones), '');
+  egal(consigne(11.7, 11.2, 0.5), 'super');
+  egal(consigne(10.7, 11.2, 0.5), 'super');
+  egal(consigne(11.8, 11.2, 0.5), 'ralentis');
+  egal(consigne(10.6, 11.2, 0.5), 'accelere');
+  egal(consigne(null, 11.2, 0.5), 'attente');
+});
+
+test('Demi-fond : un double appui est ignoré, un passage normal est gardé', () => {
+  const c = courseEssai();
+  egal(enregistrerPassage(c, 0, aSeconde(c, 32)).accepte, true);
+  egal(enregistrerPassage(c, 0, aSeconde(c, 32.4)), { accepte: false, raison: 'double' });
+  egal(enregistrerPassage(c, 0, aSeconde(c, 40)), { accepte: false, raison: 'double' }); // 100 m en 8 s = 45 km/h
+  egal(c.coureurs[0].passages, [32]);
+  egal(enregistrerPassage(c, 0, aSeconde(c, 64)).accepte, true);
+  egal(c.coureurs[0].passages, [32, 64]);
+});
+
+test('Demi-fond : deux coureurs au même instant sont notés tous les deux', () => {
+  const c = courseEssai();
+  egal(enregistrerPassage(c, 0, aSeconde(c, 32)).accepte, true);
+  egal(enregistrerPassage(c, 1, aSeconde(c, 32)).accepte, true);
+  egal(c.journal, [0, 1]);
+});
+
+test('Demi-fond : annuler retire le dernier passage, tous coureurs confondus', () => {
+  const c = courseEssai();
+  enregistrerPassage(c, 0, aSeconde(c, 32));
+  enregistrerPassage(c, 1, aSeconde(c, 37));
+  egal(annulerPassage(c).nom, 'Invité');
+  egal(c.coureurs[1].passages, []);
+  egal(c.coureurs[0].passages, [32]);
+  annulerPassage(c);
+  egal(annulerPassage(c), null);
+});
+
+test('Demi-fond : arrivée et dernier segment plus court', () => {
+  const c = courseEssai({ distance: 250 });
+  [30, 60, 75].forEach((s) => enregistrerPassage(c, 0, aSeconde(c, s)));
+  egal(estArrive(c, c.coureurs[0]), true);
+  egal(enregistrerPassage(c, 0, aSeconde(c, 120)), { accepte: false, raison: 'arrive' });
+  const b = bilanCoureur(c, c.coureurs[0]);
+  egal(b.distance, 250);
+  egal(Math.round(b.vitesses[2]), 12); // 50 m en 15 s
+});
+
+test('Demi-fond : la course sur temps refuse les passages après la fin', () => {
+  const c = courseEssai({ type: 'temps', duree: 60 });
+  egal(enregistrerPassage(c, 0, aSeconde(c, 30)).accepte, true);
+  egal(enregistrerPassage(c, 0, aSeconde(c, 61)), { accepte: false, raison: 'temps' });
+});
+
+test('Demi-fond : la zone par défaut s\'appelle VMA et les % vont de 5 en 5', () => {
+  egal(REGLAGES_DEFAUT.zones.map((z) => z.nom).includes('VMA'), true);
+  egal(REGLAGES_DEFAUT.zones.map((z) => z.nom).includes('PMA'), false);
+  egal(PCT_PAS, 5);
+});
+
+test('Demi-fond : course sur temps, allure et distance après le dernier plot', () => {
+  const c = courseEssai({ type: 'temps', duree: 100 });
+  [32, 64].forEach((s) => enregistrerPassage(c, 0, aSeconde(c, s)));
+  const coureur = c.coureurs[0];
+  // 36 s après le dernier plot, 90 m : 9 km/h
+  egal(allureFinale(c, coureur, 90), 9);
+  egal(distanceFinaleValide(c, coureur, 90), true);
+  egal(distanceFinaleValide(c, coureur, 0), true);
+  egal(distanceFinaleValide(c, coureur, -5), false);
+  egal(distanceFinaleValide(c, coureur, 400), false); // 40 km/h : impossible
+  coureur.distanceFinale = 90;
+  const b = bilanCoureur(c, coureur);
+  egal(b.distance, 290);
+  egal(b.temps, 100);
+  egal(b.moyenne.toFixed(2), '10.44');
+  egal(b.allureFinale, 9);
+  egal(b.vitesses.length, 3);
+  egal(b.vitesses[2], 9);
+  egal(b.vitesseMax.toFixed(2), '11.25'); // le dernier morceau ne compte pas ici
+});
+
+test('Demi-fond : coureur sans plot, seule la distance finale compte', () => {
+  const c = courseEssai({ type: 'temps', duree: 60 });
+  const coureur = c.coureurs[1];
+  coureur.distanceFinale = 150;
+  const b = bilanCoureur(c, coureur);
+  egal([b.distance, b.plots, b.temps], [150, 0, 60]);
+  egal(b.moyenne, 9);
+  egal(b.allureFinale, 9);
+  egal(aCouru(coureur), true);
+  c.finLe = 5000;
+  egal(courseAvecDonnees(c), true);
+});
+
+test('Demi-fond : la fusion garde la version avec les distances finales', () => {
+  const local = etatInitial();
+  const c = courseEssai({ type: 'temps', duree: 100 });
+  enregistrerPassage(c, 0, aSeconde(c, 32));
+  c.finLe = 5000;
+  const avant = JSON.parse(JSON.stringify(c));
+  fusionnerResultats(local, { courses: [avant] });
+  const apres = JSON.parse(JSON.stringify(c));
+  apres.coureurs[0].distanceFinale = 50;
+  egal(fusionnerResultats(local, { courses: [apres] }), { ajoutes: 0, misAJour: 1, dejaPresents: 0 });
+  egal(fusionnerResultats(local, { courses: [avant] }), { ajoutes: 0, misAJour: 0, dejaPresents: 1 });
+  egal(local.courses[0].coureurs[0].distanceFinale, 50);
+});
+
+test('Demi-fond : bilan (moyenne, écart, objectif, vitesse max, régularité)', () => {
+  const c = courseEssai();
+  [32, 64, 96].forEach((s) => enregistrerPassage(c, 0, aSeconde(c, s)));
+  const b = bilanCoureur(c, c.coureurs[0]);
+  egal(b.moyenne.toFixed(2), '11.25');
+  egal(b.ecart, 0.05);
+  egal(b.atteint, true);
+  egal(b.regularite, 100);
+  egal(b.vitesseMax.toFixed(2), '11.25');
+  const lent = courseEssai();
+  [40, 90, 150].forEach((s) => enregistrerPassage(lent, 0, aSeconde(lent, s)));
+  const bl = bilanCoureur(lent, lent.coureurs[0]);
+  egal(bl.atteint, false);
+  vrai(bl.regularite < 100, 'régularité attendue sous 100');
+});
+
+test('Demi-fond : suivi de l\'élève, coureur hors liste exclu', () => {
+  const etat = etatSuivi();
+  const c1 = courseEssai({ id: 'a' });
+  const c2 = courseEssai({ id: 'b' });
+  const enCours = courseEssai({ id: 'c' });
+  [c1, c2, enCours].forEach((c) => {
+    [32, 64].forEach((s) => enregistrerPassage(c, 0, aSeconde(c, s)));
+    enregistrerPassage(c, 1, aSeconde(c, 40));
+  });
+  c1.finLe = 2000;
+  c2.finLe = 1000;
+  etat.courses = [c1, c2, enCours];
+  etat.eleves.push({ id: 'e9', nom: 'Sans course', classe: '5A' });
+  const suivi = suiviDemifond(etat, 'e1');
+  egal(suivi.courses, 2);
+  egal(suivi.lignes.map((l) => l.course.id), ['b', 'a']);
+  egal(suivi.atteints, 2);
+  egal(suiviDemifond(etat, 'c9').courses, 0);
+  vrai(elevesSuivis(etat).some((e) => e.id === 'e1'), 'coureur de la liste suivi');
+  vrai(!elevesSuivis(etat).some((e) => e.id === 'e9'), 'élève sans équipe ni course non suivi');
+});
+
+test('Demi-fond : le regroupement des tablettes ajoute les courses, sans doublon', () => {
+  const autre = etatSuivi();
+  const c = courseEssai();
+  enregistrerPassage(c, 0, aSeconde(c, 32));
+  c.finLe = 5000;
+  autre.courses = [c, courseEssai({ id: 'vide' })];
+  const local = etatInitial();
+  const paquet = JSON.parse(JSON.stringify(paquetResultats(autre)));
+  egal(fusionnerResultats(local, paquet), { ajoutes: 1, misAJour: 0, dejaPresents: 0 });
+  egal(local.courses.map((x) => x.id), ['course1']);
+  egal(local.eleves.some((e) => e.id === 'e1'), true);
+  egal(fusionnerResultats(local, paquet), { ajoutes: 0, misAJour: 0, dejaPresents: 1 });
+  egal(suiviDemifond(local, 'e1').courses, 1);
+});
+
+test('Demi-fond : une course reçue alors qu\'elle tournait encore est close', () => {
+  const local = etatInitial();
+  const c = courseEssai();
+  enregistrerPassage(c, 0, aSeconde(c, 32));
+  fusionnerResultats(local, { exporteLe: 9000, courses: [c] });
+  egal(local.courses[0].finLe, 9000);
+  egal(local.courseEnCours, null);
+});
+
+test('Import de VMA : prénom + initiale, VMA en 4e colonne', () => {
+  const lignes = lireElevesCsv('Nom;Prénom;Classe;VMA\nMartin;Léa;5A;14,5\n');
+  egal(lignes[0].eleve.nom, 'Léa M.');
+  egal(lignes[0].colonnes[3], '14,5');
 });
 
 test('Une ancienne sauvegarde reçoit bien les défauts vides', () => {

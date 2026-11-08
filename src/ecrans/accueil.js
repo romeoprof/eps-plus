@@ -9,6 +9,10 @@ function tuile(activite, couleur) {
     return `<div class="tuile-apsa ${couleur} inactive" aria-disabled="true">
       <span class="tuile-icone">${icone}</span>${esc(activite.nom)}<small>Bientôt intégré</small></div>`;
   }
+  if (activite.module) {
+    return `<button class="tuile-apsa ${couleur}" data-action="ouvrir-module" data-module="${esc(activite.module)}">
+      <span class="tuile-icone">${icone}</span>${esc(activite.nom)}</button>`;
+  }
   return `<button class="tuile-apsa ${couleur}" data-action="choisir-apsa" data-apsa="${esc(activite.nom)}">
     <span class="tuile-icone">${icone}</span>${esc(activite.nom)}</button>`;
 }

@@ -61,12 +61,12 @@ export const identifiantEleve = (texte) => {
   return `e${(h >>> 0).toString(36)}`;
 };
 
-/* Lit un fichier CSV d'élèves (Nom ; Prénom ; Classe). Renvoie le nombre d'ajouts.
+/* Lit un CSV (Nom ; Prénom ; Classe ; autres colonnes éventuelles).
    Deux élèves d'une même classe qui donnent « Léa M. » deviennent « Léa M. » et « Léa M. (2) ». */
-export function importerEleves(etat, texte) {
+export function lireElevesCsv(texte) {
   const separateur = texte.includes(';') ? ';' : ',';
   const vus = {};
-  let ajoutes = 0;
+  const lignes = [];
   texte.split(/\r?\n/).forEach((ligne, rang) => {
     const colonnes = ligne.split(separateur).map((s) => s.trim().replace(/^"|"$/g, ''));
     if (!colonnes[0] || (rang === 0 && /^nom/i.test(colonnes[0]))) return;
@@ -75,8 +75,17 @@ export function importerEleves(etat, texte) {
     const repere = `${base}|${classe}`;
     vus[repere] = (vus[repere] || 0) + 1;
     const nom = vus[repere] > 1 ? `${base} (${vus[repere]})` : base;
-    if (!etat.eleves.some((e) => e.nom === nom && e.classe === classe)) {
-      etat.eleves.push({ id: identifiantEleve(`${nom}|${classe}`), nom, classe });
+    lignes.push({ eleve: { id: identifiantEleve(`${nom}|${classe}`), nom, classe }, colonnes });
+  });
+  return lignes;
+}
+
+/* Ajoute les élèves absents de la liste. Renvoie le nombre d'ajouts. */
+export function importerEleves(etat, texte) {
+  let ajoutes = 0;
+  lireElevesCsv(texte).forEach(({ eleve }) => {
+    if (!etat.eleves.some((e) => e.nom === eleve.nom && e.classe === eleve.classe)) {
+      etat.eleves.push(eleve);
       ajoutes += 1;
     }
   });

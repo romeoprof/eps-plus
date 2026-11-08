@@ -41,6 +41,14 @@ Espace enseignant → « Progression des élèves ». Seuls les élèves de la l
 
 En badminton et en tennis de table, le contrat se choisit sur l'écran du match. Ses points sont mis en avant dans la progression, sans changer le score. Le bonus chiffré s'active et se règle dans Espace enseignant → Réglages.
 
+## Demi-fond
+
+Menu principal → Activités athlétiques → Demi-fond. Quatre onglets : Coureurs (VMA, 8 coureurs maximum), Projet (course, % de VMA), Course (un appui à chaque plot), Bilan. La tolérance (0,5 km/h par défaut), la distance entre plots et les zones se règlent dans Espace enseignant → Réglages → Demi-fond, ou dans `src/demifond/contenu.js`.
+
+La consigne (SUPER, ACCÉLÈRE, RALENTIS) compare la vitesse du dernier segment au projet. L'objectif du bilan compare la vitesse moyenne au projet. Un passage impliquant plus de 30 km/h, ou moins d'une seconde après le précédent, est ignoré comme double appui. Les courses alimentent la Progression des élèves et le regroupement des tablettes.
+
+Une course sur distance se termine avec le bouton « Terminer ». Une course sur temps s'arrête seule : une fenêtre demande la distance de chaque coureur depuis son dernier plot, puis l'allure de ce dernier morceau et la distance totale sont calculées.
+
 ## Regrouper les résultats sur la tablette enseignant
 
 Espace enseignant → « Récupérer les données ». Sur chaque tablette : saisir un mot de passe, créer et envoyer le fichier chiffré. Sur la tablette enseignant : saisir le même mot de passe et choisir les fichiers reçus.

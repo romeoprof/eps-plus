@@ -57,10 +57,10 @@ export async function lireElevesProteges(paquet, motDePasse) {
 export function exporterConfiguration(etat) {
   const version = Date.now();
   etat.configVersion = version;
-  const { conseil, criteres, projets, fiche, codeEmpreinte, contratBonus, contratValeur, defauts } = etat.reglages;
+  const { conseil, criteres, projets, fiche, codeEmpreinte, contratBonus, contratValeur, defauts, demifond } = etat.reglages;
   telecharger(
     'config.json',
-    JSON.stringify({ version, reglages: { conseil, criteres, projets, fiche, codeEmpreinte, contratBonus, contratValeur, defauts } }),
+    JSON.stringify({ version, reglages: { conseil, criteres, projets, fiche, codeEmpreinte, contratBonus, contratValeur, defauts, demifond } }),
     'application/json',
   );
 }

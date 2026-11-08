@@ -5,6 +5,7 @@ import { APSA } from '../contenu/apsa.js';
 import { exporterConfiguration, exporterElevesProteges } from '../donnees/export.js';
 import { importerEleves } from '../donnees/operations.js';
 import { aUnDefautChoisi, criteresApsa, listeEditable } from '../reglages.js';
+import { carteDemifond } from '../../demifond/ecrans/reglages.js';
 import { blocImportEleves } from './import-eleves.js';
 import { vueProgression } from './progression.js';
 import { vueRecolte } from './recolte.js';
@@ -328,6 +329,7 @@ export function vueEnseignant() {
     <h2 class="titre-section">Réglages généraux</h2>
     <div class="grille-reglages">
       ${carteOptions()}
+      ${carteDemifond()}
       ${carteEleves()}
       ${carteEnvoiEleves()}
       ${carteSynchro()}

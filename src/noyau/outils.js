@@ -6,7 +6,14 @@ export const esc = (valeur) => String(valeur ?? '').replace(/[&<>"']/g, (c) => E
 /* Écriture française : virgule décimale et espace insécable devant « % ». */
 export const decimal = (nombre) => String(nombre).replace('.', ',');
 export const pourcent = (a, b) => (b ? `${decimal(Math.round((1000 * a) / b) / 10)} %` : '–');
-export const lireNombre = (texte) => parseFloat(String(texte).replace(',', '.'));
+/* Nombre à une décimale avec son signe ; jamais « -0,0 ». */
+export function avecSigne(nombre) {
+  if (nombre == null) return '–';
+  const texte = Number(nombre).toFixed(1);
+  if (Number(texte) === 0) return '0,0';
+  return `${Number(texte) > 0 ? '+' : ''}${decimal(texte)}`;
+}
+export const lireNombre =(texte) => parseFloat(String(texte).replace(',', '.'));
 
 export const formatChrono = (secondes) =>
   `${String(Math.floor(secondes / 60)).padStart(2, '0')}:${String(Math.floor(secondes % 60)).padStart(2, '0')}`;
