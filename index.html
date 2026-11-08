@@ -2,15 +2,24 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <title>Tests EPS +</title>
-  <style>
-    body { font: 16px system-ui, sans-serif; margin: 20px; }
-    .ok { color: #15803d; } .ko { color: #b91c1c; font-weight: 700; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>EPS +</title>
+  <meta name="theme-color" content="#1e3a8a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="EPS +">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="styles/app.css">
 </head>
 <body>
-  <h1 id="bilan">Tests en cours…</h1>
-  <ul id="liste"></ul>
-  <script type="module" src="tests.js"></script>
+  <header id="entete"></header>
+  <nav id="navigation"></nav>
+  <main id="contenu"></main>
+  <div id="retour-action" class="bulle" aria-live="polite"></div>
+  <div id="message" class="bulle" aria-live="polite"></div>
+  <div id="impression" hidden></div>
+  <script type="module" src="src/main.js"></script>
 </body>
 </html>
