@@ -6,10 +6,13 @@ import { exporterConfiguration, exporterElevesProteges } from '../donnees/export
 import { importerEleves } from '../donnees/operations.js';
 import { criteresApsa, ficheApsa, projetsApsa } from '../reglages.js';
 import { blocImportEleves } from './import-eleves.js';
+import { vueProgression } from './progression.js';
+import { vueRecolte } from './recolte.js';
 
 const EMPREINTE_PAR_DEFAUT = '74id85';
 
 let deverrouille = false;
+let pageEnseignant = 'reglages';
 let apsaEditee = null;
 let messageImport = '';
 
@@ -42,6 +45,19 @@ declarerActions({
     } else {
       notifier('Code incorrect.');
     }
+  },
+  'ens-bonus-actif': (_, champ) => {
+    etat.reglages.contratBonus = champ.checked;
+    sauver();
+    rafraichir();
+  },
+  'ens-bonus-valeur': (_, champ) => {
+    etat.reglages.contratValeur = Math.max(0, Number(champ.value) || 0);
+    sauver();
+  },
+  'ens-page': ({ page }) => {
+    pageEnseignant = page;
+    rafraichir();
   },
   'ens-verrouiller': () => {
     deverrouille = false;
@@ -143,8 +159,24 @@ export function vueEnseignant() {
   apsaEditee = apsa;
   const a = esc(apsa);
   const nbClasses = new Set(etat.eleves.map((e) => e.classe)).size;
-  return `
+  const onglet = (id, libelle) =>
+    `<button role="tab" aria-selected="${pageEnseignant === id}" class="onglet ${pageEnseignant === id ? 'actif' : ''}" data-action="ens-page" data-page="${id}">${libelle}</button>`;
+  const navigation = `<div class="onglets marge-bas" role="tablist">${onglet('reglages', '⚙️ Réglages')}${onglet('progression', '📈 Progression des élèves')}${onglet('recolte', '🔄 Récupérer les données')}</div>`;
+  if (pageEnseignant === 'progression') return navigation + vueProgression();
+  if (pageEnseignant === 'recolte') return navigation + vueRecolte();
+  return `${navigation}
     <div class="carte"><label class="case"><input type="checkbox" ${etat.reglages.conseil ? 'checked' : ''} data-choix="ens-conseil">Projet de jeu et conseil de fin de match</label></div>
+
+    <div class="carte"><h2 class="carte-titre">⭐ Contrat (badminton et tennis de table)</h2>
+      <label class="case"><input type="checkbox" ${etat.reglages.contratBonus ? 'checked' : ''} data-choix="ens-bonus-actif">Donner un bonus chiffré</label>
+      ${
+        etat.reglages.contratBonus
+          ? `<div class="rangee marge-haut"><label class="etire" for="valeur-bonus">Bonus par point marqué selon le contrat</label>
+             <input id="valeur-bonus" class="points" type="number" min="0" max="20" step="0.5" value="${Number(etat.reglages.contratValeur) || 0}" data-choix="ens-bonus-valeur"></div>`
+          : ''
+      }
+      <p class="aide">Le bonus s'affiche uniquement dans la page Progression. Le score des matchs ne change pas.</p>
+    </div>
 
     <div class="carte"><h2 class="carte-titre">Critères observables</h2>
       <select data-choix="ens-apsa">${Object.keys(APSA).map((k) => `<option ${k === apsa ? 'selected' : ''}>${esc(k)}</option>`).join('')}</select>

@@ -40,6 +40,7 @@ export function reinitialiserBilans(etat, apsa) {
         projets: [[], []],
         bilanProjet: [{}, {}],
         fiche: [{}, {}],
+        contrats: {},
       });
     });
   etat.matchCourant = null;

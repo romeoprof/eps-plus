@@ -10,6 +10,7 @@ import { exporterCsv, exporterSauvegarde } from '../donnees/export.js';
 import { lireSauvegarde } from '../donnees/migration.js';
 import { reinitialiserBilans } from '../donnees/operations.js';
 import { nomCote, nomEquipe } from '../reglages.js';
+import { courbe } from './courbe.js';
 import { afficherFiche } from './fiche.js';
 import { terrain } from './terrain.js';
 
@@ -117,16 +118,6 @@ function detailsMatch(m) {
     }
   });
   return html;
-}
-
-function courbe(parts) {
-  const L = 240;
-  const H = 64;
-  const points = parts.map((v, i) => [parts.length > 1 ? 12 + (i * (L - 24)) / (parts.length - 1) : L / 2, H - 10 - v * (H - 20)]);
-  return `<svg class="courbe" viewBox="0 0 ${L} ${H}" role="img" aria-label="Part des points gagnés à chaque rencontre">
-    <polyline fill="none" stroke="#2563eb" stroke-width="2" points="${points.map((p) => p.join(',')).join(' ')}"/>
-    ${points.map((p, i) => `<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#ea580c"/><text x="${p[0]}" y="${p[1] - 6}" font-size="9" text-anchor="middle">${Math.round(parts[i] * 100)} %</text>`).join('')}
-  </svg>`;
 }
 
 function carteProgression() {

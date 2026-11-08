@@ -26,6 +26,21 @@ export function empreinte(code) {
   return (h >>> 0).toString(36);
 }
 
+/* Ouvre le partage de l'appareil (Drive, Quick Share, e-mail) ; sinon, télécharge le fichier. */
+export async function partagerFichier(nomFichier, contenu, type = 'text/plain') {
+  const fichier = new File([contenu], nomFichier, { type });
+  if (navigator.canShare?.({ files: [fichier] })) {
+    try {
+      await navigator.share({ files: [fichier], title: nomFichier });
+      return 'partage';
+    } catch (erreur) {
+      if (erreur.name === 'AbortError') return 'annule';
+    }
+  }
+  telecharger(nomFichier, contenu, type);
+  return 'telecharge';
+}
+
 export function telecharger(nomFichier, contenu, type) {
   const url = URL.createObjectURL(new Blob([contenu], { type }));
   const lien = document.createElement('a');

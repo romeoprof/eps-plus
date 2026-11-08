@@ -3,6 +3,8 @@
 import { APSA } from '../src/champ4/contenu/apsa.js';
 import { classer } from '../src/champ4/calculs/classement.js';
 import { possesseur, score, tempsDePossession } from '../src/champ4/calculs/match.js';
+import { bonusContrat, contratDuMatch, elevesSuivis, suiviEleve } from '../src/champ4/calculs/progression.js';
+import { creerFichierResultats, fusionnerResultats, lireFichierResultats, paquetResultats } from '../src/champ4/donnees/fusion.js';
 import { indicateurs } from '../src/champ4/calculs/stats.js';
 import { projetPrecedent } from '../src/champ4/calculs/suivi.js';
 import { lignesCsv, lireElevesProteges } from '../src/champ4/donnees/export.js';
@@ -231,7 +233,136 @@ test('Reprise V3 : les noms complets sont réduits, équipes individuelles compr
   egal(etat.equipes.map((t) => t.nom), ['Léa M.', 'Les Bleus']);
 });
 
+function etatSuivi() {
+  const etat = etatInitial();
+  etat.eleves = [{ id: 'e1', nom: 'Léa M.', classe: '5A' }, { id: 'e2', nom: 'Tom D.', classe: '5A' }, { id: 'e3', nom: 'Zoé B.', classe: '5B' }];
+  etat.equipes = [
+    { id: 'A', nom: 'Léa M.', classe: '5A', membres: ['e1'] },
+    { id: 'B', nom: 'Saisi à la main', classe: '', membres: [] },
+    { id: 'C', nom: 'Les Aigles', classe: '5A', membres: ['e1', 'e2'] },
+  ];
+  return etat;
+}
+
+test('Progression : seuls les élèves choisis dans une équipe sont suivis', () => {
+  egal(elevesSuivis(etatSuivi()).map((e) => e.id), ['e1', 'e2']);
+});
+
+test('Progression : les événements de tous les sports sont comptés', () => {
+  const etat = etatSuivi();
+  etat.matchs = [
+    match('Badminton', [[0, 'gag'], [0, 'gag'], [1, 'gag']], { termine: true, termineLe: 10 }),
+    Object.assign(match('Handball', [[1, 'but'], [0, 'but']], { termine: true, termineLe: 20 }), { a: 'B', b: 'C' }),
+    match('Handball', [], { termine: true, termineLe: 30 }),
+  ];
+  const suivi = suiviEleve(etat, 'e1');
+  egal(suivi.sports.map((s) => s.apsa), ['Badminton', 'Handball']);
+  egal(suivi.rencontres, 2);
+  egal([suivi.victoires, suivi.nuls, suivi.defaites], [1, 1, 0]);
+  egal(suivi.sports[0].criteres.find((c) => c.libelle === 'Coup gagnant').nombre, 2);
+  egal(suiviEleve(etat, 'e2').sports.map((s) => s.apsa), ['Handball']);
+  egal(suiviEleve(etat, 'e3').rencontres, 0);
+});
+
+test('Contrat : seuls les points de la manière choisie sont valorisés', () => {
+  const etat = etatSuivi();
+  etat.matchs = [match('Badminton', [[0, 'gag'], [0, 'serv'], [0, 'gag'], [1, 'fil']], { termine: true, termineLe: 10, contrats: { e1: 'gag' } })];
+  const contrat = suiviEleve(etat, 'e1').sports[0].contrat;
+  egal([contrat.points, contrat.gagnes], [2, 4]);
+  egal(contrat.parts, [0.5]);
+  egal(suiviEleve(etat, 'e1').pointsContrat, 2);
+  egal(score(etat.matchs[0], 0), 4);
+});
+
+test('Contrat : changer de contrat ne réécrit pas les matchs déjà commencés', () => {
+  const etat = etatSuivi();
+  etat.contrats = { e1: { Badminton: 'serv' } };
+  const ancienAvecContrat = match('Badminton', [[0, 'gag']], { contrats: { e1: 'gag' } });
+  const ancienSansContrat = match('Badminton', [[0, 'serv']], { contrats: undefined });
+  const nonCommence = match('Badminton', []);
+  egal(contratDuMatch(etat, ancienAvecContrat, 'e1'), 'gag');
+  egal(contratDuMatch(etat, ancienSansContrat, 'e1'), '');
+  egal(contratDuMatch(etat, nonCommence, 'e1'), 'serv');
+});
+
+test('Contrat : un match réinitialisé oublie son contrat', () => {
+  const etat = etatSuivi();
+  const enPoule = match('Badminton', [[0, 'gag']], { pouleId: 'p', contrats: { e1: 'gag' } });
+  etat.matchs = [enPoule];
+  reinitialiserBilans(etat, 'Badminton');
+  egal(enPoule.contrats, {});
+});
+
+test('Bonus de contrat : seulement si activé', () => {
+  egal(bonusContrat(3, { contratBonus: false, contratValeur: 2 }), 0);
+  egal(bonusContrat(3, { contratBonus: true, contratValeur: 2 }), 6);
+  egal(bonusContrat(3, { contratBonus: true, contratValeur: 0.5 }), 1.5);
+});
+
+test('La fusion ajoute les matchs reçus sans toucher aux données locales', () => {
+  const autre = etatSuivi();
+  const recu = match('Badminton', [[0, 'gag']], { id: 'm-autre', termine: true, termineLe: 5 });
+  autre.matchs = [recu, match('Rugby', [], { id: 'vide' })];
+  const local = etatInitial();
+  local.apsa = 'Rugby';
+  local.eleves = [{ id: 'e2', nom: 'Tom D.', classe: '5A' }];
+  local.equipes = [{ id: 'A', nom: 'Équipe locale', classe: '', membres: [] }];
+  local.reglages.contratValeur = 4;
+  const bilan = fusionnerResultats(local, paquetResultats(autre));
+  egal(bilan, { ajoutes: 1, misAJour: 0, dejaPresents: 0 });
+  egal(local.matchs.map((m) => m.id), ['m-autre']);
+  egal(local.equipes.find((t) => t.id === 'A').nom, 'Équipe locale');
+  egal(local.equipes.find((t) => t.id === 'B').archivee, true);
+  egal(local.apsa, 'Rugby');
+  egal(local.reglages.contratValeur, 4);
+});
+
+test('La fusion ne crée pas de doublon et garde la version la plus avancée', () => {
+  const local = etatInitial();
+  const paquet = (evenements) => ({ matchs: [match('Handball', evenements, { id: 'm1' })] });
+  fusionnerResultats(local, paquet([[0, 'but']]));
+  egal(fusionnerResultats(local, paquet([[0, 'but']])), { ajoutes: 0, misAJour: 0, dejaPresents: 1 });
+  egal(fusionnerResultats(local, paquet([[0, 'but'], [1, 'but']])), { ajoutes: 0, misAJour: 1, dejaPresents: 0 });
+  egal(fusionnerResultats(local, paquet([[0, 'but']])), { ajoutes: 0, misAJour: 0, dejaPresents: 1 });
+  egal(local.matchs.length, 1);
+  egal(local.matchs[0].evenements.length, 2);
+});
+
+test('La fusion arrête un chrono resté lancé', () => {
+  const local = etatInitial();
+  fusionnerResultats(local, { exporteLe: 10000, matchs: [match('Handball', [[0, 'but']], { departChrono: 4000, duree: 10 })] });
+  egal([local.matchs[0].departChrono, local.matchs[0].duree], [0, 16]);
+});
+
+test('Après fusion, la progression compte les matchs des deux tablettes', () => {
+  const local = etatSuivi();
+  local.matchs = [match('Badminton', [[0, 'gag']], { id: 'm1' })];
+  const autre = etatSuivi();
+  autre.matchs = [Object.assign(match('Handball', [[1, 'but']], { id: 'm2' }), { a: 'B', b: 'C' })];
+  fusionnerResultats(local, paquetResultats(autre));
+  egal(suiviEleve(local, 'e1').rencontres, 2);
+  egal(suiviEleve(local, 'e1').sports.map((s) => s.apsa).sort(), ['Badminton', 'Handball']);
+});
+
 async function testsAsynchrones() {
+  const etatChiffre = etatSuivi();
+  etatChiffre.matchs = [match('Badminton', [[0, 'gag']], { id: 'm1' })];
+  const texte = await creerFichierResultats(etatChiffre, 'un-long-mot-de-passe');
+  const champs = Object.keys(JSON.parse(texte)).sort().join();
+  const clair = champs === 'donnees,iterations,iv,sel' && !/Léa|classe|nom|equipes|matchs/.test(texte.replace(/"donnees":"[^"]*"/, ''));
+  resultats.push([clair && !texte.includes('Léa'), 'Fichier de résultats : seuls des champs chiffrés sont lisibles']);
+  const relu = await lireFichierResultats(texte, 'un-long-mot-de-passe');
+  resultats.push([relu.matchs.length === 1, 'Fichier de résultats : relu avec le bon mot de passe']);
+  let refus = false;
+  try {
+    await lireFichierResultats(texte, 'mauvais-mot-de-passe');
+  } catch {
+    refus = true;
+  }
+  resultats.push([refus, 'Fichier de résultats : un mauvais mot de passe est refusé']);
+  const v3 = await lireFichierResultats(JSON.stringify(SAUVEGARDE_V3), '');
+  resultats.push([v3.matchs.length === 2, 'Fichier de résultats : une sauvegarde V3 est acceptée']);
+
   const eleves = [{ id: 'e1', nom: 'Léa M.', classe: '5A' }];
   const paquet = await chiffrer(JSON.stringify(eleves), 'un-long-mot-de-passe');
   try {

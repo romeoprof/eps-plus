@@ -11,7 +11,16 @@ export const etatInitial = () => ({
   matchCourant: null,
   matchBilan: null,
   eleves: [],
-  reglages: { conseil: true, criteres: {}, projets: {}, fiche: {}, codeEmpreinte: null },
+  contrats: {}, // { idEleve: { apsa: clé du critère choisi } }
+  reglages: {
+    conseil: true,
+    criteres: {},
+    projets: {},
+    fiche: {},
+    codeEmpreinte: null,
+    contratBonus: false, // bonus chiffré affiché dans la page Progression
+    contratValeur: 1, // bonus par point marqué selon le contrat
+  },
   configVersion: null,
   affichage: { sombre: false, grandsBoutons: false },
 });
@@ -32,4 +41,5 @@ export const nouveauMatch = (apsa, a, b, pouleId = null) => ({
   projets: [[], []],
   bilanProjet: [{}, {}],
   fiche: [{}, {}],
+  contrats: {}, // contrats en vigueur pendant ce match
 });

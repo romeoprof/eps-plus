@@ -368,6 +368,26 @@ body.grands .critere { min-height: 112px; font-size: 1.2rem; }
 
 .journal { margin: 0; padding-left: 20px; font-size: .95rem; }
 
+/* Contrat et progression des élèves */
+.critere.contrat { outline: 4px solid #facc15; outline-offset: 1px; }
+.ligne-contrat select { flex: 1 1 200px; margin-bottom: 0; }
+.marge-bas { margin-bottom: 12px; }
+.marge-haut { margin-top: 10px; }
+.compte-rendu { margin: 8px 0 0; padding-left: 20px; font-size: .92rem; font-weight: 600; overflow-wrap: anywhere; }
+.deux-colonnes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 12px; }
+.tuiles-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.tuile-stat { padding: 12px 8px; background: var(--carte); border: 2px solid var(--bordure); border-radius: 14px; text-align: center; }
+.tuile-stat b { display: block; color: var(--titre); font-size: 1.4rem; font-weight: 900; }
+.tuile-stat span { color: var(--texte-doux); font-size: .85rem; font-weight: 700; }
+.icone-titre svg { width: 22px; height: 22px; vertical-align: -4px; }
+h4 { margin: 14px 0 6px; font-size: 1rem; font-weight: 900; }
+.bloc-contrat { margin: 12px 0; padding: 4px 14px 12px; background: rgba(250, 204, 21, .15); border: 2px solid #eab308; border-radius: 14px; }
+.evolution { display: block; margin-bottom: 8px; color: var(--texte-doux); font-size: .9rem; font-weight: 800; }
+.evolution.hausse { color: var(--vert); }
+.evolution.baisse { color: var(--rouge); }
+tr.positif td:first-child { color: var(--vert); font-weight: 700; }
+tr.negatif td:first-child { color: var(--rouge); font-weight: 700; }
+
 /* Terrains */
 .terrain { position: relative; max-width: 300px; margin: 0 auto 6px; }
 .terrain svg { display: block; width: 100%; border-radius: 12px; }

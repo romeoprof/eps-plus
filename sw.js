@@ -1,7 +1,7 @@
 /* Fonctionnement hors connexion : réseau d'abord, copie locale si pas de réseau.
    Ajouter ici tout nouveau fichier de l'application, et changer VERSION. */
 const PREFIXE = 'eps-plus-';
-const VERSION = `${PREFIXE}2`;
+const VERSION = `${PREFIXE}4`;
 const FICHIERS = [
   './',
   'index.html',
@@ -21,19 +21,24 @@ const FICHIERS = [
   'src/champ4/contenu/terrains.js',
   'src/champ4/calculs/classement.js',
   'src/champ4/calculs/match.js',
+  'src/champ4/calculs/progression.js',
   'src/champ4/calculs/stats.js',
   'src/champ4/calculs/suivi.js',
   'src/champ4/donnees/export.js',
+  'src/champ4/donnees/fusion.js',
   'src/champ4/donnees/migration.js',
   'src/champ4/donnees/modele.js',
   'src/champ4/donnees/operations.js',
   'src/champ4/ecrans/bilan.js',
+  'src/champ4/ecrans/courbe.js',
   'src/champ4/ecrans/enseignant.js',
   'src/champ4/ecrans/equipes.js',
   'src/champ4/ecrans/fiche.js',
   'src/champ4/ecrans/import-eleves.js',
   'src/champ4/ecrans/match.js',
   'src/champ4/ecrans/poules.js',
+  'src/champ4/ecrans/progression.js',
+  'src/champ4/ecrans/recolte.js',
   'src/champ4/ecrans/terrain.js',
 ];
 

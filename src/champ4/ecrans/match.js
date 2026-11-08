@@ -4,6 +4,7 @@ import { esc, formatChrono } from '../../noyau/outils.js';
 import { APSA, NIVEAUX_PROJET } from '../contenu/apsa.js';
 import { TERRAINS } from '../contenu/terrains.js';
 import { compte, libelleDe, possesseur, score, tempsEcoule } from '../calculs/match.js';
+import { contratDuMatch, membresDuCote } from '../calculs/progression.js';
 import { projetPrecedent } from '../calculs/suivi.js';
 import { nouveauMatch } from '../donnees/modele.js';
 import { criteresApsa, criteresDuMatch, equipesActives, ficheApsa, matchCourant, nomCote, projetsApsa } from '../reglages.js';
@@ -49,6 +50,18 @@ function retourAction(match, equipe, cle) {
   minuteurRetour = setTimeout(() => bulle.classList.remove('visible'), 1300);
 }
 
+/* Au premier événement, le contrat de chaque élève est enregistré dans le match. */
+function figerContrats(m) {
+  m.contrats = m.contrats || {};
+  COTES.forEach((cote) =>
+    membresDuCote(etat, m, cote).forEach((id) => {
+      m.contrats[id] = contratDuMatch(etat, m, id);
+    }),
+  );
+}
+
+const clesContrat = (m, cote) => membresDuCote(etat, m, cote).map((id) => contratDuMatch(etat, m, id));
+
 function arreterChrono(m) {
   if (m.departChrono) {
     m.duree += (Date.now() - m.departChrono) / 1000;
@@ -70,6 +83,7 @@ declarerActions({
   'match-marquer': ({ equipe, cle }) => {
     const m = matchCourant();
     if (!m || m.termine) return;
+    if (!m.evenements.length) figerContrats(m);
     if (!m.criteres) m.criteres = criteresApsa(m.apsa).map((c) => ({ ...c }));
     const evenement = { equipe: Number(equipe), critere: cle, t: Math.round(tempsEcoule(m) * 10) / 10 };
     if (zoneChoisie != null) evenement.zone = zoneChoisie;
@@ -103,6 +117,13 @@ declarerActions({
   },
   'match-fermer': () => {
     etat.matchCourant = null;
+    sauver();
+    rafraichir();
+  },
+  'match-contrat': ({ eleve }, champ) => {
+    const m = matchCourant();
+    etat.contrats[eleve] = { ...etat.contrats[eleve], [m.apsa]: champ.value };
+    m.contrats = { ...m.contrats, [eleve]: champ.value };
     sauver();
     rafraichir();
   },
@@ -184,12 +205,33 @@ function barrePossession(m) {
   </div>`;
 }
 
+function carteContrats(m) {
+  const manieres = criteresDuMatch(m).filter((c) => c.points > 0);
+  const lignes = COTES.flatMap((cote) => membresDuCote(etat, m, cote)).map((id) => {
+    const eleve = etat.eleves.find((e) => e.id === id);
+    const choix = contratDuMatch(etat, m, id);
+    return `<div class="rangee ligne-contrat">
+      <label class="etire" for="contrat-${esc(id)}"><b>${esc(eleve.nom)}</b></label>
+      <select id="contrat-${esc(id)}" data-choix="match-contrat" data-eleve="${esc(id)}">
+        <option value="">Aucun contrat</option>
+        ${manieres.map((c) => `<option value="${esc(c.cle)}" ${c.cle === choix ? 'selected' : ''}>${esc(c.libelle)}</option>`).join('')}
+      </select>
+    </div>`;
+  });
+  const contenu = lignes.length
+    ? lignes.join('')
+    : `<p class="aide">Le contrat est disponible pour les joueurs créés depuis la liste d'élèves.</p>`;
+  return `<div class="carte"><h2 class="carte-titre">⭐ Contrat <small>la manière de marquer que chaque élève veut valoriser</small></h2>${contenu}</div>`;
+}
+
 function colonneEquipe(m, cote) {
+  const contrats = clesContrat(m, cote);
   const boutons = criteresDuMatch(m)
     .map((c) => {
       const couleur = c.points > 0 ? 'vert' : c.points < 0 ? 'rouge' : c.cle === 'perte' || c.cle === 'faute' ? 'orange' : '';
-      return `<button class="critere ${couleur}" ${m.termine ? 'disabled' : ''} data-action="match-marquer" data-equipe="${cote}" data-cle="${esc(c.cle)}">
-        <span>${esc(c.libelle)}</span><b>${compte(m, cote, c.cle)}</b></button>`;
+      const contrat = contrats.includes(c.cle);
+      return `<button class="critere ${couleur} ${contrat ? 'contrat' : ''}" ${m.termine ? 'disabled' : ''} data-action="match-marquer" data-equipe="${cote}" data-cle="${esc(c.cle)}">
+        <span>${contrat ? '⭐ ' : ''}${esc(c.libelle)}</span><b>${compte(m, cote, c.cle)}</b></button>`;
     })
     .join('');
   return `<div class="colonne-equipe"><h3 class="nom-equipe cote-${cote}">${esc(nomCote(m, cote))}</h3>${boutons}</div>`;
@@ -283,6 +325,7 @@ export function vueMatch() {
       </div>
     </div>
     ${apresMatch}
+    ${APSA[m.apsa].terrain && !m.termine ? carteContrats(m) : ''}
     <div class="disposition ${avecTerrain ? 'avec-terrain' : ''}">
       ${avecTerrain ? carteZones(m) : ''}
       <div class="colonnes-equipes">${colonneEquipe(m, 0)}${colonneEquipe(m, 1)}</div>

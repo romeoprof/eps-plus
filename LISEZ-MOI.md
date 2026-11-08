@@ -35,6 +35,18 @@ Si un fichier est ajouté, l'inscrire dans la liste de `sw.js`. Après toute mod
 
 Le fichier en ligne est chiffré et le mot de passe n'est enregistré nulle part. Un mot de passe long est indispensable, car le fichier reste téléchargeable par tous. Le code de l'espace enseignant est distinct : il évite seulement les modifications par erreur.
 
+## Progression des élèves et contrats
+
+Espace enseignant → « Progression des élèves ». Seuls les élèves de la liste choisis dans une équipe ou comme joueur seul sont suivis. En sport collectif, ils reçoivent les statistiques de leur équipe.
+
+En badminton et en tennis de table, le contrat se choisit sur l'écran du match. Ses points sont mis en avant dans la progression, sans changer le score. Le bonus chiffré s'active et se règle dans Espace enseignant → Réglages.
+
+## Regrouper les résultats sur la tablette enseignant
+
+Espace enseignant → « Récupérer les données ». Sur chaque tablette : saisir un mot de passe, créer et envoyer le fichier chiffré. Sur la tablette enseignant : saisir le même mot de passe et choisir les fichiers reçus.
+
+La fusion n'efface rien, évite les doublons et ne change pas les réglages. Il n'y a pas de synchronisation automatique, car l'application n'a pas de serveur. Ne jamais déposer ces fichiers sur GitHub.
+
 ## Reprendre les données de la V3
 
 Dans la V3 : Bilan → Sauvegarder. Dans EPS + : Bilan → Restaurer, puis choisir le fichier `sauvegarde_eps.json`.
