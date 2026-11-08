@@ -2,27 +2,11 @@
 import { etat, sauver } from '../../noyau/etat.js';
 import { declarerActions, notifier, rafraichir } from '../../noyau/interface.js';
 import { esc, uid } from '../../noyau/outils.js';
-import { lireElevesCsv } from '../../champ4/donnees/operations.js';
-import { blocImportEleves } from '../../champ4/ecrans/import-eleves.js';
 import { MAX_COUREURS } from '../contenu.js';
-import { coureurDe, ficheCoureur, tousLesCoureurs } from '../etat.js';
+import { coureurDe, ficheCoureur, lireVma, tousLesCoureurs } from '../etat.js';
 
 let classeChoisie = '';
 let voirArchives = false;
-
-const lireVma = (texte) => {
-  const vma = parseFloat(String(texte).replace(',', '.'));
-  return vma >= 4 && vma <= 30 ? vma : null;
-};
-
-async function lireTexte(fichier) {
-  const octets = await fichier.arrayBuffer();
-  try {
-    return new TextDecoder('utf-8', { fatal: true }).decode(octets);
-  } catch {
-    return new TextDecoder('windows-1252').decode(octets);
-  }
-}
 
 declarerActions({
   'df-classe': (_, champ) => {
@@ -72,24 +56,6 @@ declarerActions({
     sauver();
     rafraichir();
   },
-  'df-csv': async (_, champ) => {
-    const fichier = champ.files[0];
-    if (!fichier) return;
-    const lignes = lireElevesCsv(await lireTexte(fichier));
-    let vmas = 0;
-    lignes.forEach(({ eleve, colonnes }) => {
-      if (!etat.eleves.some((e) => e.id === eleve.id)) etat.eleves.push(eleve);
-      const vma = lireVma(colonnes[3]);
-      if (vma != null) {
-        ficheCoureur(eleve.id).vma = vma;
-        vmas += 1;
-      }
-    });
-    champ.value = '';
-    sauver();
-    rafraichir();
-    notifier(`${lignes.length} élève${lignes.length > 1 ? 's' : ''} lu${lignes.length > 1 ? 's' : ''}, ${vmas} VMA enregistrée${vmas > 1 ? 's' : ''} ✔`);
-  },
 });
 
 function ligneCoureur(c) {
@@ -128,23 +94,14 @@ export function vueCoureurs() {
             <div class="grille-coureurs">${liste.map(ligneCoureur).join('') || '<p class="aide">Aucun coureur ici.</p>'}</div>
             ${nbChoisis ? `<button class="btn marge-haut" data-action="df-onglet" data-onglet="projet">Continuer vers le projet →</button>` : ''}
           </div>`
-        : ''
+        : `<div class="carte centre"><p class="aide">Aucun élève sur cette tablette. La liste d'élèves et les VMA s'importent dans Espace enseignant → Demi-fond.</p></div>`
     }
-    <div class="grille-reglages">
-      <div class="carte"><h2 class="carte-titre">⬇ Importer la liste d'élèves</h2>
-        ${blocImportEleves()}
-      </div>
-      <div class="carte"><h2 class="carte-titre">📄 Importer des VMA (CSV)</h2>
-        <p class="aide">Colonnes : Nom ; Prénom ; Classe ; VMA. Seuls le prénom et l'initiale du nom sont conservés.</p>
-        <label class="btn">Choisir le fichier<input type="file" accept=".csv,.txt" hidden data-choix="df-csv"></label>
-      </div>
-      <div class="carte"><h2 class="carte-titre">➕ Coureur hors liste</h2>
-        <p class="aide">Il peut courir, mais il n'est pas compté dans la Progression des élèves.</p>
-        <div class="rangee sans-marge">
-          <input id="df-nom" class="etire" placeholder="Nom" aria-label="Nom du coureur">
-          <input id="df-nouvelle-vma" class="points" inputmode="decimal" placeholder="VMA" aria-label="VMA du coureur">
-          <button class="btn secondaire" data-action="df-ajouter">Ajouter</button>
-        </div>
+    <div class="carte"><h2 class="carte-titre">➕ Coureur hors liste</h2>
+      <p class="aide">Il peut courir, mais il n'est pas compté dans la Progression des élèves.</p>
+      <div class="rangee sans-marge">
+        <input id="df-nom" class="etire" placeholder="Nom" aria-label="Nom du coureur">
+        <input id="df-nouvelle-vma" class="points" inputmode="decimal" placeholder="VMA" aria-label="VMA du coureur">
+        <button class="btn secondaire" data-action="df-ajouter">Ajouter</button>
       </div>
     </div>`;
 }

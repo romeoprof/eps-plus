@@ -2,10 +2,22 @@
 import { etat, sauver } from '../../noyau/etat.js';
 import { declarerActions, demander, notifier, rafraichir } from '../../noyau/interface.js';
 import { decimal, esc } from '../../noyau/outils.js';
+import { lireElevesCsv } from '../../champ4/donnees/operations.js';
+import { blocImportEleves } from '../../champ4/ecrans/import-eleves.js';
 import { PCT_MAX, PCT_MIN, PCT_PAS, REGLAGES_DEFAUT } from '../contenu.js';
-import { reglagesDemifond } from '../etat.js';
+import { ficheCoureur, lireVma, reglagesDemifond } from '../etat.js';
 
 const nombre = (texte) => parseFloat(String(texte).replace(',', '.'));
+
+/* Les CSV d'Excel sont souvent en Windows-1252 : on évite ainsi les accents abîmés. */
+async function lireTexte(fichier) {
+  const octets = await fichier.arrayBuffer();
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(octets);
+  } catch {
+    return new TextDecoder('windows-1252').decode(octets);
+  }
+}
 
 function modifier(reglage, valeur) {
   etat.reglages.demifond = { ...reglagesDemifond(), [reglage]: valeur };
@@ -32,6 +44,24 @@ function valeurNumerique(champ, min, message) {
 }
 
 declarerActions({
+  'dfr-csv-vma': async (_, champ) => {
+    const fichier = champ.files[0];
+    if (!fichier) return;
+    const lignes = lireElevesCsv(await lireTexte(fichier));
+    let vmas = 0;
+    lignes.forEach(({ eleve, colonnes }) => {
+      if (!etat.eleves.some((e) => e.id === eleve.id)) etat.eleves.push(eleve);
+      const vma = lireVma(colonnes[3]);
+      if (vma != null) {
+        ficheCoureur(eleve.id).vma = vma;
+        vmas += 1;
+      }
+    });
+    champ.value = '';
+    sauver();
+    rafraichir();
+    notifier(`${lignes.length} élève${lignes.length > 1 ? 's' : ''} lu${lignes.length > 1 ? 's' : ''}, ${vmas} VMA enregistrée${vmas > 1 ? 's' : ''} ✔`);
+  },
   'dfr-tolerance': (_, champ) => {
     const v = valeurNumerique(champ, 0, 'Tolérance invalide.');
     if (v == null) return;
@@ -218,6 +248,13 @@ export function vueReglagesDemifond() {
   const r = reglagesDemifond();
   return `
     <div class="grille-reglages">
+      <div class="carte"><h2 class="carte-titre">⬇ Importer la liste d'élèves</h2>
+        ${blocImportEleves()}
+      </div>
+      <div class="carte"><h2 class="carte-titre">📄 Importer des VMA (CSV)</h2>
+        <p class="aide">Colonnes : Nom ; Prénom ; Classe ; VMA. Seuls le prénom et l'initiale du nom sont conservés.</p>
+        <label class="btn">Choisir le fichier<input type="file" accept=".csv,.txt" hidden data-choix="dfr-csv-vma"></label>
+      </div>
       ${carteSeuils(r)}
       ${carteCourse(r)}
       ${carteConsignes(r)}

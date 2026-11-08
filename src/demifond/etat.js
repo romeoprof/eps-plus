@@ -8,6 +8,11 @@ export const reglagesDemifond = () => ({
   consignes: { ...REGLAGES_DEFAUT.consignes, ...etat.reglages.demifond?.consignes },
 });
 
+export const lireVma = (texte) => {
+  const vma = parseFloat(String(texte).replace(',', '.'));
+  return vma >= 4 && vma <= 30 ? vma : null;
+};
+
 export const coureurDe = (id) => etat.coureurs.find((c) => c.id === id);
 export const courseEnCours = () => etat.courses.find((c) => c.id === etat.courseEnCours);
 
