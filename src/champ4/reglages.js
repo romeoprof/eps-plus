@@ -2,9 +2,19 @@
 import { etat } from '../noyau/etat.js';
 import { APSA } from './contenu/apsa.js';
 
-export const criteresApsa = (apsa) => etat.reglages.criteres[apsa] || APSA[apsa].criteres;
-export const projetsApsa = (apsa) => etat.reglages.projets[apsa] || APSA[apsa].projets;
-export const ficheApsa = (apsa) => etat.reglages.fiche[apsa] || projetsApsa(apsa);
+/* Priorité : réglage en cours, puis défaut choisi par l'enseignant, puis contenu d'origine. */
+const defautChoisi = (type, apsa) => etat.reglages.defauts?.[type]?.[apsa];
+export const aUnDefautChoisi = (type, apsa) => !!defautChoisi(type, apsa);
+
+export const criteresApsa = (apsa) => etat.reglages.criteres[apsa] || defautChoisi('criteres', apsa) || APSA[apsa].criteres;
+const nonVides = (liste) => liste.filter((ligne) => ligne.trim());
+export const projetsApsa = (apsa) => nonVides(etat.reglages.projets[apsa] || defautChoisi('projets', apsa) || APSA[apsa].projets);
+export const ficheApsa = (apsa) => nonVides(etat.reglages.fiche[apsa] || defautChoisi('fiche', apsa) || projetsApsa(apsa));
+
+/* Pour l'espace enseignant : garde les lignes vides en cours de saisie. */
+export function listeEditable(type, apsa) {
+  return etat.reglages[type][apsa] || (type === 'fiche' ? ficheApsa(apsa) : projetsApsa(apsa));
+}
 
 export const criteresDuMatch = (match) => match.criteres || criteresApsa(match.apsa);
 

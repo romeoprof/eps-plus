@@ -293,6 +293,12 @@ test('Contrat : un match réinitialisé oublie son contrat', () => {
   egal(enPoule.contrats, {});
 });
 
+test('Une ancienne sauvegarde reçoit bien les défauts vides', () => {
+  const ancienne = etatInitial();
+  delete ancienne.reglages.defauts;
+  egal(lireSauvegarde(JSON.parse(JSON.stringify(ancienne))).reglages.defauts, { criteres: {}, fiche: {}, projets: {} });
+});
+
 test('Bonus de contrat : seulement si activé', () => {
   egal(bonusContrat(3, { contratBonus: false, contratValeur: 2 }), 0);
   egal(bonusContrat(3, { contratBonus: true, contratValeur: 2 }), 6);

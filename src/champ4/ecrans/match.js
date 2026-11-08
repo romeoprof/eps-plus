@@ -267,6 +267,7 @@ function carteBilanProjet(m) {
 }
 
 function carteFiche(m) {
+  if (!ficheApsa(m.apsa).length) return '';
   const lignes = COTES.map(
     (cote) => `<p><b>${esc(nomCote(m, cote))}</b></p>${ficheApsa(m.apsa)
       .map(

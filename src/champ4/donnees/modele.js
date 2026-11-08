@@ -20,6 +20,7 @@ export const etatInitial = () => ({
     codeEmpreinte: null,
     contratBonus: false, // bonus chiffré affiché dans la page Progression
     contratValeur: 1, // bonus par point marqué selon le contrat
+    defauts: { criteres: {}, fiche: {}, projets: {} }, // valeurs choisies avec « Définir par défaut »
   },
   configVersion: null,
   affichage: { sombre: false, grandsBoutons: false },
