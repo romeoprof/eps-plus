@@ -6,6 +6,15 @@ const critereDe = (match, cle) => (match.criteres || []).find((c) => c.cle === c
 export const pointsDe = (match, cle) => critereDe(match, cle)?.points ?? 0;
 export const libelleDe = (match, cle) => critereDe(match, cle)?.libelle ?? cle;
 
+/* Cohérence zone / critère (zones 0 à 8 : côté A, zones 9 à 17 : côté B).
+   Un coup qui marque arrive dans le camp adverse ; une faute ne se note pas sur une zone. */
+export function coupPossible(zone, cote, points) {
+  if (zone == null || points === 0) return true;
+  if (points < 0) return false;
+  const campDeLaZone = zone < 9 ? 0 : 1;
+  return campDeLaZone !== cote;
+}
+
 export const compte = (match, equipe, cle) =>
   match.evenements.filter((e) => e.equipe === equipe && e.critere === cle).length;
 

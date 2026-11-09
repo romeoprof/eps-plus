@@ -2,7 +2,7 @@
    Ouvrir tests/index.html via le serveur local. */
 import { APSA } from '../src/champ4/contenu/apsa.js';
 import { classer } from '../src/champ4/calculs/classement.js';
-import { possesseur, score, tempsDePossession } from '../src/champ4/calculs/match.js';
+import { coupPossible, possesseur, score, tempsDePossession } from '../src/champ4/calculs/match.js';
 import { bonusContrat, contratDuMatch, elevesSuivis, suiviEleve } from '../src/champ4/calculs/progression.js';
 import { creerFichierResultats, fusionnerResultats, lireFichierResultats, paquetResultats } from '../src/champ4/donnees/fusion.js';
 import { indicateurs } from '../src/champ4/calculs/stats.js';
@@ -564,6 +564,39 @@ test('Import de VMA : prénom + initiale, VMA en 4e colonne', () => {
   const lignes = lireElevesCsv('Nom;Prénom;Classe;VMA\nMartin;Léa;5A;14,5\n');
   egal(lignes[0].eleve.nom, 'Léa M.');
   egal(lignes[0].colonnes[3], '14,5');
+});
+
+/* Raquette : zones et contrats créés par l'enseignant */
+test('Raquette : un coup gagnant n\'arrive que dans le camp adverse', () => {
+  egal(coupPossible(4, 1, 1), true); // zone côté A, joueur B marque
+  egal(coupPossible(4, 0, 1), false); // zone côté A, joueur A ne peut pas y marquer
+  egal(coupPossible(13, 0, 1), true);
+  egal(coupPossible(13, 1, 1), false);
+  egal(coupPossible(8, 0, 1), false); // dernière zone du côté A
+  egal(coupPossible(9, 0, 1), true); // première zone du côté B
+});
+
+test('Raquette : une faute ne se note pas sur une zone', () => {
+  egal(coupPossible(4, 0, -1), false);
+  egal(coupPossible(13, 0, -1), false);
+  egal(coupPossible(null, 0, -1), true);
+  egal(coupPossible(null, 0, 1), true); // la zone reste facultative
+  egal(coupPossible(4, 0, 0), true); // un critère sans point n'est pas concerné
+});
+
+test('Contrat créé : compte au score et n\'apparaît au bilan que s\'il a servi', () => {
+  const m = match('Badminton', [[0, 'gag'], [0, 'ctr1']]);
+  m.criteres.push({ cle: 'ctr1', libelle: 'Smash gagnant', points: 2, contrat: true }, { cle: 'ctr2', libelle: 'Amorti', points: 1, contrat: true });
+  m.contrats = { e1: 'ctr1' };
+  egal(score(m, 0), 3);
+  const lignes = indicateurs(m).map((l) => l[0]);
+  egal(lignes.includes('Smash gagnant'), true);
+  egal(lignes.includes('Amorti'), false);
+  const etat = etatSuivi();
+  etat.matchs = [Object.assign(m, { termine: true, termineLe: 5 })];
+  const contrat = suiviEleve(etat, 'e1').sports[0].contrat;
+  egal([contrat.points, contrat.gagnes], [2, 3]);
+  egal(contrat.lignes[0].libelle, 'Smash gagnant');
 });
 
 /* Test VMA */

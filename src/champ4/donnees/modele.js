@@ -32,6 +32,7 @@ export const etatInitial = () => ({
     contratValeur: 1, // bonus par point marqué selon le contrat
     defauts: { criteres: {}, fiche: {}, projets: {} }, // valeurs choisies avec « Définir par défaut »
     demifond: null, // tolérance, plots, sons et zones ; null = valeurs de demifond/contenu.js
+    contrats: {}, // { apsa: [{ id, nom, points }] } : contrats créés par l'enseignant
   },
   configVersion: null,
   affichage: { sombre: false, grandsBoutons: false },

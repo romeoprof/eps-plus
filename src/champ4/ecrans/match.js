@@ -2,15 +2,16 @@ import { etat, sauver } from '../../noyau/etat.js';
 import { declarerActions, notifier, rafraichir } from '../../noyau/interface.js';
 import { esc, formatChrono } from '../../noyau/outils.js';
 import { APSA, NIVEAUX_PROJET } from '../contenu/apsa.js';
-import { compte, libelleDe, possesseur, score, tempsEcoule } from '../calculs/match.js';
+import { compte, coupPossible, libelleDe, possesseur, score, tempsEcoule } from '../calculs/match.js';
 import { contratDuMatch, membresDuCote } from '../calculs/progression.js';
 import { projetPrecedent } from '../calculs/suivi.js';
 import { nouveauMatch } from '../donnees/modele.js';
-import { criteresApsa, criteresDuMatch, equipesActives, ficheApsa, matchCourant, nomCote, projetsApsa } from '../reglages.js';
+import { criteresDuMatch, equipesActives, ficheApsa, matchCourant, nomCote, projetsApsa } from '../reglages.js';
 import { terrain } from './terrain.js';
 
 let zoneChoisie = null;
 let panneauOuvert = false;
+let matchDuPanneau = null;
 let positionBalle = 50;
 let matchDeLaBalle = null;
 let minuteurRetour;
@@ -55,7 +56,9 @@ function figerContrats(m) {
   m.contrats = m.contrats || {};
   COTES.forEach((cote) =>
     membresDuCote(etat, m, cote).forEach((id) => {
-      m.contrats[id] = contratDuMatch(etat, m, id);
+      /* Un contrat supprimé entre-temps par l'enseignant n'est plus retenu. */
+      const cle = contratDuMatch(etat, m, id);
+      m.contrats[id] = criteresDuMatch(m).some((c) => c.cle === cle) ? cle : '';
     }),
   );
 }
@@ -83,8 +86,15 @@ declarerActions({
   'match-marquer': ({ equipe, cle }) => {
     const m = matchCourant();
     if (!m || m.termine) return;
-    if (!m.evenements.length) figerContrats(m);
-    if (!m.criteres) m.criteres = criteresApsa(m.apsa).map((c) => ({ ...c }));
+    const critere = criteresDuMatch(m).find((c) => c.cle === cle);
+    if (!coupPossible(zoneChoisie, Number(equipe), critere?.points ?? 0)) {
+      return notifier('Ce coup ne correspond pas à la zone touchée.');
+    }
+    if (!m.evenements.length) {
+      figerContrats(m);
+      panneauOuvert = false; // le terrain reprend sa place dès le premier point
+    }
+    if (!m.criteres) m.criteres = criteresDuMatch(m).map((c) => ({ ...c }));
     const evenement = { equipe: Number(equipe), critere: cle, t: Math.round(tempsEcoule(m) * 10) / 10 };
     if (zoneChoisie != null) evenement.zone = zoneChoisie;
     zoneChoisie = null;
@@ -230,11 +240,15 @@ function carteContrats(m) {
 
 function colonneEquipe(m, cote) {
   const contrats = clesContrat(m, cote);
+  const zone = APSA[m.apsa].terrain ? zoneChoisie : null;
   const boutons = criteresDuMatch(m)
+    /* Le bouton d'un contrat créé par l'enseignant n'apparaît que du côté de l'élève qui l'a choisi. */
+    .filter((c) => !c.contrat || contrats.includes(c.cle))
     .map((c) => {
       const couleur = c.points > 0 ? 'vert' : c.points < 0 ? 'rouge' : c.cle === 'perte' || c.cle === 'faute' ? 'orange' : '';
       const contrat = contrats.includes(c.cle);
-      return `<button class="critere ${couleur} ${contrat ? 'contrat' : ''}" ${m.termine ? 'disabled' : ''} data-action="match-marquer" data-equipe="${cote}" data-cle="${esc(c.cle)}">
+      const inactif = m.termine || !coupPossible(zone, cote, c.points);
+      return `<button class="critere ${couleur} ${contrat ? 'contrat' : ''}" ${inactif ? 'disabled' : ''} data-action="match-marquer" data-equipe="${cote}" data-cle="${esc(c.cle)}">
         <span>${contrat ? '⭐ ' : ''}${esc(c.libelle)}</span><b>${compte(m, cote, c.cle)}</b></button>`;
     })
     .join('');
@@ -244,11 +258,19 @@ function colonneEquipe(m, cote) {
 function terrainZones(m) {
   const cellule = (z) =>
     `<button class="zone ${zoneChoisie === z ? 'choisie' : ''}" data-action="match-zone" data-zone="${z}" aria-label="Zone ${z + 1}">${zoneChoisie === z ? '●' : ''}</button>`;
-  return `<div class="plateau-terrain">${terrain(m, cellule)}<p class="aide centre">Touche la zone (facultatif), puis le critère.</p></div>`;
+  const aide = zoneChoisie == null
+    ? 'Touche la zone (facultatif), puis le critère.'
+    : `Zone côté ${esc(nomCote(m, zoneChoisie < 9 ? 0 : 1))} : seul ${esc(nomCote(m, zoneChoisie < 9 ? 1 : 0))} peut y marquer. Retouche la zone pour l'enlever.`;
+  return `<div class="plateau-terrain">${terrain(m, cellule)}<p class="aide centre">${aide}</p></div>`;
 }
 
 /* Badminton et tennis de table : le terrain au centre, chaque joueur de son côté. */
 function vueRaquette(m) {
+  /* Au début d'un match, le choix du contrat est ouvert pour que l'élève le voie. */
+  if (matchDuPanneau !== m.id) {
+    matchDuPanneau = m.id;
+    panneauOuvert = !m.evenements.length;
+  }
   const chrono = m.departChrono ? '⏸' : '▶';
   return `
     <div class="barre-raquette">

@@ -16,7 +16,15 @@ export function listeEditable(type, apsa) {
   return etat.reglages[type][apsa] || (type === 'fiche' ? ficheApsa(apsa) : projetsApsa(apsa));
 }
 
-export const criteresDuMatch = (match) => match.criteres || criteresApsa(match.apsa);
+/* Contrats créés par l'enseignant : chacun devient une façon de marquer pour l'élève qui le choisit. */
+export const contratsApsa = (apsa) => etat.reglages.contrats?.[apsa] || [];
+const criteresContrat = (apsa) =>
+  contratsApsa(apsa)
+    .filter((c) => c.nom.trim())
+    .map((c) => ({ cle: c.id, libelle: c.nom.trim(), points: c.points, contrat: true }));
+
+export const criteresDuMatch = (match) =>
+  match.criteres || [...criteresApsa(match.apsa), ...criteresContrat(match.apsa)];
 
 export const nomEquipe = (id) => etat.equipes.find((e) => e.id === id)?.nom ?? '?';
 export const equipesActives = () => etat.equipes.filter((e) => !e.archivee);

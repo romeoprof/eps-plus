@@ -39,7 +39,9 @@ Le fichier en ligne est chiffré et le mot de passe n'est enregistré nulle part
 
 Espace enseignant → « Progression des élèves ». Seuls les élèves de la liste choisis dans une équipe ou comme joueur seul sont suivis. En sport collectif, ils reçoivent les statistiques de leur équipe.
 
-En badminton et en tennis de table, le contrat se choisit sur l'écran du match. Ses points sont mis en avant dans la progression, sans changer le score. Le bonus chiffré s'active et se règle dans Espace enseignant → Réglages.
+En badminton et en tennis de table, l'enseignant crée les contrats dans Espace enseignant → Réglages, en choisissant le sport. L'élève en choisit un sur l'écran du match (bouton ⭐ Contrat) : un contrat créé ajoute un bouton de son côté et ses points comptent au score ; ils sont aussi mis en avant dans la progression.
+
+Sur ces deux sports, un coup qui marque ne peut être noté que sur une zone du camp adverse, et une faute ne se note pas sur une zone. Le bonus chiffré s'active et se règle dans Espace enseignant → Réglages.
 
 ## Demi-fond
 

@@ -62,7 +62,10 @@ function statsDuel(match) {
     ['Points', score(match, 0), score(match, 1)],
     ['Part des points', pourcent(score(match, 0), total), pourcent(score(match, 1), total)],
   ];
-  criteres.forEach((c) => lignes.push([c.libelle, compte(match, 0, c.cle), compte(match, 1, c.cle)]));
+  /* Un contrat n'apparaît que s'il a servi dans ce match. */
+  criteres
+    .filter((c) => !c.contrat || compte(match, 0, c.cle) + compte(match, 1, c.cle) > 0)
+    .forEach((c) => lignes.push([c.libelle, compte(match, 0, c.cle), compte(match, 1, c.cle)]));
   const somme = (eq, liste) => liste.reduce((s, c) => s + compte(match, eq, c.cle), 0);
   const reussite = (eq) => {
     const gagnants = somme(eq, criteres.filter((c) => c.points > 0));

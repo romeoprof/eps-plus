@@ -4,7 +4,7 @@ import { empreinte, esc, uid } from '../../noyau/outils.js';
 import { APSA } from '../contenu/apsa.js';
 import { exporterConfiguration, exporterElevesProteges } from '../donnees/export.js';
 import { importerEleves } from '../donnees/operations.js';
-import { aUnDefautChoisi, criteresApsa, listeEditable } from '../reglages.js';
+import { aUnDefautChoisi, contratsApsa, criteresApsa, listeEditable } from '../reglages.js';
 import { vueReglagesDemifond } from '../../demifond/ecrans/reglages.js';
 import { blocImportEleves } from './import-eleves.js';
 import { vueProgression } from './progression.js';
@@ -125,6 +125,27 @@ declarerActions({
     sauver();
     rafraichir();
   },
+  'ens-contrat-ajouter': ({ apsa }) => {
+    etat.reglages.contrats[apsa] = [...contratsApsa(apsa), { id: `ctr${uid()}`, nom: 'Nouveau contrat', points: 1 }];
+    sauver();
+    rafraichir();
+    [...document.querySelectorAll('[data-saisie="ens-contrat-nom"]')].pop()?.select();
+  },
+  'ens-contrat-nom': ({ apsa, rang }, champ) => {
+    contratsApsa(apsa)[rang].nom = champ.value;
+    sauver();
+  },
+  'ens-contrat-points': ({ apsa, rang, pas }) => {
+    const contrat = contratsApsa(apsa)[rang];
+    contrat.points = Math.min(POINTS_MAX, Math.max(1, contrat.points + Number(pas)));
+    sauver();
+    rafraichir();
+  },
+  'ens-contrat-retirer': ({ apsa, rang }) => {
+    contratsApsa(apsa).splice(Number(rang), 1);
+    sauver();
+    rafraichir();
+  },
   'ens-ligne': ({ type, apsa, rang }, champ) => {
     listeModifiable(type, apsa)[rang] = champ.value;
     sauver();
@@ -238,6 +259,29 @@ const carteCriteres = (apsa, a) => `
     </div>
   </div>`;
 
+function carteContratsEnseignant(apsa, a) {
+  const tuiles = contratsApsa(apsa)
+    .map((c, rang) => {
+      const reperes = `data-apsa="${a}" data-rang="${rang}"`;
+      return `<div class="tuile-critere positif">
+        <input value="${esc(c.nom)}" aria-label="Nom du contrat" placeholder="Nom du contrat" data-saisie="ens-contrat-nom" ${reperes}>
+        <div class="tuile-critere-bas">
+          <span class="etiquette-points">Points</span>
+          <button class="btn-rond" aria-label="Retirer un point à ${esc(c.nom)}" ${c.points <= 1 ? 'disabled' : ''} data-action="ens-contrat-points" data-pas="-1" ${reperes}>−</button>
+          <b class="valeur-points">+${c.points}</b>
+          <button class="btn-rond" aria-label="Ajouter un point à ${esc(c.nom)}" ${c.points >= POINTS_MAX ? 'disabled' : ''} data-action="ens-contrat-points" data-pas="1" ${reperes}>+</button>
+          <button class="btn-rond supprimer" aria-label="Supprimer ${esc(c.nom)}" data-action="ens-contrat-retirer" ${reperes}>✕</button>
+        </div>
+      </div>`;
+    })
+    .join('');
+  return `<div class="carte"><h2 class="carte-titre">⭐ Contrats <small>${a}</small></h2>
+    <p class="aide">Chaque contrat créé est proposé à l'élève sur l'écran du match, en plus des coups gagnants ci-dessus. S'il le choisit, un bouton ⭐ à son nom apparaît de son côté. Les changements s'appliquent aux prochains matchs.</p>
+    ${tuiles ? `<div class="grille-criteres">${tuiles}</div>` : ''}
+    <button class="btn" data-action="ens-contrat-ajouter" data-apsa="${a}">＋ Créer un contrat</button>
+  </div>`;
+}
+
 function carteListe(type, titre, description, apsa, a) {
   const reperes = `data-type="${type}" data-apsa="${a}"`;
   const lignes = listeEditable(type, apsa)
@@ -327,6 +371,7 @@ export function vueEnseignant() {
       apsa === DEMIFOND
         ? vueReglagesDemifond()
         : `${carteCriteres(apsa, a)}
+           ${APSA[apsa].terrain ? carteContratsEnseignant(apsa, a) : ''}
            <div class="grille-reglages">
              ${carteListe('fiche', "📋 Fiche d'observation", "Critère de la fiche d'observation", apsa, a)}
              ${carteListe('projets', '🎯 Projets de jeu proposés', 'Projet de jeu', apsa, a)}
