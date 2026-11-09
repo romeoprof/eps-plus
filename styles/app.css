@@ -44,13 +44,14 @@ body.sombre {
 
 [hidden] { display: none !important; }
 
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; background: #e8f4fd; }
 
 body {
   margin: 0 auto;
   max-width: 1100px;
   padding: 12px;
-  padding-bottom: 40px;
+  padding-top: max(12px, env(safe-area-inset-top));
+  padding-bottom: max(40px, env(safe-area-inset-bottom));
   background: var(--fond);
   color: var(--texte);
   font: 17px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -469,8 +470,10 @@ body.en-course #entete { display: none; }
 .champ-vma input { width: 60px; margin: 0; padding: 8px 6px; font-weight: 800; text-align: center; }
 
 .grille-parametres { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0 12px; }
-.grille-parametres label { font-size: .92rem; font-weight: 800; }
+/* Le texte peut tenir sur une ou deux lignes : les cases restent alignées en bas. */
+.grille-parametres label { display: flex; flex-direction: column; justify-content: space-between; font-size: .92rem; font-weight: 800; }
 .grille-parametres input { margin-top: 4px; }
+.btn.a-valider { background: var(--orange); box-shadow: 0 0 0 3px rgba(234, 88, 12, .3); }
 .carte-projet { display: flex; flex-direction: column; gap: 8px; }
 .reglage-pct { display: flex; flex: none; align-items: center; gap: 6px; padding: 3px; background: var(--fond); border: 2px solid var(--bleu); border-radius: 24px; }
 .reglage-pct b { min-width: 58px; color: var(--titre); font-size: 1.1rem; font-weight: 900; text-align: center; }

@@ -43,7 +43,7 @@ En badminton et en tennis de table, le contrat se choisit sur l'écran du match.
 
 ## Demi-fond
 
-Menu principal → Activités athlétiques → Demi-fond. Quatre onglets : Coureurs (VMA, 8 coureurs maximum), Projet (course, % de VMA), Course (un appui à chaque plot), Bilan. La liste d'élèves et les VMA s'importent uniquement dans Espace enseignant → Demi-fond. Les seuils, les consignes, la tolérance (0,5 km/h par défaut), les valeurs par défaut des courses et la limite de double appui se règlent dans Espace enseignant → Demi-fond, ou dans `src/demifond/contenu.js`.
+Menu principal → Activités athlétiques → Demi-fond. Quatre onglets : Coureurs (VMA, 8 coureurs maximum), Projet (course, % de VMA), Course (un appui à chaque plot), Bilan. La liste d'élèves et les VMA s'importent uniquement dans Espace enseignant → Réglages → Demi-fond. Les seuils, les consignes, la tolérance (0,5 km/h par défaut), les valeurs par défaut des courses et la limite de double appui se règlent au même endroit, ou dans `src/demifond/contenu.js`.
 
 La consigne (SUPER, ACCÉLÈRE, RALENTIS) et l'écart affiché sur la carte comparent la vitesse du dernier segment au projet, au dixième près. L'objectif du bilan compare la vitesse moyenne au projet. Un passage impliquant plus de 30 km/h (réglable), ou moins d'une seconde après le précédent, est ignoré comme double appui. Les courses alimentent la Progression des élèves et le regroupement des tablettes.
 
@@ -53,7 +53,7 @@ Une course sur distance se termine avec le bouton « Terminer ». Une course sur
 
 ## Test VMA
 
-Menu principal → Activités athlétiques → Test VMA. Se règlent : vitesse initiale, incrémentation, durée d'un palier et distance entre repères (`src/testvma/calculs.js` pour les valeurs d'origine). Un bip retentit à chaque repère, plus aigu et plus long au premier repère de chaque palier. À l'arrêt : VMA = vitesse du palier + incrément × part du palier réalisée ; VO₂max estimée = VMA × 3,5. Les résultats ne sont pas rattachés à un élève et ne partent pas dans le regroupement des tablettes.
+Menu principal → Activités athlétiques → Test VMA. Se règlent : vitesse initiale, incrémentation, durée d'un palier et distance entre repères (`src/testvma/calculs.js` pour les valeurs d'origine). Le test ne change qu'après « Valider ces valeurs ». Un bip retentit à chaque repère, plus aigu et plus long au premier repère de chaque palier. À l'arrêt : VMA = vitesse du palier + incrément × part du palier réalisée ; VO₂max estimée = VMA × 3,5. Les résultats ne sont pas rattachés à un élève et ne partent pas dans le regroupement des tablettes.
 
 ## Regrouper les résultats sur la tablette enseignant
 

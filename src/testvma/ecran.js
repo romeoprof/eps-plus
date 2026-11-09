@@ -6,6 +6,7 @@ import { erreurParametre, paliersDuTest, PARAMETRES_DEFAUT, resultatTest, situat
 
 let affichage = 'focus';
 let rangConnu = null;
+let brouillon = null; // valeurs saisies, pas encore validées
 let contexteAudio = null;
 let verrouEcran = null;
 
@@ -17,6 +18,7 @@ const CHAMPS = [
 ];
 
 const test = () => etat.testVma;
+const valeurAffichee = (nom) => brouillon?.[nom] ?? decimal(test()[nom]);
 const enCours = () => !!test().depart && !test().arret;
 const tempsEcoule = (maintenant = Date.now()) =>
   test().depart ? ((test().arret || maintenant) - test().depart) / 1000 : 0;
@@ -91,23 +93,32 @@ function actualiser() {
 setInterval(actualiser, 50);
 
 declarerActions({
-  'tv-parametre': ({ nom }, champ) => {
-    const valeur = parseFloat(String(champ.value).replace(',', '.'));
-    const erreur = erreurParametre(nom, valeur);
-    if (erreur) {
-      notifier(erreur);
-    } else {
-      test()[nom] = valeur;
-      sauver();
+  'tv-saisie': ({ nom }, champ) => {
+    brouillon = { ...brouillon, [nom]: champ.value };
+    document.querySelector('[data-action="tv-valider"]')?.classList.add('a-valider');
+  },
+  'tv-valider': () => {
+    const valeurs = {};
+    for (const { nom } of CHAMPS) {
+      const valeur = parseFloat(String(valeurAffichee(nom)).replace(',', '.'));
+      const erreur = erreurParametre(nom, valeur);
+      if (erreur) return notifier(erreur);
+      valeurs[nom] = valeur;
     }
+    Object.assign(test(), valeurs);
+    brouillon = null;
+    sauver();
     rafraichir();
+    notifier('Test mis à jour ✔');
   },
   'tv-defaut': () => {
     Object.assign(test(), PARAMETRES_DEFAUT);
+    brouillon = null;
     sauver();
     rafraichir();
   },
   'tv-depart': () => {
+    if (brouillon) return notifier('Valide d\'abord tes valeurs.');
     bip(1000, 0.05, 0.05); // débloque le son sur tablette
     test().depart = Date.now();
     test().arret = null;
@@ -142,11 +153,14 @@ const carteReglages = () => `
   <div class="carte"><h2 class="carte-titre">⚙️ Réglages du test</h2>
     <div class="grille-parametres">
       ${CHAMPS.map(
-        (c) => `<label>${esc(c.libelle)}<input inputmode="${c.mode}" value="${decimal(test()[c.nom])}" data-choix="tv-parametre" data-nom="${c.nom}"></label>`,
+        (c) => `<label>${esc(c.libelle)}<input inputmode="${c.mode}" value="${esc(valeurAffichee(c.nom))}" data-saisie="tv-saisie" data-nom="${c.nom}"></label>`,
       ).join('')}
     </div>
-    <p class="aide">Les valeurs restent enregistrées sur cette tablette. Un palier contient un nombre entier de repères : il peut durer un peu moins que la durée choisie.</p>
-    <button class="btn secondaire" data-action="tv-defaut">Rétablir les valeurs d'origine</button>
+    <div class="rangee sans-marge">
+      <button class="btn ${brouillon ? 'a-valider' : ''}" data-action="tv-valider">✓ Valider ces valeurs</button>
+      <button class="btn secondaire" data-action="tv-defaut">Rétablir les valeurs d'origine</button>
+    </div>
+    <p class="aide marge-haut">Les valeurs restent enregistrées sur cette tablette. Un palier contient un nombre entier de repères : il peut durer un peu moins que la durée choisie.</p>
   </div>`;
 
 function carteResultat(paliers) {

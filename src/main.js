@@ -149,6 +149,10 @@ definirDessin(() => {
   if (vue.ecran === 'champ4' && !etat.apsa) vue.ecran = 'accueil';
   document.body.classList.toggle('sombre', etat.affichage.sombre);
   document.body.classList.toggle('grands', etat.affichage.grandsBoutons);
+  /* La zone autour de l'application (barre d'état de l'iPad) suit le fond, clair ou sombre. */
+  const couleurFond = etat.affichage.sombre ? '#0f172a' : '#e8f4fd';
+  document.documentElement.style.background = couleurFond;
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', couleurFond);
   /* Pendant une course, on masque l'en-tête pour laisser la place aux coureurs. */
   const testEnCours = vue.ecran === 'testvma' && !!etat.testVma.depart && !etat.testVma.arret;
   const match = vue.ecran === 'champ4' && vue.onglet === 'match' ? matchCourant() : null;

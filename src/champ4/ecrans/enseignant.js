@@ -12,6 +12,7 @@ import { vueRecolte } from './recolte.js';
 
 const EMPREINTE_PAR_DEFAUT = '74id85';
 const POINTS_MAX = 10;
+const DEMIFOND = 'demifond'; // sport réglé à part : ses réglages ont leur propre écran
 
 let deverrouille = false;
 let pageEnseignant = 'reglages';
@@ -186,12 +187,13 @@ declarerActions({
 const vueVerrou = () => `
   <div class="carte verrou"><h2 class="carte-titre">🔒 Espace enseignant</h2>
     <label class="etiquette" for="code">Code d'accès</label>
-    <input id="code" type="password" inputmode="numeric" autocomplete="off" placeholder="Code">
+    <input id="code" type="password" inputmode="text" autocapitalize="off" autocorrect="off" autocomplete="off" placeholder="Code">
     <button class="btn" data-action="ens-entrer">Entrer</button>
   </div>`;
 
 const choixDuSport = (apsa) => `
   <div class="choix-sports" role="group" aria-label="Sport à régler">
+    <button class="choix-sport ${apsa === DEMIFOND ? 'actif' : ''}" aria-pressed="${apsa === DEMIFOND}" data-action="ens-apsa" data-apsa="${DEMIFOND}"><span aria-hidden="true">🏃</span>Demi-fond</button>
     ${Object.keys(APSA)
       .map(
         (k) => `<button class="choix-sport ${k === apsa ? 'actif' : ''}" aria-pressed="${k === apsa}" data-action="ens-apsa" data-apsa="${esc(k)}"><span aria-hidden="true">${APSA[k].icone}</span>${esc(k)}</button>`,
@@ -310,23 +312,26 @@ const carteCode = () => `
 
 export function vueEnseignant() {
   if (!deverrouille) return vueVerrou();
-  const apsa = apsaEditee && APSA[apsaEditee] ? apsaEditee : etat.apsa || Object.keys(APSA)[0];
+  const apsa = apsaEditee === DEMIFOND || APSA[apsaEditee] ? apsaEditee : etat.apsa || DEMIFOND;
   apsaEditee = apsa;
   const a = esc(apsa);
   const onglet = (id, libelle) =>
     `<button role="tab" aria-selected="${pageEnseignant === id}" class="onglet ${pageEnseignant === id ? 'actif' : ''}" data-action="ens-page" data-page="${id}">${libelle}</button>`;
-  const navigation = `<div class="onglets marge-bas" role="tablist">${onglet('reglages', '⚙️ Réglages')}${onglet('demifond', '🏃 Demi-fond')}${onglet('progression', '📈 Progression')}${onglet('recolte', '🔄 Récupérer les données')}</div>`;
-  if (pageEnseignant === 'demifond') return navigation + vueReglagesDemifond();
+  const navigation = `<div class="onglets marge-bas" role="tablist">${onglet('reglages', '⚙️ Réglages')}${onglet('progression', '📈 Progression')}${onglet('recolte', '🔄 Récupérer les données')}</div>`;
   if (pageEnseignant === 'progression') return navigation + vueProgression();
   if (pageEnseignant === 'recolte') return navigation + vueRecolte();
   return `${navigation}
     <h2 class="titre-section">Réglages par sport</h2>
     ${choixDuSport(apsa)}
-    ${carteCriteres(apsa, a)}
-    <div class="grille-reglages">
-      ${carteListe('fiche', "📋 Fiche d'observation", "Critère de la fiche d'observation", apsa, a)}
-      ${carteListe('projets', '🎯 Projets de jeu proposés', 'Projet de jeu', apsa, a)}
-    </div>
+    ${
+      apsa === DEMIFOND
+        ? vueReglagesDemifond()
+        : `${carteCriteres(apsa, a)}
+           <div class="grille-reglages">
+             ${carteListe('fiche', "📋 Fiche d'observation", "Critère de la fiche d'observation", apsa, a)}
+             ${carteListe('projets', '🎯 Projets de jeu proposés', 'Projet de jeu', apsa, a)}
+           </div>`
+    }
     <h2 class="titre-section">Réglages généraux</h2>
     <div class="grille-reglages">
       ${carteOptions()}
