@@ -12,6 +12,7 @@ import { chiffrer } from '../src/noyau/chiffrement.js';
 import { lireSauvegarde, migrerV3 } from '../src/champ4/donnees/migration.js';
 import { etatInitial, nouveauMatch } from '../src/champ4/donnees/modele.js';
 import { importerEleves, lireElevesCsv, reinitialiserBilans, supprimerEquipe } from '../src/champ4/donnees/operations.js';
+import { erreurParametre, paliersDuTest, resultatTest, situationTest } from '../src/testvma/calculs.js';
 import { PCT_PAS, REGLAGES_DEFAUT } from '../src/demifond/contenu.js';
 import {
   aCouru,
@@ -563,6 +564,58 @@ test('Import de VMA : prénom + initiale, VMA en 4e colonne', () => {
   const lignes = lireElevesCsv('Nom;Prénom;Classe;VMA\nMartin;Léa;5A;14,5\n');
   egal(lignes[0].eleve.nom, 'Léa M.');
   egal(lignes[0].colonnes[3], '14,5');
+});
+
+/* Test VMA */
+const PROTOCOLE_LEGER = { vitesse: 8, increment: 0.5, duree: 60, distance: 20 };
+const chronoArrondi = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+
+test('Test VMA : mêmes temps de passage que le tableau de référence', () => {
+  const paliers = paliersDuTest(PROTOCOLE_LEGER);
+  egal(paliers[0].vitesse, 8);
+  egal(paliers[0].passages.map(chronoArrondi), ['0:09', '0:18', '0:27', '0:36', '0:45', '0:54']);
+  egal(paliers[1].vitesse, 8.5);
+  egal(paliers[1].passages.slice(0, 5).map(chronoArrondi), ['1:02', '1:10', '1:19', '1:27', '1:36']);
+  egal(paliers[2].passages.slice(0, 5).map(chronoArrondi), ['2:01', '2:09', '2:17', '2:25', '2:33']);
+  egal(paliers[paliers.length - 1].vitesse, 25);
+});
+
+test('Test VMA : les incréments sans erreur d\'arrondi (10, 10,1, 10,2…)', () => {
+  const paliers = paliersDuTest({ vitesse: 10, increment: 0.1, duree: 60, distance: 20 });
+  egal(paliers.slice(0, 4).map((p) => p.vitesse), [10, 10.1, 10.2, 10.3]);
+});
+
+test('Test VMA : position dans le test', () => {
+  const paliers = paliersDuTest(PROTOCOLE_LEGER);
+  const avant = situationTest(paliers, 0);
+  egal(avant.dernier, null);
+  egal(chronoArrondi(avant.suivant.t), '0:09');
+  const ensuite = situationTest(paliers, 9.1);
+  egal(ensuite.dernier.colonne, 1);
+  egal(ensuite.dernier.palier.numero, 1);
+  egal(chronoArrondi(ensuite.suivant.t), '0:18');
+  const palier2 = situationTest(paliers, 63);
+  egal(palier2.dernier.palier.numero, 2);
+  egal(palier2.dernier.colonne, 1);
+});
+
+test('Test VMA : VMA avec part du palier réalisée, et VO₂max', () => {
+  const paliers = paliersDuTest(PROTOCOLE_LEGER);
+  const debut = resultatTest(paliers, 0, PROTOCOLE_LEGER);
+  egal([debut.vma, debut.palier, debut.reperes, debut.distance], [8, 1, 0, 0]);
+  const moitie = resultatTest(paliers, 27.1, PROTOCOLE_LEGER); // 3 repères sur 6 au palier 1
+  egal(moitie.vma, 8.25);
+  egal(moitie.vo2, 8.25 * 3.5);
+  egal(moitie.distance, 60);
+});
+
+test('Test VMA : paramètres impossibles refusés', () => {
+  egal(erreurParametre('vitesse', 10), null);
+  vrai(erreurParametre('vitesse', 40) != null, 'vitesse trop haute acceptée');
+  vrai(erreurParametre('increment', 0) != null, 'incrément nul accepté');
+  vrai(erreurParametre('increment', NaN) != null, 'incrément vide accepté');
+  vrai(erreurParametre('duree', 2) != null, 'durée trop courte acceptée');
+  vrai(erreurParametre('distance', 1) != null, 'distance trop courte acceptée');
 });
 
 test('Une ancienne sauvegarde reçoit bien les défauts vides', () => {

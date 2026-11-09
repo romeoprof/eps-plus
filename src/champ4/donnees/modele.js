@@ -1,4 +1,5 @@
 import { uid } from '../../noyau/outils.js';
+import { PARAMETRES_DEFAUT } from '../../testvma/calculs.js';
 
 export const VERSION_DONNEES = 2;
 
@@ -17,6 +18,8 @@ export const etatInitial = () => ({
   courses: [],
   courseEnCours: null,
   courseBilan: null,
+  /* Test VMA : réglages personnalisés et test en cours */
+  testVma: { ...PARAMETRES_DEFAUT, depart: null, arret: null },
   /* null = valeur réglée dans l'espace enseignant */
   prepCourse: { selection: [], pct: {}, type: null, distance: null, duree: null, plots: null, tolerance: null },
   reglages: {

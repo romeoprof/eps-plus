@@ -4,6 +4,7 @@ import { brancherEvenements, declarerActions, definirDessin, notifier, rafraichi
 import { esc } from './noyau/outils.js';
 import { vueAccueil } from './ecrans/accueil.js';
 import { APSA } from './champ4/contenu/apsa.js';
+import { matchCourant } from './champ4/reglages.js';
 import { vueBilan } from './champ4/ecrans/bilan.js';
 import { vueEnseignant } from './champ4/ecrans/enseignant.js';
 import { vueEquipes } from './champ4/ecrans/equipes.js';
@@ -11,6 +12,7 @@ import { vueMatch } from './champ4/ecrans/match.js';
 import { vuePoules } from './champ4/ecrans/poules.js';
 import { ONGLETS_DF, vueDemifond } from './demifond/ecrans/module.js';
 import { oublierChoixCourse } from './demifond/ecrans/reglages.js';
+import { vueTestVma } from './testvma/ecran.js';
 
 const ONGLETS = [
   { id: 'equipes', libelle: '👥 Équipes', vue: vueEquipes },
@@ -94,14 +96,17 @@ function indicateurSauvegarde() {
 function dessinerEnTete() {
   const champ4 = vue.ecran === 'champ4';
   const demifond = vue.ecran === 'demifond';
+  const testVma = vue.ecran === 'testvma';
   const sousTitre = champ4
     ? esc(etat.apsa)
     : demifond
       ? 'Demi-fond'
-      : vue.ecran === 'enseignant'
-        ? 'Espace enseignant'
-        : 'Saint-Joseph Auneau';
-  const icone = champ4 ? APSA[etat.apsa].icone : demifond ? '🏃' : '🏅';
+      : testVma
+        ? 'Test VMA'
+        : vue.ecran === 'enseignant'
+          ? 'Espace enseignant'
+          : 'Saint-Joseph Auneau';
+  const icone = champ4 ? APSA[etat.apsa].icone : demifond ? '🏃' : testVma ? '📈' : '🏅';
   document.querySelector('#entete').innerHTML = `
     <div class="marque"><span class="marque-icone">${icone}</span><div><h1>EPS +</h1><small>${sousTitre}</small></div></div>
     <div class="commandes">
@@ -115,7 +120,7 @@ function dessinerEnTete() {
 
 function dessinerNavigation() {
   const barre = document.querySelector('#navigation');
-  if (vue.ecran === 'enseignant') {
+  if (vue.ecran === 'enseignant' || vue.ecran === 'testvma') {
     barre.innerHTML = `<button class="btn-retour" data-action="accueil">← Menu principal</button>`;
   } else if (vue.ecran === 'champ4') {
     barre.innerHTML = `<button class="btn-retour" data-action="menu-principal">← Menu principal</button>
@@ -136,6 +141,7 @@ function contenu() {
   if (vue.ecran === 'enseignant') return vueEnseignant();
   if (vue.ecran === 'accueil') return vueAccueil();
   if (vue.ecran === 'demifond') return vueDemifond();
+  if (vue.ecran === 'testvma') return vueTestVma();
   return ONGLETS.find((o) => o.id === vue.onglet).vue();
 }
 
@@ -144,7 +150,10 @@ definirDessin(() => {
   document.body.classList.toggle('sombre', etat.affichage.sombre);
   document.body.classList.toggle('grands', etat.affichage.grandsBoutons);
   /* Pendant une course, on masque l'en-tête pour laisser la place aux coureurs. */
-  document.body.classList.toggle('en-course', vue.ecran === 'demifond' && vue.ongletDF === 'course' && !!etat.courseEnCours);
+  const testEnCours = vue.ecran === 'testvma' && !!etat.testVma.depart && !etat.testVma.arret;
+  const match = vue.ecran === 'champ4' && vue.onglet === 'match' ? matchCourant() : null;
+  const raquetteEnCours = !!match && !match.termine && !!APSA[match.apsa]?.terrain;
+  document.body.classList.toggle('en-course', testEnCours || raquetteEnCours || (vue.ecran === 'demifond' && vue.ongletDF === 'course' && !!etat.courseEnCours));
   dessinerEnTete();
   dessinerNavigation();
   document.querySelector('#contenu').innerHTML = contenu();
@@ -163,6 +172,8 @@ if (etat.courseEnCours) {
   vue.ecran = 'demifond';
   vue.ongletDF = 'course';
 }
+/* Un test VMA en cours reprend de même. */
+if (etat.testVma.depart && !etat.testVma.arret) vue.ecran = 'testvma';
 rafraichir();
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

@@ -1,7 +1,7 @@
 /* Fonctionnement hors connexion : réseau d'abord, copie locale si pas de réseau.
    Ajouter ici tout nouveau fichier de l'application, et changer VERSION. */
 const PREFIXE = 'eps-plus-';
-const VERSION = `${PREFIXE}13`;
+const VERSION = `${PREFIXE}15`;
 const FICHIERS = [
   './',
   'index.html',
@@ -16,6 +16,8 @@ const FICHIERS = [
   'src/noyau/etat.js',
   'src/noyau/interface.js',
   'src/noyau/outils.js',
+  'src/testvma/calculs.js',
+  'src/testvma/ecran.js',
   'src/demifond/calculs.js',
   'src/demifond/contenu.js',
   'src/demifond/etat.js',

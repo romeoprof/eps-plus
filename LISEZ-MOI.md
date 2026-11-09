@@ -51,6 +51,10 @@ La barre de chaque coureur montre son avancée idéale entre deux plots : elle r
 
 Une course sur distance se termine avec le bouton « Terminer ». Une course sur temps s'arrête seule : une fenêtre demande la distance de chaque coureur depuis son dernier plot, puis l'allure de ce dernier morceau et la distance totale sont calculées.
 
+## Test VMA
+
+Menu principal → Activités athlétiques → Test VMA. Se règlent : vitesse initiale, incrémentation, durée d'un palier et distance entre repères (`src/testvma/calculs.js` pour les valeurs d'origine). Un bip retentit à chaque repère, plus aigu et plus long au premier repère de chaque palier. À l'arrêt : VMA = vitesse du palier + incrément × part du palier réalisée ; VO₂max estimée = VMA × 3,5. Les résultats ne sont pas rattachés à un élève et ne partent pas dans le regroupement des tablettes.
+
 ## Regrouper les résultats sur la tablette enseignant
 
 Espace enseignant → « Récupérer les données ». Sur chaque tablette : saisir un mot de passe, créer et envoyer le fichier chiffré. Sur la tablette enseignant : saisir le même mot de passe et choisir les fichiers reçus.

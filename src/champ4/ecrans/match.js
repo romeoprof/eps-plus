@@ -2,7 +2,6 @@ import { etat, sauver } from '../../noyau/etat.js';
 import { declarerActions, notifier, rafraichir } from '../../noyau/interface.js';
 import { esc, formatChrono } from '../../noyau/outils.js';
 import { APSA, NIVEAUX_PROJET } from '../contenu/apsa.js';
-import { TERRAINS } from '../contenu/terrains.js';
 import { compte, libelleDe, possesseur, score, tempsEcoule } from '../calculs/match.js';
 import { contratDuMatch, membresDuCote } from '../calculs/progression.js';
 import { projetPrecedent } from '../calculs/suivi.js';
@@ -11,6 +10,7 @@ import { criteresApsa, criteresDuMatch, equipesActives, ficheApsa, matchCourant,
 import { terrain } from './terrain.js';
 
 let zoneChoisie = null;
+let panneauOuvert = false;
 let positionBalle = 50;
 let matchDeLaBalle = null;
 let minuteurRetour;
@@ -127,6 +127,10 @@ declarerActions({
     sauver();
     rafraichir();
   },
+  'match-panneau': () => {
+    panneauOuvert = !panneauOuvert;
+    rafraichir();
+  },
   'match-zone': ({ zone }) => {
     const z = Number(zone);
     zoneChoisie = zoneChoisie === z ? null : z;
@@ -237,10 +241,37 @@ function colonneEquipe(m, cote) {
   return `<div class="colonne-equipe"><h3 class="nom-equipe cote-${cote}">${esc(nomCote(m, cote))}</h3>${boutons}</div>`;
 }
 
-function carteZones(m) {
+function terrainZones(m) {
   const cellule = (z) =>
     `<button class="zone ${zoneChoisie === z ? 'choisie' : ''}" data-action="match-zone" data-zone="${z}" aria-label="Zone ${z + 1}">${zoneChoisie === z ? '●' : ''}</button>`;
-  return `<div class="carte"><h2 class="carte-titre">Où ? <small>Touche la zone, puis le critère.</small></h2>${terrain(m, cellule)}</div>`;
+  return `<div class="plateau-terrain">${terrain(m, cellule)}<p class="aide centre">Touche la zone (facultatif), puis le critère.</p></div>`;
+}
+
+/* Badminton et tennis de table : le terrain au centre, chaque joueur de son côté. */
+function vueRaquette(m) {
+  const chrono = m.departChrono ? '⏸' : '▶';
+  return `
+    <div class="barre-raquette">
+      <div class="br-score">
+        <span class="br-nom cote-0">${esc(nomCote(m, 0))}</span>
+        <b class="score-a">${score(m, 0)}</b><span class="score-tiret">–</span><b class="score-b">${score(m, 1)}</b>
+        <span class="br-nom cote-1">${esc(nomCote(m, 1))}</span>
+      </div>
+      <div class="br-commandes">
+        <button class="btn secondaire" data-action="match-chrono" aria-label="${m.departChrono ? 'Mettre le chrono en pause' : 'Lancer le chrono'}">${chrono} <span id="chrono">${formatChrono(tempsEcoule(m))}</span></button>
+        <button class="btn secondaire" data-action="match-annuler" aria-label="Annuler le dernier" title="Annuler le dernier" ${m.evenements.length ? '' : 'disabled'}>↩</button>
+        <button class="btn secondaire" aria-pressed="${panneauOuvert}" data-action="match-panneau">⭐ Contrat</button>
+        <button class="btn contour-rouge" data-action="match-fin">Fin du match</button>
+        <button class="btn secondaire" data-action="match-fermer" aria-label="Fermer le match" title="Fermer le match">✕</button>
+      </div>
+    </div>
+    ${panneauOuvert ? `${carteContrats(m)}${carteProjetAObserver(m)}` : ''}
+    <div class="plateau-raquette">
+      ${colonneEquipe(m, 0)}
+      ${terrainZones(m)}
+      ${colonneEquipe(m, 1)}
+    </div>
+    ${carteJournal(m)}`;
 }
 
 function carteProjetAObserver(m) {
@@ -309,7 +340,7 @@ export function vueMatch() {
   const m = matchCourant();
   if (!m || m.apsa !== etat.apsa) return vueMatchLibre();
   garderEcranAllume();
-  const avecTerrain = !m.termine && TERRAINS[m.apsa];
+  if (APSA[m.apsa].terrain && !m.termine) return vueRaquette(m);
   const apresMatch = m.termine
     ? carteBilanProjet(m) + carteFiche(m) + (etat.reglages.conseil ? carteProjets(m) : '')
     : carteProjetAObserver(m);
@@ -326,10 +357,6 @@ export function vueMatch() {
       </div>
     </div>
     ${apresMatch}
-    ${APSA[m.apsa].terrain && !m.termine ? carteContrats(m) : ''}
-    <div class="disposition ${avecTerrain ? 'avec-terrain' : ''}">
-      ${avecTerrain ? carteZones(m) : ''}
-      <div class="colonnes-equipes">${colonneEquipe(m, 0)}${colonneEquipe(m, 1)}</div>
-    </div>
+    <div class="colonnes-equipes">${colonneEquipe(m, 0)}${colonneEquipe(m, 1)}</div>
     ${carteJournal(m)}`;
 }

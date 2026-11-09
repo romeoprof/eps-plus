@@ -24,7 +24,10 @@ export const FAMILLES = [
   {
     titre: 'Activités athlétiques',
     couleur: 'turquoise',
-    activites: [{ nom: 'Demi-fond', icone: '🏃', module: 'demifond' }],
+    activites: [
+      { nom: 'Demi-fond', icone: '🏃', module: 'demifond' },
+      { nom: 'Test VMA', icone: '📈', module: 'testvma' },
+    ],
   },
   {
     titre: "Activités d'expression",
