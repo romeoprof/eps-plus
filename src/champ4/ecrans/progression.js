@@ -3,6 +3,7 @@ import { etat } from '../../noyau/etat.js';
 import { declarerActions, rafraichir } from '../../noyau/interface.js';
 import { avecSigne, decimal, esc, formatChrono, pourcent } from '../../noyau/outils.js';
 import { suiviDemifond } from '../../demifond/calculs.js';
+import { testsVmaEleve } from '../../testvma/cooper.js';
 import { dateCourte } from '../../demifond/etat.js';
 import { APSA, NIVEAUX_PROJET } from '../contenu/apsa.js';
 import { bonusContrat, elevesSuivis, suiviEleve } from '../calculs/progression.js';
@@ -103,14 +104,30 @@ function carteDemifond(df) {
   </div>`;
 }
 
+/* Bloc Tests VMA : résultats du demi-Cooper. */
+function carteTestsVma(tests) {
+  const min = Math.min(...tests.map((t) => t.vma));
+  const max = Math.max(...tests.map((t) => t.vma));
+  const parts = tests.map((t) => (max > min ? 0.15 + ((t.vma - min) / (max - min)) * 0.7 : 0.5));
+  const lignes = tests
+    .map((t) => `<tr><td>${dateCourte(t.date)}</td><td>Demi-Cooper</td><td>${t.distance} m</td><td><b>${vitesse(t.vma)} km/h</b></td></tr>`)
+    .join('');
+  return `<div class="carte">
+    <h2 class="carte-titre"><span class="icone-titre">📈</span> Tests VMA <small>${pluriel(tests.length, 'test')} · dernière VMA ${vitesse(tests[tests.length - 1].vma)} km/h</small></h2>
+    ${tests.length > 1 ? `<h4>VMA à chaque test (km/h)</h4>${courbe(parts, 'VMA à chaque test', tests.map((t) => vitesse(t.vma)))}` : ''}
+    <div class="defile"><table><tr><th>Date</th><th>Test</th><th>Distance</th><th>VMA</th></tr>${lignes}</table></div>
+  </div>`;
+}
+
 function vueEleve(eleve) {
   const suivi = suiviEleve(etat, eleve.id);
   const df = suiviDemifond(etat, eleve.id);
-  if (!suivi.rencontres && !df.courses) {
+  const tests = testsVmaEleve(etat, eleve.id);
+  if (!suivi.rencontres && !df.courses && !tests.length) {
     return `<div class="carte centre"><p class="aide">Aucun match observé pour ${esc(eleve.nom)} sur cette tablette.</p></div>`;
   }
   const tuile = (valeur, libelle) => `<div class="tuile-stat"><b>${valeur}</b><span>${libelle}</span></div>`;
-  const nbSports = suivi.sports.length + (df.courses ? 1 : 0);
+  const nbSports = suivi.sports.length + (df.courses ? 1 : 0) + (tests.length ? 1 : 0);
   return `
     <div class="tuiles-stats">
       ${tuile(nbSports, nbSports > 1 ? 'sports' : 'sport')}
@@ -119,7 +136,9 @@ function vueEleve(eleve) {
       ${suivi.pointsContrat ? tuile(`⭐ ${suivi.pointsContrat}`, 'points de contrat') : ''}
       ${suivi.pointsContrat && etat.reglages.contratBonus ? tuile(`+${decimal(bonusContrat(suivi.pointsContrat, etat.reglages))}`, 'bonus de contrat') : ''}
       ${df.courses ? tuile(`🏃 ${df.courses}`, df.courses > 1 ? 'courses' : 'course') : ''}
+      ${tests.length ? tuile(`${vitesse(tests[tests.length - 1].vma)}`, 'dernière VMA (km/h)') : ''}
     </div>
+    ${tests.length ? carteTestsVma(tests) : ''}
     ${suivi.sports.map(carteSport).join('')}
     ${df.courses ? carteDemifond(df) : ''}`;
 }

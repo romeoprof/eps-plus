@@ -634,6 +634,8 @@ body.sombre .tuile-focus.suivant b { color: #93c5fd; }
 }
 .bouton-repere small { color: inherit; font-size: 1.1rem; font-weight: 800; opacity: .9; }
 .bouton-repere:active { transform: translateY(5px); box-shadow: 0 3px 0 rgba(0, 0, 0, .25); }
+.enregistre { padding: 8px 12px; background: #dcfce7; border-radius: 10px; color: #15803d; font-weight: 800; }
+body.sombre .enregistre { background: rgba(22, 163, 74, .2); color: #86efac; }
 .liste-vitesses { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
 .liste-vitesses li { display: flex; justify-content: space-between; padding: 6px 10px; background: var(--fond); border-radius: 10px; font-size: .92rem; }
 

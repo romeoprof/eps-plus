@@ -4,7 +4,16 @@ import { etat, sauver } from '../noyau/etat.js';
 import { declarerActions, demander, notifier, rafraichir, vue } from '../noyau/interface.js';
 import { decimal, esc, formatChrono } from '../noyau/outils.js';
 import { allureFinale, annulerPassage, distanceAuPlot, distanceFinaleValide, enregistrerPassage } from '../demifond/calculs.js';
-import { COOPER_DEFAUT, cooperEnDirect, DUREE_COOPER, nouveauDemiCooper, resultatCooper } from './cooper.js';
+import {
+  ajouterTestVma,
+  COOPER_DEFAUT,
+  cooperEnDirect,
+  DUREE_COOPER,
+  enregistrementCooper,
+  nouveauDemiCooper,
+  reporterVmaDemifond,
+  resultatCooper,
+} from './cooper.js';
 
 /* Signaux sonores : à mi-parcours et à la dernière minute. */
 const ANNONCES = [
@@ -90,6 +99,16 @@ declarerActions({
     cooper().nom = champ.value.trim();
     sauver();
   },
+  'tvc-classe': (_, champ) => {
+    cooper().classe = champ.value;
+    cooper().eleveId = '';
+    sauver();
+    rafraichir();
+  },
+  'tvc-eleve': (_, champ) => {
+    cooper().eleveId = champ.value;
+    sauver();
+  },
   'tvc-plots': (_, champ) => {
     const v = lireNombre(champ.value);
     if (!(v >= 10 && v <= 400)) {
@@ -100,8 +119,19 @@ declarerActions({
     sauver();
   },
   'tvc-depart': () => {
+    const reglage = cooper();
+    const eleve = reglage.classe ? etat.eleves.find((e) => e.id === reglage.eleveId) : null;
+    if (reglage.classe && !eleve) return notifier("Choisis l'élève qui court.");
     bip(990, 0.35, 0.3);
-    cooper().test = nouveauDemiCooper(cooper(), Date.now());
+    reglage.test = nouveauDemiCooper(
+      {
+        plots: reglage.plots,
+        nom: eleve ? eleve.nom : reglage.nom,
+        eleveId: eleve ? eleve.id : null,
+        classe: eleve ? eleve.classe : '',
+      },
+      Date.now(),
+    );
     garderEcranAllume();
     sauver();
     rafraichir();
@@ -140,24 +170,52 @@ declarerActions({
     const metres = lireNombre(document.querySelector('#tvc-distance').value);
     if (!distanceFinaleValide(test, c, metres)) return notifier('Distance impossible.');
     c.distanceFinale = metres;
+    const enregistrement = enregistrementCooper(test);
+    if (enregistrement) {
+      ajouterTestVma(etat, enregistrement);
+      reporterVmaDemifond(etat, enregistrement.eleveId);
+    }
     sauver();
     rafraichir();
   },
   'tvc-nouveau': () => {
     cooper().test = null;
+    cooper().eleveId = ''; // la classe reste choisie pour l'élève suivant
     sauver();
     rafraichir();
   },
 });
+
+/* Le coureur : un élève de la liste (résultat gardé dans ses progrès) ou un nom libre. */
+function choixCoureur() {
+  const reglage = cooper();
+  const classes = [...new Set(etat.eleves.map((e) => e.classe))].sort();
+  const classe = classes.includes(reglage.classe) ? reglage.classe : '';
+  const eleves = etat.eleves.filter((e) => e.classe === classe).sort((a, b) => a.nom.localeCompare(b.nom));
+  const champClasse = `<label>Classe
+    <select data-choix="tvc-classe">
+      <option value="">Nom libre (hors liste)</option>
+      ${classes.map((c) => `<option ${c === classe ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+    </select></label>`;
+  const champCoureur = classe
+    ? `<label>Élève qui court
+        <select data-choix="tvc-eleve">
+          <option value="">Choisis l'élève…</option>
+          ${eleves.map((e) => `<option value="${esc(e.id)}" ${e.id === reglage.eleveId ? 'selected' : ''}>${esc(e.nom)}</option>`).join('')}
+        </select></label>`
+    : `<label>Nom du coureur (facultatif)<input value="${esc(reglage.nom)}" autocomplete="off" data-choix="tvc-nom"></label>`;
+  return `${classes.length ? champClasse : ''}${champCoureur}`;
+}
 
 const vueAvant = () => `
   <div class="carte"><h2 class="carte-titre">⏱️ Demi-Cooper</h2>
     <p><b>Cours le plus loin possible en 6 minutes</b>, à une allure régulière. Ton camarade touche le gros bouton à chaque repère.</p>
     <p class="aide">VMA (km/h) = distance parcourue (m) ÷ 100. C'est une estimation : ne pars pas trop vite.</p>
     <div class="grille-parametres">
-      <label>Prénom du coureur (facultatif)<input value="${esc(cooper().nom)}" autocomplete="off" data-choix="tvc-nom"></label>
+      ${choixCoureur()}
       <label>Distance entre repères (m)<input inputmode="numeric" value="${decimal(cooper().plots)}" data-choix="tvc-plots"></label>
     </div>
+    <p class="aide">Pour un élève de la liste, la VMA s'enregistre dans ses progrès. Pour un nom libre, rien n'est gardé.</p>
   </div>
   <button class="btn bouton-depart bouton-large-depart" data-action="tvc-depart">▶ Départ</button>`;
 
@@ -218,9 +276,10 @@ function vueResultat(test) {
         ${statistique('Régularité', r.regularite == null ? '–' : `${r.regularite}/100`)}
       </div>
       <p class="aide">Note ta VMA sur ta fiche. Calcul : ${r.distance} m ÷ 100 = ${kmh(r.vma)} km/h.</p>
+      ${test.coureurs[0].eleveId ? `<p class="enregistre">✔ VMA enregistrée dans les progrès et reportée en Demi-fond : ${esc(nom)}</p>` : ''}
       ${segments ? `<h4>Vitesse entre les repères</h4><ul class="liste-vitesses">${segments}</ul>` : ''}
     </div>
-    <button class="btn bouton-large" data-action="tvc-nouveau">↺ Nouveau test</button>`;
+    <button class="btn bouton-large" data-action="tvc-nouveau">↺ Nouveau test (coureur suivant)</button>`;
 }
 
 export function vueCooper() {

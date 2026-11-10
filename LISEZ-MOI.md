@@ -57,7 +57,7 @@ Une course sur distance se termine avec le bouton « Terminer ». Une course sur
 
 Menu principal → Activités athlétiques → Test VMA, puis « Paliers » ou « Demi-Cooper ».
 
-Demi-Cooper (`src/testvma/cooper.js`) : 6 minutes, le plus loin possible. Un élève touche le gros bouton à chaque repère : distance, vitesse du dernier repère et VMA estimée s'affichent en direct. Bips à mi-parcours et à la dernière minute ; arrêt automatique à 6 minutes, puis saisie des mètres faits après le dernier repère. VMA (km/h) = distance (m) ÷ 100.
+Demi-Cooper (`src/testvma/cooper.js`) : 6 minutes, le plus loin possible. Un élève touche le gros bouton à chaque repère : distance, vitesse du dernier repère et VMA estimée s'affichent en direct. Bips à mi-parcours et à la dernière minute ; arrêt automatique à 6 minutes, puis saisie des mètres faits après le dernier repère. VMA (km/h) = distance (m) ÷ 100. Le coureur se choisit dans la liste d'élèves (classe puis élève) ou se saisit par un nom libre. Pour un élève de la liste, le résultat s'enregistre dans sa Progression, devient sa VMA en Demi-fond et part avec le fichier « Récupérer les données ».
 
 Paliers : se règlent vitesse initiale, incrémentation, durée d'un palier et distance entre repères (`src/testvma/calculs.js` pour les valeurs d'origine). Le test ne change qu'après « Valider ces valeurs ». Un bip retentit à chaque repère, plus aigu et plus long au premier repère de chaque palier. À l'arrêt : VMA = vitesse du palier + incrément × part du palier réalisée ; VO₂max estimée = VMA × 3,5. Les résultats ne sont pas rattachés à un élève et ne partent pas dans le regroupement des tablettes.
 

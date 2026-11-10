@@ -13,7 +13,16 @@ import { lireSauvegarde, migrerV3 } from '../src/champ4/donnees/migration.js';
 import { etatInitial, nouveauMatch } from '../src/champ4/donnees/modele.js';
 import { importerEleves, lireElevesCsv, reinitialiserBilans, supprimerEquipe } from '../src/champ4/donnees/operations.js';
 import { erreurParametre, paliersDuTest, resultatTest, situationTest } from '../src/testvma/calculs.js';
-import { cooperEnDirect, DUREE_COOPER, nouveauDemiCooper, resultatCooper } from '../src/testvma/cooper.js';
+import {
+  ajouterTestVma,
+  cooperEnDirect,
+  DUREE_COOPER,
+  enregistrementCooper,
+  nouveauDemiCooper,
+  reporterVmaDemifond,
+  resultatCooper,
+  testsVmaEleve,
+} from '../src/testvma/cooper.js';
 import { PCT_PAS, REGLAGES_DEFAUT } from '../src/demifond/contenu.js';
 import {
   aCouru,
@@ -674,6 +683,57 @@ test('Demi-Cooper : un double appui est ignoré, les repères suivent les régla
   egal(enregistrerPassage(t, 0, depart + 30500), { accepte: false, raison: 'double' });
   egal(cooperEnDirect(t).distance, 100);
   egal(enregistrerPassage(t, 0, depart + (DUREE_COOPER + 1) * 1000), { accepte: false, raison: 'temps' });
+});
+
+test('Demi-Cooper : le résultat d\'un élève de la liste va dans ses progrès, pas celui d\'un nom libre', () => {
+  const depart = 2000000;
+  const fini = (reglage) => {
+    const t = nouveauDemiCooper(reglage, depart);
+    [15, 30].forEach((s) => enregistrerPassage(t, 0, depart + s * 1000));
+    t.finLe = depart + DUREE_COOPER * 1000;
+    t.coureurs[0].distanceFinale = 20;
+    return t;
+  };
+  const libre = fini({ plots: 50, nom: 'Invité' });
+  egal(enregistrementCooper(libre), null);
+  const eleve = fini({ plots: 50, nom: 'Léa M.', eleveId: 'e1', classe: '5A' });
+  const e = enregistrementCooper(eleve);
+  egal([e.eleveId, e.distance, e.vma, e.type], ['e1', 120, 1.2, 'demi-cooper']);
+  const etat = etatSuivi();
+  egal(ajouterTestVma(etat, e), true);
+  egal(ajouterTestVma(etat, e), false); // pas de doublon
+  egal(testsVmaEleve(etat, 'e1').length, 1);
+  egal(elevesSuivis(etat).some((x) => x.id === 'e1'), true);
+});
+
+test('Demi-Cooper : le résultat part vers la tablette enseignant, sans doublon', () => {
+  const autre = etatSuivi();
+  autre.testsVma = [{ id: 'cooper1', type: 'demi-cooper', eleveId: 'e2', nom: 'Tom D.', classe: '5A', date: 5, distance: 1300, vma: 13 }];
+  const local = etatInitial();
+  const paquet = JSON.parse(JSON.stringify(paquetResultats(autre)));
+  egal(fusionnerResultats(local, paquet), { ajoutes: 1, misAJour: 0, dejaPresents: 0 });
+  egal(fusionnerResultats(local, paquet), { ajoutes: 0, misAJour: 0, dejaPresents: 1 });
+  egal(testsVmaEleve(local, 'e2')[0].vma, 13);
+  egal(local.eleves.some((x) => x.id === 'e2'), true);
+});
+
+test('Demi-Cooper : la VMA du test le plus récent passe dans la fiche Demi-fond', () => {
+  const etat = etatSuivi();
+  etat.coureurs = [{ id: 'e1', eleveId: 'e1', nom: 'Léa M.', classe: '5A', vma: 11, archive: false }];
+  etat.testsVma = [
+    { id: 'a', type: 'demi-cooper', eleveId: 'e1', date: 20, distance: 1300, vma: 13 },
+    { id: 'b', type: 'demi-cooper', eleveId: 'e1', date: 10, distance: 1200, vma: 12 },
+  ];
+  egal(reporterVmaDemifond(etat, 'e1'), true);
+  egal(etat.coureurs[0].vma, 13);
+  // Un élève sans fiche de coureur en reçoit une
+  etat.testsVma.push({ id: 'c', type: 'demi-cooper', eleveId: 'e2', date: 5, distance: 1250, vma: 12.5 });
+  reporterVmaDemifond(etat, 'e2');
+  egal(etat.coureurs.find((c) => c.id === 'e2').vma, 12.5);
+  // Récupéré sur la tablette enseignant : la VMA suit aussi
+  const local = etatInitial();
+  fusionnerResultats(local, JSON.parse(JSON.stringify(paquetResultats(etat))));
+  egal(local.coureurs.find((c) => c.id === 'e1').vma, 13);
 });
 
 test('Une ancienne sauvegarde reçoit bien les défauts vides', () => {

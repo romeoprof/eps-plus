@@ -5,6 +5,7 @@
  */
 import { chiffrer, dechiffrer } from '../../noyau/chiffrement.js';
 import { avancementCourse, courseAvecDonnees } from '../../demifond/calculs.js';
+import { reporterVmaDemifond } from '../../testvma/cooper.js';
 import { lireSauvegarde } from './migration.js';
 
 const TYPE_RESULTATS = 'eps-resultats';
@@ -22,11 +23,14 @@ export function paquetResultats(etat, maintenant = Date.now()) {
       if (c.eleveId) idsEleves.add(c.eleveId);
     }),
   );
+  const testsVma = etat.testsVma || [];
+  testsVma.forEach((t) => idsEleves.add(t.eleveId));
   return {
     type: TYPE_RESULTATS,
     exporteLe: maintenant,
     matchs,
     courses,
+    testsVma,
     equipes,
     poules: etat.poules.filter((p) => idsPoules.has(p.id)),
     eleves: etat.eleves.filter((e) => idsEleves.has(e.id)),
@@ -34,7 +38,26 @@ export function paquetResultats(etat, maintenant = Date.now()) {
 }
 
 export const aDesResultats = (etat) =>
-  etat.matchs.some((m) => m.evenements.length) || (etat.courses || []).some(courseAvecDonnees);
+  etat.matchs.some((m) => m.evenements.length) ||
+  (etat.courses || []).some(courseAvecDonnees) ||
+  (etat.testsVma || []).length > 0;
+
+/* Les résultats de tests VMA sont définitifs : un même test n'est ajouté qu'une fois. */
+function fusionnerTestsVma(etat, paquet, bilan) {
+  etat.testsVma = etat.testsVma || [];
+  const eleves = new Set();
+  (paquet.testsVma || []).forEach((test) => {
+    if (etat.testsVma.some((t) => t.id === test.id)) {
+      bilan.dejaPresents += 1;
+    } else {
+      etat.testsVma.push(test);
+      eleves.add(test.eleveId);
+      bilan.ajoutes += 1;
+    }
+  });
+  /* Le test le plus récent de chaque élève donne sa VMA en Demi-fond. */
+  eleves.forEach((id) => reporterVmaDemifond(etat, id));
+}
 
 /* Une course reçue alors qu'elle tournait encore est close à l'heure de l'envoi. */
 function fusionnerCourses(etat, paquet, bilan) {
@@ -102,6 +125,7 @@ export function fusionnerResultats(etat, paquet) {
     }
   });
   fusionnerCourses(etat, paquet, bilan);
+  fusionnerTestsVma(etat, paquet, bilan);
   return bilan;
 }
 

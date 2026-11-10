@@ -15,7 +15,7 @@ function nomDuFichier() {
 
 async function envoyer() {
   const champ = document.querySelector('#mot-de-passe-envoi');
-  if (!aDesResultats(etat)) return notifier('Aucun match ni aucune course sur cette tablette.');
+  if (!aDesResultats(etat)) return notifier('Aucun résultat sur cette tablette.');
   if (champ.value.length < 10) return notifier('Choisis un mot de passe de 10 caractères ou plus.');
   const contenu = await creerFichierResultats(etat, champ.value);
   champ.value = '';
@@ -52,10 +52,11 @@ declarerActions({ 'recolte-envoyer': envoyer, 'recolte-recuperer': recuperer });
 export function vueRecolte() {
   const observes = etat.matchs.filter((m) => m.evenements.length).length;
   const courses = etat.courses.filter(courseAvecDonnees).length;
+  const tests = (etat.testsVma || []).length;
   return `
     <div class="carte"><h2 class="carte-titre">📤 Envoyer les résultats de cette tablette</h2>
       <p class="aide">À faire sur chaque tablette d'élèves. Le fichier est chiffré, puis tu l'envoies par Drive, Quick Share ou e-mail vers la tablette enseignant. Les résultats restent aussi sur cette tablette.</p>
-      <p><b>${observes} match${observes > 1 ? 's' : ''} observé${observes > 1 ? 's' : ''} et ${courses} course${courses > 1 ? 's' : ''}</b> sur cette tablette.</p>
+      <p><b>${observes} match${observes > 1 ? 's' : ''} observé${observes > 1 ? 's' : ''}, ${courses} course${courses > 1 ? 's' : ''} et ${tests} test${tests > 1 ? 's' : ''} VMA</b> sur cette tablette.</p>
       <div class="rangee">
         <input id="mot-de-passe-envoi" class="etire" type="password" autocomplete="new-password" placeholder="Mot de passe (10 caractères ou plus)" aria-label="Mot de passe du fichier de résultats">
         <button class="btn" data-action="recolte-envoyer">📤 Créer et envoyer le fichier</button>
