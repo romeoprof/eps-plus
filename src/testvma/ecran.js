@@ -1,5 +1,8 @@
-/* Test VMA : réglages personnalisés, bip à chaque repère, vue Focus ou tableau complet. */
+/* Test VMA : choix Paliers / Demi-Cooper.
+   Paliers : réglages personnalisés, bip à chaque repère, vue Focus ou tableau complet. */
+import { bip, garderEcranAllume } from '../noyau/appareil.js';
 import { etat, sauver } from '../noyau/etat.js';
+import { cooperEnCours, vueCooper } from './ecran-cooper.js';
 import { declarerActions, demander, notifier, rafraichir, vue } from '../noyau/interface.js';
 import { decimal, esc, formatChrono } from '../noyau/outils.js';
 import { erreurParametre, paliersDuTest, PARAMETRES_DEFAUT, resultatTest, situationTest } from './calculs.js';
@@ -7,8 +10,6 @@ import { erreurParametre, paliersDuTest, PARAMETRES_DEFAUT, resultatTest, situat
 let affichage = 'focus';
 let rangConnu = null;
 let brouillon = null; // valeurs saisies, pas encore validées
-let contexteAudio = null;
-let verrouEcran = null;
 
 const CHAMPS = [
   { nom: 'vitesse', libelle: 'Vitesse initiale (km/h)', mode: 'decimal' },
@@ -23,43 +24,6 @@ const enCours = () => !!test().depart && !test().arret;
 const tempsEcoule = (maintenant = Date.now()) =>
   test().depart ? ((test().arret || maintenant) - test().depart) / 1000 : 0;
 const kmh = (n) => decimal(n.toFixed(1));
-
-function bip(frequence = 1000, duree = 0.12, volume = 0.22) {
-  try {
-    contexteAudio = contexteAudio || new (window.AudioContext || window.webkitAudioContext)();
-    contexteAudio.resume?.();
-    const debut = contexteAudio.currentTime;
-    const oscillateur = contexteAudio.createOscillator();
-    const gain = contexteAudio.createGain();
-    oscillateur.frequency.value = frequence;
-    gain.gain.setValueAtTime(0.0001, debut);
-    gain.gain.exponentialRampToValueAtTime(volume, debut + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, debut + duree);
-    oscillateur.connect(gain).connect(contexteAudio.destination);
-    oscillateur.start(debut);
-    oscillateur.stop(debut + duree + 0.02);
-  } catch {
-    /* son non disponible */
-  }
-}
-
-function garderEcranAllume() {
-  try {
-    if (navigator.wakeLock && !verrouEcran) {
-      navigator.wakeLock
-        .request('screen')
-        .then((v) => {
-          verrouEcran = v;
-          v.addEventListener('release', () => {
-            verrouEcran = null;
-          });
-        })
-        .catch(() => {});
-    }
-  } catch {
-    /* non disponible */
-  }
-}
 
 function terminer() {
   test().arret = Date.now();
@@ -147,6 +111,11 @@ declarerActions({
     affichage = mode;
     rafraichir();
   },
+  'tv-mode': ({ mode }) => {
+    test().mode = mode;
+    sauver();
+    rafraichir();
+  },
 });
 
 const carteReglages = () => `
@@ -218,7 +187,17 @@ function centrerLigne() {
   });
 }
 
+/* Le choix du test reste caché tant qu'un test est en cours. */
 export function vueTestVma() {
+  const mode = cooperEnCours() ? 'cooper' : enCours() ? 'paliers' : test().mode || 'paliers';
+  const choix = (id, libelle) =>
+    `<button class="choix-sport ${mode === id ? 'actif' : ''}" aria-pressed="${mode === id}" data-action="tv-mode" data-mode="${id}">${libelle}</button>`;
+  const enTest = cooperEnCours() || enCours();
+  return `${enTest ? '' : `<div class="choix-sports choix-test">${choix('paliers', '📶 Paliers')}${choix('cooper', '⏱️ Demi-Cooper')}</div>`}
+    ${mode === 'cooper' ? vueCooper() : vuePaliers()}`;
+}
+
+function vuePaliers() {
   const paliers = paliersDuTest(test());
   const t = tempsEcoule();
   const situation = situationTest(paliers, t);

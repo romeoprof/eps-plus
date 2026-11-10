@@ -19,7 +19,7 @@ export const etatInitial = () => ({
   courseEnCours: null,
   courseBilan: null,
   /* Test VMA : réglages personnalisés et test en cours */
-  testVma: { ...PARAMETRES_DEFAUT, depart: null, arret: null },
+  testVma: { ...PARAMETRES_DEFAUT, depart: null, arret: null, mode: 'paliers', cooper: { plots: 50, nom: '', test: null } },
   /* null = valeur réglée dans l'espace enseignant */
   prepCourse: { selection: [], pct: {}, type: null, distance: null, duree: null, plots: null, tolerance: null },
   reglages: {

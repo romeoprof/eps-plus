@@ -13,6 +13,9 @@ import { vuePoules } from './champ4/ecrans/poules.js';
 import { ONGLETS_DF, vueDemifond } from './demifond/ecrans/module.js';
 import { oublierChoixCourse } from './demifond/ecrans/reglages.js';
 import { vueTestVma } from './testvma/ecran.js';
+import { cooperEnCours } from './testvma/ecran-cooper.js';
+
+const testVmaEnCours = () => !!etat.testVma.depart && !etat.testVma.arret;
 
 const ONGLETS = [
   { id: 'equipes', libelle: '👥 Équipes', vue: vueEquipes },
@@ -154,7 +157,7 @@ definirDessin(() => {
   document.documentElement.style.background = couleurFond;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', couleurFond);
   /* Pendant une course, on masque l'en-tête pour laisser la place aux coureurs. */
-  const testEnCours = vue.ecran === 'testvma' && !!etat.testVma.depart && !etat.testVma.arret;
+  const testEnCours = vue.ecran === 'testvma' && (testVmaEnCours() || cooperEnCours());
   const match = vue.ecran === 'champ4' && vue.onglet === 'match' ? matchCourant() : null;
   const raquetteEnCours = !!match && !match.termine && !!APSA[match.apsa]?.terrain;
   document.body.classList.toggle('en-course', testEnCours || raquetteEnCours || (vue.ecran === 'demifond' && vue.ongletDF === 'course' && !!etat.courseEnCours));
@@ -177,7 +180,9 @@ if (etat.courseEnCours) {
   vue.ongletDF = 'course';
 }
 /* Un test VMA en cours reprend de même. */
-if (etat.testVma.depart && !etat.testVma.arret) vue.ecran = 'testvma';
+if (testVmaEnCours() || cooperEnCours() || (etat.testVma.cooper?.test && etat.testVma.cooper.test.coureurs[0].distanceFinale == null)) {
+  vue.ecran = 'testvma';
+}
 rafraichir();
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

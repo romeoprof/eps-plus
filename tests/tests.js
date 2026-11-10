@@ -13,6 +13,7 @@ import { lireSauvegarde, migrerV3 } from '../src/champ4/donnees/migration.js';
 import { etatInitial, nouveauMatch } from '../src/champ4/donnees/modele.js';
 import { importerEleves, lireElevesCsv, reinitialiserBilans, supprimerEquipe } from '../src/champ4/donnees/operations.js';
 import { erreurParametre, paliersDuTest, resultatTest, situationTest } from '../src/testvma/calculs.js';
+import { cooperEnDirect, DUREE_COOPER, nouveauDemiCooper, resultatCooper } from '../src/testvma/cooper.js';
 import { PCT_PAS, REGLAGES_DEFAUT } from '../src/demifond/contenu.js';
 import {
   aCouru,
@@ -649,6 +650,30 @@ test('Test VMA : paramètres impossibles refusés', () => {
   vrai(erreurParametre('increment', NaN) != null, 'incrément vide accepté');
   vrai(erreurParametre('duree', 2) != null, 'durée trop courte acceptée');
   vrai(erreurParametre('distance', 1) != null, 'distance trop courte acceptée');
+});
+
+/* Demi-Cooper */
+test('Demi-Cooper : VMA = distance ÷ 100, avec les mètres après le dernier repère', () => {
+  const t = nouveauDemiCooper({ plots: 50, nom: 'Léa M.' }, 1000000);
+  [15, 30, 45, 60].forEach((s) => enregistrerPassage(t, 0, 1000000 + s * 1000)); // 50 m en 15 s = 12 km/h
+  const direct = cooperEnDirect(t);
+  egal([direct.distance, direct.reperes, Math.round(direct.vitesse), Math.round(direct.vmaEstimee)], [200, 4, 12, 12]);
+  egal(direct.distancePrevue, 1200); // 12 km/h pendant 6 min
+  t.finLe = 1000000 + DUREE_COOPER * 1000;
+  t.coureurs[0].distanceFinale = 0;
+  egal(resultatCooper(t).vma, 2); // 200 m ÷ 100
+  t.coureurs[0].distanceFinale = 30;
+  const r = resultatCooper(t);
+  egal([r.distance, r.vma], [230, 2.3]);
+});
+
+test('Demi-Cooper : un double appui est ignoré, les repères suivent les réglages', () => {
+  const depart = 1000000;
+  const t = nouveauDemiCooper({ plots: 100, nom: '' }, depart);
+  egal(enregistrerPassage(t, 0, depart + 30000).accepte, true);
+  egal(enregistrerPassage(t, 0, depart + 30500), { accepte: false, raison: 'double' });
+  egal(cooperEnDirect(t).distance, 100);
+  egal(enregistrerPassage(t, 0, depart + (DUREE_COOPER + 1) * 1000), { accepte: false, raison: 'temps' });
 });
 
 test('Une ancienne sauvegarde reçoit bien les défauts vides', () => {

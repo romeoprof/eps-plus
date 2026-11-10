@@ -599,6 +599,44 @@ body.sombre .tuile-focus.suivant b { color: #93c5fd; }
 .tableau-test td.case-passee { background: rgba(234, 88, 12, .15); }
 .tableau-test td.case-suivante { background: var(--bleu); color: #fff; font-weight: 900; border-radius: 8px; }
 
+/* Demi-Cooper */
+.choix-test { justify-content: center; }
+.choix-test .choix-sport { min-width: 170px; justify-content: center; font-size: 1.05rem; }
+.bouton-large-depart { width: 100%; }
+.cooper-haut { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; padding: 8px 16px; background: var(--carte); border: 2px solid var(--bordure); border-radius: 16px; }
+.cooper-haut span { display: block; color: var(--texte-doux); font-size: .9rem; font-weight: 800; }
+.cooper-haut .chrono-test { display: block; color: var(--titre); font-weight: 900; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.cooper-nom { color: var(--titre); font-size: 1.6rem; font-weight: 900; overflow-wrap: anywhere; }
+.cooper-direct { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.cooper-direct .tuile-focus { padding: 10px 14px; }
+.cooper-direct .tuile-focus b { font-size: clamp(1.8rem, 5vw, 3rem); }
+.bouton-repere {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 34vh;
+  padding: 20px;
+  background: var(--vert);
+  border: 0;
+  border-radius: 24px;
+  box-shadow: 0 8px 0 rgba(0, 0, 0, .25);
+  color: #fff;
+  font: inherit;
+  font-size: clamp(2.4rem, 8vw, 4.5rem);
+  font-weight: 900;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.bouton-repere small { color: inherit; font-size: 1.1rem; font-weight: 800; opacity: .9; }
+.bouton-repere:active { transform: translateY(5px); box-shadow: 0 3px 0 rgba(0, 0, 0, .25); }
+.liste-vitesses { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
+.liste-vitesses li { display: flex; justify-content: space-between; padding: 6px 10px; background: var(--fond); border-radius: 10px; font-size: .92rem; }
+
 /* Contrat et progression des élèves */
 .critere.contrat { outline: 4px solid #facc15; outline-offset: 1px; }
 .ligne-contrat select { flex: 1 1 200px; margin-bottom: 0; }
