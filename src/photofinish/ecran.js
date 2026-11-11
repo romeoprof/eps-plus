@@ -10,13 +10,13 @@ import { apresDessin, declarerActions, demander, notifier, rafraichir, vue } fro
 import { esc, telecharger } from '../noyau/outils.js';
 import {
   ajouterPassage,
+  enregistrerTempsCourse,
   analyserImage,
   analyseSon,
   estSifflet,
   formatTemps,
   lignesCsvCourse,
   luminositesLignes,
-  nomPassage,
   nouveauDetecteur,
   nouvelleCourse,
   partEnMouvement,
@@ -51,6 +51,12 @@ export function pf() {
 }
 const reglages = () => pf().reglages;
 const laCourse = () => pf().course;
+
+/* Course terminée : les temps attribués aux élèves vont dans leur Progression, puis on enregistre. */
+function sauverCourse() {
+  if (laCourse()?.fin) enregistrerTempsCourse(etat, laCourse());
+  sauver();
+}
 export const coursePfEnCours = () => !!laCourse() && !laCourse().fin;
 
 const direct = {
@@ -303,7 +309,7 @@ document.addEventListener('click', (e) => {
   const t = temps[Math.min(temps.length - 1, Math.max(0, Math.floor(x / COLONNE)))];
   const p = ajouterPassage(laCourse(), t, 'image');
   direct.selection = p.id;
-  sauver();
+  sauverCourse();
   rafraichir();
   notifier(`Passage ajouté : ${formatTemps(t)} s`);
 });
@@ -547,7 +553,7 @@ declarerActions({
     if (!coursePfEnCours()) return;
     course.fin = Date.now();
     bip(880, 0.3, 0.3);
-    sauver();
+    sauverCourse();
     rafraichir();
   },
   'pf-abandon': async () => {
@@ -579,14 +585,14 @@ declarerActions({
     } else {
       p.t = Math.max(0, p.t + pas * 10);
     }
-    sauver();
+    sauverCourse();
     rafraichir();
   },
   'pf-supprimer': ({ id }) => {
     const course = laCourse();
     course.passages = course.passages.filter((p) => p.id !== id);
     if (direct.selection === id) direct.selection = null;
-    sauver();
+    sauverCourse();
     rafraichir();
   },
   'pf-eleve': ({ id }, champ) => {
@@ -594,7 +600,8 @@ declarerActions({
     if (!p) return;
     p.eleveId = champ.value;
     p.nom = '';
-    sauver();
+    sauverCourse();
+    rafraichir();
   },
   'pf-nom': ({ id }, champ) => {
     const p = laCourse().passages.find((q) => q.id === id);
@@ -622,7 +629,7 @@ declarerActions({
     rafraichir();
   },
   'pf-historique-suppr': async ({ id }) => {
-    const ok = await demander({ titre: 'Effacer cette course ?', texte: 'Ses temps seront perdus.', confirmer: 'Effacer', danger: true });
+    const ok = await demander({ titre: 'Effacer cette course ?', texte: 'La course disparaît de cette liste. Les temps attribués aux élèves restent dans leur Progression.', confirmer: 'Effacer', danger: true });
     if (!ok) return;
     pf().historique = pf().historique.filter((c) => c.id !== id);
     sauver();
@@ -713,16 +720,18 @@ function carteHistorique() {
     .map((c) => {
       const tries = passagesTries(c);
       const date = new Date(c.depart).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+      /* Sans les noms : cet écran est ouvert aux élèves. Les temps nominatifs sont dans la Progression. */
       const premiers = tries
         .slice(0, 3)
-        .map((p, i) => `${i + 1}. ${esc(nomPassage(p, etat.eleves) || '?')} ${formatTemps(p.t)}`)
+        .map((p, i) => `${i + 1}. ${formatTemps(p.t)}`)
         .join(' · ');
       return `<li><div><b>${esc(c.libelle || 'Course')}</b> <small>${date} · ${tries.length} temps</small><br><small>${premiers}</small></div>
-        <span class="rangee"><button class="btn-mini" data-action="pf-csv" data-id="${esc(c.id)}">⬇ CSV</button>
-        <button class="btn-mini" data-action="pf-historique-suppr" data-id="${esc(c.id)}" aria-label="Effacer">🗑</button></span></li>`;
+        <button class="btn-mini" data-action="pf-historique-suppr" data-id="${esc(c.id)}" aria-label="Effacer">🗑</button></li>`;
     })
     .join('');
-  return `<div class="carte"><h2 class="carte-titre">📋 Courses précédentes</h2><ul class="pf-historique">${lignes}</ul></div>`;
+  return `<div class="carte"><h2 class="carte-titre">📋 Courses précédentes</h2>
+    <p class="aide">Les noms n'apparaissent pas ici. Les temps attribués aux élèves sont dans Espace enseignant → Progression des élèves.</p>
+    <ul class="pf-historique">${lignes}</ul></div>`;
 }
 
 const listeDirect = (course) =>
@@ -775,6 +784,7 @@ function vueResultats(course) {
   const tries = passagesTries(course);
   const choisi = tries.find((p) => p.id === direct.selection);
   const bandeau = bandeauDisponible();
+  const attribues = (etat.tempsPf || []).filter((r) => r.courseId === course.id).length;
   const lignes = tries
     .map(
       (p, i) => `<li class="pf-resultat ${p.id === direct.selection ? 'choisi' : ''}">
@@ -803,7 +813,14 @@ function vueResultats(course) {
       </div>`
           : ''
       }
+      <h4>Attribuer les temps</h4>
+      <p class="aide">${
+        course.classe
+          ? 'Choisis l’élève à côté de chaque temps : le temps et le rang vont dans son dossier (Espace enseignant → Progression des élèves), visible seulement avec le code enseignant.'
+          : 'Choisis la classe pour attribuer chaque temps à un élève de la liste (il ira dans son dossier). Sinon, écris un nom ou un dossard : ce temps n’est pas gardé dans un dossier.'
+      }</p>
       <div class="grille-parametres">${choixClasse(course.classe)}</div>
+      ${attribues ? `<p class="enregistre">✔ ${attribues} temps enregistré${attribues > 1 ? 's' : ''} dans le dossier des élèves</p>` : ''}
       <ol class="pf-liste">${lignes || '<li class="aide">Aucun passage.</li>'}</ol>
     </div>
     <div class="rangee centre-rangee">

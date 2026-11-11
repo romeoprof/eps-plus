@@ -46,7 +46,9 @@ import {
   ajouterPassage,
   analyserImage,
   analyseSon,
+  enregistrerTempsCourse,
   estSifflet,
+  tempsPfEleve,
   formatTemps,
   lignesCsvCourse,
   luminositesLignes,
@@ -800,6 +802,30 @@ test('PhotoFinish : plusieurs passages classés et exportés', () => {
   const lignes = lignesCsvCourse(course, [{ id: 'e1', nom: 'Léa M.', classe: '5A' }]);
   egal(lignes[1], ['1', '7,95', 'Dossard 4', '5A']);
   egal(lignes[2], ['2', '8,12', 'Léa M.', '5A']);
+});
+
+test('PhotoFinish : les temps attribués vont dans le dossier des élèves et partent à la tablette enseignant', () => {
+  const etat = etatInitial();
+  etat.eleves = [{ id: 'e1', nom: 'Léa M.', classe: '5A' }, { id: 'e2', nom: 'Tom B.', classe: '5A' }];
+  const course = nouvelleCourse({ methode: 'sifflet', libelle: '50 m', classe: '5A' }, 5000);
+  course.fin = 15000;
+  ajouterPassage(course, 8200, 'camera').eleveId = 'e1';
+  ajouterPassage(course, 7900, 'camera').eleveId = 'e2';
+  ajouterPassage(course, 9000, 'camera').nom = 'Dossard 9'; // nom libre : pas de dossier
+  egal(enregistrerTempsCourse(etat, course), 2);
+  egal(tempsPfEleve(etat, 'e1').map((t) => [t.t, t.rang, t.partants, t.libelle]), [[8200, 2, 3, '50 m']]);
+  vrai(elevesSuivis(etat).some((e) => e.id === 'e2'), 'élève suivi dans la Progression');
+  // Correction après coup : le temps change de propriétaire, sans doublon
+  course.passages[0].eleveId = 'e2';
+  course.passages[1].eleveId = '';
+  enregistrerTempsCourse(etat, course);
+  egal(etat.tempsPf.map((t) => [t.eleveId, t.t]), [['e2', 8200]]);
+  // Tablette enseignant : la version reçue de la course remplace l'ancienne
+  const enseignant = etatInitial();
+  enseignant.tempsPf = [{ id: 'vieux', courseId: course.id, eleveId: 'e1', t: 1 }];
+  fusionnerResultats(enseignant, JSON.parse(JSON.stringify(paquetResultats(etat))));
+  egal(enseignant.tempsPf.map((t) => [t.eleveId, t.t]), [['e2', 8200]]);
+  vrai(enseignant.eleves.some((e) => e.id === 'e2'), 'élève transmis');
 });
 
 test('Une ancienne sauvegarde reçoit bien les défauts vides', () => {

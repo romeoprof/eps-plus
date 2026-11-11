@@ -25,12 +25,15 @@ export function paquetResultats(etat, maintenant = Date.now()) {
   );
   const testsVma = etat.testsVma || [];
   testsVma.forEach((t) => idsEleves.add(t.eleveId));
+  const tempsPf = etat.tempsPf || [];
+  tempsPf.forEach((t) => idsEleves.add(t.eleveId));
   return {
     type: TYPE_RESULTATS,
     exporteLe: maintenant,
     matchs,
     courses,
     testsVma,
+    tempsPf,
     equipes,
     poules: etat.poules.filter((p) => idsPoules.has(p.id)),
     eleves: etat.eleves.filter((e) => idsEleves.has(e.id)),
@@ -40,7 +43,22 @@ export function paquetResultats(etat, maintenant = Date.now()) {
 export const aDesResultats = (etat) =>
   etat.matchs.some((m) => m.evenements.length) ||
   (etat.courses || []).some(courseAvecDonnees) ||
-  (etat.testsVma || []).length > 0;
+  (etat.testsVma || []).length > 0 ||
+  (etat.tempsPf || []).length > 0;
+
+/* Temps PhotoFinish : la version reçue d'une course remplace celle de cette tablette
+   (l'attribution a pu être corrigée après un premier envoi). */
+function fusionnerTempsPf(etat, paquet, bilan) {
+  const recus = paquet.tempsPf || [];
+  if (!recus.length) return;
+  const courses = new Set(recus.map((t) => t.courseId));
+  const avant = new Set((etat.tempsPf || []).map((t) => t.id));
+  etat.tempsPf = [...(etat.tempsPf || []).filter((t) => !courses.has(t.courseId)), ...recus];
+  recus.forEach((t) => {
+    if (avant.has(t.id)) bilan.dejaPresents += 1;
+    else bilan.ajoutes += 1;
+  });
+}
 
 /* Les résultats de tests VMA sont définitifs : un même test n'est ajouté qu'une fois. */
 function fusionnerTestsVma(etat, paquet, bilan) {
@@ -126,6 +144,7 @@ export function fusionnerResultats(etat, paquet) {
   });
   fusionnerCourses(etat, paquet, bilan);
   fusionnerTestsVma(etat, paquet, bilan);
+  fusionnerTempsPf(etat, paquet, bilan);
   return bilan;
 }
 

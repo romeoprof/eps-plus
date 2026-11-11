@@ -4,6 +4,7 @@ import { declarerActions, rafraichir } from '../../noyau/interface.js';
 import { avecSigne, decimal, esc, formatChrono, pourcent } from '../../noyau/outils.js';
 import { suiviDemifond } from '../../demifond/calculs.js';
 import { testsVmaEleve } from '../../testvma/cooper.js';
+import { formatTemps, tempsPfEleve } from '../../photofinish/calculs.js';
 import { dateCourte } from '../../demifond/etat.js';
 import { APSA, NIVEAUX_PROJET } from '../contenu/apsa.js';
 import { bonusContrat, elevesSuivis, suiviEleve } from '../calculs/progression.js';
@@ -119,15 +120,39 @@ function carteTestsVma(tests) {
   </div>`;
 }
 
+/* Bloc PhotoFinish : chaque temps attribué à l'élève, regroupé par nom de course (même épreuve). */
+function cartePhotofinish(temps) {
+  const epreuves = new Map();
+  temps.forEach((t) => {
+    const cle = t.libelle || 'Course sans nom';
+    epreuves.set(cle, [...(epreuves.get(cle) || []), t]);
+  });
+  const blocs = [...epreuves.entries()]
+    .map(([libelle, liste]) => {
+      const meilleur = Math.min(...liste.map((t) => t.t));
+      const lignes = liste
+        .map((t) => `<tr><td>${dateCourte(t.date)}</td><td><b>${formatTemps(t.t)} s</b>${t.t === meilleur && liste.length > 1 ? ' 🏅' : ''}</td><td>${t.rang} / ${t.partants}</td></tr>`)
+        .join('');
+      return `<h4>${esc(libelle)} <small>· meilleur temps ${formatTemps(meilleur)} s</small></h4>
+        <div class="defile"><table><tr><th>Date</th><th>Temps</th><th>Rang</th></tr>${lignes}</table></div>`;
+    })
+    .join('');
+  return `<div class="carte">
+    <h2 class="carte-titre"><span class="icone-titre">📸</span> PhotoFinish <small>${temps.length} temps</small></h2>
+    ${blocs}
+  </div>`;
+}
+
 function vueEleve(eleve) {
   const suivi = suiviEleve(etat, eleve.id);
   const df = suiviDemifond(etat, eleve.id);
   const tests = testsVmaEleve(etat, eleve.id);
-  if (!suivi.rencontres && !df.courses && !tests.length) {
+  const temps = tempsPfEleve(etat, eleve.id);
+  if (!suivi.rencontres && !df.courses && !tests.length && !temps.length) {
     return `<div class="carte centre"><p class="aide">Aucun match observé pour ${esc(eleve.nom)} sur cette tablette.</p></div>`;
   }
   const tuile = (valeur, libelle) => `<div class="tuile-stat"><b>${valeur}</b><span>${libelle}</span></div>`;
-  const nbSports = suivi.sports.length + (df.courses ? 1 : 0) + (tests.length ? 1 : 0);
+  const nbSports = suivi.sports.length + (df.courses ? 1 : 0) + (tests.length ? 1 : 0) + (temps.length ? 1 : 0);
   return `
     <div class="tuiles-stats">
       ${tuile(nbSports, nbSports > 1 ? 'sports' : 'sport')}
@@ -139,6 +164,7 @@ function vueEleve(eleve) {
       ${tests.length ? tuile(`${vitesse(tests[tests.length - 1].vma)}`, 'dernière VMA (km/h)') : ''}
     </div>
     ${tests.length ? carteTestsVma(tests) : ''}
+    ${temps.length ? cartePhotofinish(temps) : ''}
     ${suivi.sports.map(carteSport).join('')}
     ${df.courses ? carteDemifond(df) : ''}`;
 }

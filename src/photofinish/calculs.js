@@ -128,6 +128,35 @@ export function ajouterPassage(course, t, source) {
 export const nomPassage = (passage, eleves) =>
   (passage.eleveId && eleves.find((e) => e.id === passage.eleveId)?.nom) || passage.nom || '';
 
+/* Dossier des élèves : chaque temps attribué à un élève de la liste est gardé dans etat.tempsPf,
+   avec son rang. Refait après chaque changement de la course (attribution, suppression, décalage). */
+export function enregistrerTempsCourse(etat, course) {
+  const tries = passagesTries(course);
+  const nouveaux = tries
+    .map((p, i) => ({ p, rang: i + 1 }))
+    .filter(({ p }) => p.eleveId && etat.eleves.some((e) => e.id === p.eleveId))
+    .map(({ p, rang }) => {
+      const eleve = etat.eleves.find((e) => e.id === p.eleveId);
+      return {
+        id: `${course.id}-${p.id}`,
+        courseId: course.id,
+        eleveId: eleve.id,
+        nom: eleve.nom,
+        classe: eleve.classe,
+        date: course.depart,
+        libelle: course.libelle || '',
+        t: p.t,
+        rang,
+        partants: tries.length,
+      };
+    });
+  etat.tempsPf = [...(etat.tempsPf || []).filter((r) => r.courseId !== course.id), ...nouveaux];
+  return nouveaux.length;
+}
+
+export const tempsPfEleve = (etat, idEleve) =>
+  (etat.tempsPf || []).filter((r) => r.eleveId === idEleve).sort((a, b) => a.date - b.date || a.t - b.t);
+
 /* Classement exportable : Rang ; Temps (s) ; Nom ; Classe */
 export function lignesCsvCourse(course, eleves) {
   const lignes = [['Rang', 'Temps (s)', 'Nom', 'Classe']];

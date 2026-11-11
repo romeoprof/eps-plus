@@ -11,6 +11,7 @@ export const elevesSuivis = (etat) => {
     }),
   );
   (etat.testsVma || []).forEach((t) => membres.add(t.eleveId));
+  (etat.tempsPf || []).forEach((t) => membres.add(t.eleveId));
   return etat.eleves.filter((e) => membres.has(e.id));
 };
 
