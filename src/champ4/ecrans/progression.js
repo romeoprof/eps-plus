@@ -2,7 +2,8 @@
 import { etat } from '../../noyau/etat.js';
 import { declarerActions, rafraichir } from '../../noyau/interface.js';
 import { avecSigne, decimal, esc, formatChrono, pourcent } from '../../noyau/outils.js';
-import { suiviDemifond } from '../../demifond/calculs.js';
+import { bilanCoureur, suiviDemifond } from '../../demifond/calculs.js';
+import { graphique } from '../../demifond/ecrans/bilan.js';
 import { testsVmaEleve } from '../../testvma/cooper.js';
 import { formatTemps, tempsPfEleve } from '../../photofinish/calculs.js';
 import { dateCourte } from '../../demifond/etat.js';
@@ -13,8 +14,13 @@ import { courbe } from './courbe.js';
 
 let classeChoisie = '';
 let eleveChoisi = '';
+let apsaChoisie = '';
 
 declarerActions({
+  'progression-apsa': (_, champ) => {
+    apsaChoisie = champ.value;
+    rafraichir();
+  },
   'progression-classe': (_, champ) => {
     classeChoisie = champ.value;
     eleveChoisi = '';
@@ -105,6 +111,17 @@ function carteDemifond(df) {
       <tr><th>Date</th><th>Projet</th><th>Réalisé</th><th>Écart</th><th>Distance</th><th>Temps</th><th>Régularité</th><th>Objectif</th><th>Observé par</th></tr>
       ${lignes}
     </table></div>
+    <h4>Évolution de la vitesse pendant chaque course</h4>
+    ${[...df.lignes]
+      .reverse()
+      .map((l, rang) => {
+        const b = bilanCoureur(l.course, l.coureur);
+        return `<details class="courbe-course" ${rang === 0 ? 'open' : ''}>
+          <summary>${dateCourte(l.course.finLe)} · ${vitesse(l.moyenne)} km/h${l.atteint ? ' ✅' : ''}</summary>
+          ${graphique(b.vitesses, l.coureur.cible, l.course.tolerance, b.allureFinale != null)}
+        </details>`;
+      })
+      .join('')}
   </div>`;
 }
 
@@ -146,7 +163,17 @@ function cartePhotofinish(temps) {
   </div>`;
 }
 
-export function vueEleve(eleve) {
+/* Activités où l'élève a des résultats : sports, Demi-fond, Tests VMA, PhotoFinish. */
+function activitesEleve(eleve) {
+  const liste = suiviEleve(etat, eleve.id).sports.map((s) => ({ id: s.apsa, libelle: `${APSA[s.apsa]?.icone || ''} ${s.apsa}` }));
+  if (suiviDemifond(etat, eleve.id).courses) liste.push({ id: 'demifond', libelle: '🏃 Demi-fond' });
+  if (testsVmaEleve(etat, eleve.id).length) liste.push({ id: 'testvma', libelle: '📈 Tests VMA' });
+  if (tempsPfEleve(etat, eleve.id).length) liste.push({ id: 'photofinish', libelle: '📸 PhotoFinish' });
+  return liste;
+}
+
+/* apsa : '' pour tout voir, sinon le nom d'un sport, 'demifond', 'testvma' ou 'photofinish'. */
+export function vueEleve(eleve, apsa = '') {
   const suivi = suiviEleve(etat, eleve.id);
   const df = suiviDemifond(etat, eleve.id);
   const tests = testsVmaEleve(etat, eleve.id);
@@ -154,6 +181,10 @@ export function vueEleve(eleve) {
   if (!suivi.rencontres && !df.courses && !tests.length && !temps.length) {
     return `<div class="carte centre"><p class="aide">Aucun match observé pour ${esc(eleve.nom)} sur cette tablette.</p></div>`;
   }
+  if (apsa === 'demifond') return df.courses ? carteDemifond(df) : '';
+  if (apsa === 'testvma') return tests.length ? carteTestsVma(tests) : '';
+  if (apsa === 'photofinish') return temps.length ? cartePhotofinish(temps) : '';
+  if (apsa) return suivi.sports.filter((s) => s.apsa === apsa).map(carteSport).join('');
   const tuile = (valeur, libelle) => `<div class="tuile-stat"><b>${valeur}</b><span>${libelle}</span></div>`;
   const nbSports = suivi.sports.length + (df.courses ? 1 : 0) + (tests.length ? 1 : 0) + (temps.length ? 1 : 0);
   return `
@@ -182,9 +213,11 @@ export function vueProgression() {
   const classe = classes.includes(classeChoisie) ? classeChoisie : classes[0];
   const dansClasse = eleves.filter((e) => e.classe === classe).sort((a, b) => a.nom.localeCompare(b.nom));
   const eleve = dansClasse.find((e) => e.id === eleveChoisi);
+  const activites = eleve ? activitesEleve(eleve) : [];
+  const apsa = activites.some((a) => a.id === apsaChoisie) ? apsaChoisie : '';
   return `
     <div class="carte"><h2 class="carte-titre">📈 Progression des élèves</h2>
-      <div class="deux-colonnes">
+      <div class="trois-colonnes">
         <div><label class="etiquette" for="progression-classe">Classe</label>
           <select id="progression-classe" data-choix="progression-classe">${classes.map((c) => `<option ${c === classe ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
         <div><label class="etiquette" for="progression-eleve">Élève</label>
@@ -192,8 +225,13 @@ export function vueProgression() {
             <option value="">Choisis un élève…</option>
             ${dansClasse.map((e) => `<option value="${esc(e.id)}" ${e.id === eleveChoisi ? 'selected' : ''}>${esc(e.nom)}</option>`).join('')}
           </select></div>
+        <div><label class="etiquette" for="progression-apsa">APSA</label>
+          <select id="progression-apsa" data-choix="progression-apsa" ${eleve ? '' : 'disabled'}>
+            <option value="">Toutes les APSA</option>
+            ${activites.map((a) => `<option value="${esc(a.id)}" ${a.id === apsa ? 'selected' : ''}>${esc(a.libelle)}</option>`).join('')}
+          </select></div>
       </div>
       <p class="aide">En sport collectif, l'élève reçoit les statistiques de son équipe. Sont comptés les matchs et les courses de cette tablette, et ceux récupérés des autres (onglet « Récupérer les données »).</p>
     </div>
-    ${eleve ? vueEleve(eleve) : ''}`;
+    ${eleve ? vueEleve(eleve, apsa) : ''}`;
 }

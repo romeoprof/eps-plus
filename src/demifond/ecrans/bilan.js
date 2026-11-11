@@ -58,8 +58,8 @@ declarerActions({
   },
 });
 
-/* Graphique des vitesses par plot, avec le projet en pointillés. */
-function graphique(vitesses, cible, tolerance, avecFinale = false) {
+/* Graphique des vitesses par plot, avec le projet en pointillés (aussi dans la Progression). */
+export function graphique(vitesses, cible, tolerance, avecFinale = false) {
   if (!vitesses.length) return '<p class="aide">Aucun passage noté.</p>';
   const L = 640;
   const H = 240;
@@ -104,7 +104,8 @@ export function vueBilanDF() {
   const lignes = course.coureurs.map((c) => ({ c, b: bilanCoureur(course, c) }));
   const { c, b } = lignes[coureurVu];
   const statistique = (libelle, valeur, detail = '') =>
-    `<div class="tuile-stat"><b>${valeur}</b><span>${libelle}</span>${detail ? `<small>${detail}</small>` : ''}</div>`;
+    `<div class="stat-ligne"><span>${libelle}</span><b>${valeur}</b>${detail ? `<small>${detail}</small>` : ''}</div>`;
+  const groupe = (titre, contenu) => `<section class="groupe-stats"><h4>${titre}</h4>${contenu}</section>`;
   return `
     <div class="carte"><h2 class="carte-titre">📊 Bilan de la course</h2>
       <select data-choix="df-bilan-course" aria-label="Course">${liste.map((x) => `<option value="${esc(x.id)}" ${x.id === course.id ? 'selected' : ''}>${esc(titreCourse(x))}</option>`).join('')}</select>
@@ -123,16 +124,27 @@ export function vueBilanDF() {
       )
       .join('')}</div>
     <div class="carte"><h2 class="carte-titre">🏃 ${esc(c.nom)} <small>${esc(c.classe)} · VMA ${kmh(c.vma)} km/h${c.zone ? ` · ${esc(c.zone)}` : ''}</small></h2>
-      <div class="tuiles-stats">
-        ${statistique('Projet', `${kmh(c.cible)} km/h`, `${c.pct} % de VMA`)}
-        ${statistique('Réalisé', `${kmh(b.moyenne)} km/h`, `${pct(b.pctReel)} de VMA`)}
-        ${statistique('Écart', `${signe(b.ecart)} km/h`, b.ecartPct == null ? '' : `${signe(b.ecartPct)} %`)}
-        ${statistique('Objectif atteint', b.atteint ? 'Oui ✅' : 'Non', `±${decimal(course.tolerance)} km/h`)}
-        ${statistique('Distance', `${b.distance} m`, `${b.plots} plot${b.plots > 1 ? 's' : ''}`)}
-        ${statistique('Temps', formatChrono(b.temps))}
-        ${statistique('Vitesse max', `${kmh(b.vitesseMax)} km/h`)}
-        ${statistique('Régularité', b.regularite == null ? '–' : `${b.regularite}/100`)}
-        ${b.distanceFinale ? statistique('Après le dernier plot', `${decimal(b.distanceFinale)} m`, `allure ${kmh(b.allureFinale)} km/h`) : ''}
+      <div class="verdict-course ${b.atteint ? 'reussi' : 'manque'}">
+        <div class="verdict-titre">${b.atteint ? '✅ Objectif atteint' : '❌ Objectif non atteint'}<small>tolérance ±${decimal(course.tolerance)} km/h</small></div>
+        <div class="verdict-comparaison">
+          <div><span>Projet</span><b>${kmh(c.cible)}</b><small>km/h · ${c.pct} % VMA</small></div>
+          <div class="verdict-fleche" aria-hidden="true">→</div>
+          <div><span>Réalisé</span><b>${kmh(b.moyenne)}</b><small>km/h · ${pct(b.pctReel)} VMA</small></div>
+          <div class="verdict-ecart"><span>Écart</span><b>${signe(b.ecart)}</b><small>km/h${b.ecartPct == null ? '' : ` · ${signe(b.ecartPct)} %`}</small></div>
+        </div>
+      </div>
+      <div class="groupes-stats">
+        ${groupe(
+          '📏 La course',
+          `${statistique('Distance', `${b.distance} m`, `${b.plots} plot${b.plots > 1 ? 's' : ''}`)}
+           ${statistique('Temps', formatChrono(b.temps))}
+           ${b.distanceFinale ? statistique('Après le dernier plot', `${decimal(b.distanceFinale)} m`, `allure ${kmh(b.allureFinale)} km/h`) : ''}`,
+        )}
+        ${groupe(
+          '⚡ L’allure',
+          `${statistique('Vitesse max', `${kmh(b.vitesseMax)} km/h`, 'entre deux plots')}
+           ${statistique('Régularité', b.regularite == null ? '–' : `${b.regularite}/100`, '100 = toujours la même vitesse')}`,
+        )}
       </div>
       <h4>Évolution de la vitesse</h4>
       ${graphique(b.vitesses, c.cible, course.tolerance, b.allureFinale != null)}
