@@ -112,6 +112,10 @@ declarerActions({
     window.scrollTo(0, 0);
     rafraichir();
   },
+  'ens-fiche-active': (_, champ) => {
+    etat.reglages.ficheObservateurs = champ.checked;
+    sauver();
+  },
   'ens-conseil': (_, champ) => {
     etat.reglages.conseil = champ.checked;
     sauver();
@@ -342,8 +346,10 @@ function carteListe(type, titre, description, apsa, a) {
 }
 
 const carteOptions = () => `
-  <div class="carte"><h2 class="carte-titre">⚙️ Options</h2>
-    <label class="case"><input type="checkbox" ${etat.reglages.conseil ? 'checked' : ''} data-choix="ens-conseil">Projet de jeu et conseil de fin de match</label>
+  <div class="carte"><h2 class="carte-titre">⚙️ Options des matchs</h2>
+    <p class="aide">Pour tous les sports.</p>
+    <label class="case"><input type="checkbox" ${etat.reglages.ficheObservateurs !== false ? 'checked' : ''} data-choix="ens-fiche-active">📋 Fiche d'observation des observateurs en fin de match</label>
+    <label class="case marge-haut"><input type="checkbox" ${etat.reglages.conseil ? 'checked' : ''} data-choix="ens-conseil">Projet de jeu et conseil de fin de match</label>
     <label class="case marge-haut"><input type="checkbox" ${etat.reglages.contratBonus ? 'checked' : ''} data-choix="ens-bonus-actif">⭐ Bonus chiffré pour le contrat</label>
     ${
       etat.reglages.contratBonus
@@ -420,10 +426,9 @@ function carteCodes() {
 const PAGES = [
   { id: 'activites', icone: '🏅', titre: 'Activités', texte: 'Observer, chronométrer, PhotoFinish' },
   { id: 'eleves', icone: '👥', titre: 'Gestion des élèves', texte: 'Listes, codes, liste protégée' },
-  { id: 'observables', icone: '👁️', titre: 'Observables par APSA', texte: 'Critères, contrats, fiches, demi-fond' },
+  { id: 'observables', icone: '👁️', titre: 'Observables par APSA', texte: 'Critères, contrats, fiches, options' },
   { id: 'progression', icone: '📈', titre: 'Progression des élèves', texte: 'Dossier de chaque élève' },
   { id: 'recevoir', icone: '📥', titre: 'Recevoir les données', texte: 'QR codes ou fichiers des tablettes' },
-  { id: 'options', icone: '⚙️', titre: 'Options et synchronisation', texte: 'Options, config.json' },
   { id: 'code', icone: '🔑', titre: "Code d'accès", texte: "Code de l'espace enseignant" },
 ];
 export const titrePageEnseignant = () => PAGES.find((p) => p.id === pageEnseignant)?.titre || 'Espace enseignant';
@@ -433,7 +438,8 @@ const vueMenu = () => `
   <div class="grille-menu">${PAGES.map(
     (p) => `<button class="tuile-menu" ${p.id === 'activites' ? 'data-action="ens-activites"' : `data-action="ens-page" data-page="${p.id}"`}>
       <span class="tuile-icone">${p.icone}</span><b>${p.titre}</b><small>${p.texte}</small></button>`,
-  ).join('')}</div>`;
+  ).join('')}</div>
+  <div class="marge-haut">${carteSynchro()}</div>`;
 
 function vueObservables() {
   const apsa = apsaEditee === DEMIFOND || APSA[apsaEditee] ? apsaEditee : etat.apsa || DEMIFOND;
@@ -458,13 +464,11 @@ export function vueEnseignant() {
     case 'eleves':
       return `${titre('👥 Gestion des élèves')}<div class="grille-reglages">${carteEleves()}${carteCodes()}${carteEnvoiEleves()}</div>`;
     case 'observables':
-      return `${titre('👁️ Observables par APSA')}${vueObservables()}`;
+      return `${titre('👁️ Observables par APSA')}${vueObservables()}${carteOptions()}`;
     case 'progression':
       return vueProgression();
     case 'recevoir':
       return `${titre('📥 Recevoir les données')}${vueRecevoir()}`;
-    case 'options':
-      return `${titre('⚙️ Options et synchronisation')}<div class="grille-reglages">${carteOptions()}${carteSynchro()}</div>`;
     case 'code':
       return `${titre("🔑 Code d'accès")}${carteCode()}`;
     default:

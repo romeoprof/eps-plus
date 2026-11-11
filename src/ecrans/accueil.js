@@ -32,7 +32,7 @@ export function vueAccueil() {
   </div>
   ${familles
     .map(
-      (famille) => `<section class="carte"><h2 class="carte-titre">${esc(famille.titre)}</h2>
+      (famille) => `<section class="carte"><h2 class="carte-titre titre-famille ${famille.couleur}">${esc(famille.titre)}</h2>
       <div class="grille-apsa">${famille.activites.map((a) => tuile(a, famille.couleur)).join('')}</div>
     </section>`,
     )

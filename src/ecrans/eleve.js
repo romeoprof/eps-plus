@@ -138,6 +138,6 @@ export function bandeauEleve() {
         <button class="btn secondaire" data-action="cx-quitter">Me déconnecter</button>
       </div>${outils}</div>`;
   }
-  return `<div class="carte bandeau-eleve"><div class="bandeau-eleve-nom">Tu n'es pas identifié·e. <small>Tu peux quand même observer et chronométrer tes camarades.</small></div>
+  return `<div class="carte bandeau-eleve"><div class="bandeau-eleve-nom">Tu n'es pas identifié·e. <small>Tu peux quand même observer, arbitrer et coacher tes camarades.</small></div>
     <div class="rangee sans-marge"><button class="btn" data-action="cx-ouvrir">🔑 M'identifier</button></div>${outils}</div>`;
 }

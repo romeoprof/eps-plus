@@ -797,6 +797,12 @@ body.grands .plateau-raquette .critere { min-height: 80px; }
   .pf-commandes { grid-template-columns: 1fr; }
 }
 
+/* Titres des familles de sports : en majuscules, centrés, de la couleur des tuiles */
+.titre-famille { --couleur: var(--bleu); color: var(--couleur); text-align: center; text-transform: uppercase; letter-spacing: .08em; font-weight: 900; }
+.titre-famille.turquoise { --couleur: var(--turquoise); }
+.titre-famille.violet { --couleur: var(--violet); }
+.titre-famille.orange { --couleur: var(--orange); }
+
 /* Écran d'arrivée : logo et choix de l'espace */
 .choix-espace { max-width: 860px; margin: 0 auto; }
 .logo-accueil { display: flex; flex-direction: column; align-items: center; margin: 10px 0 22px; text-align: center; }

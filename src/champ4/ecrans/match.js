@@ -366,7 +366,7 @@ export function vueMatch() {
   garderEcranAllume();
   if (APSA[m.apsa].terrain && !m.termine) return vueRaquette(m);
   const apresMatch = m.termine
-    ? carteBilanProjet(m) + carteFiche(m) + (etat.reglages.conseil ? carteProjets(m) : '')
+    ? carteBilanProjet(m) + (etat.reglages.ficheObservateurs !== false ? carteFiche(m) : '') + (etat.reglages.conseil ? carteProjets(m) : '')
     : carteProjetAObserver(m);
   return `
     <div class="carte tableau-score">
