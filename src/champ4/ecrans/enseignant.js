@@ -8,7 +8,7 @@ import { aUnDefautChoisi, contratsApsa, criteresApsa, listeEditable } from '../r
 import { vueReglagesDemifond } from '../../demifond/ecrans/reglages.js';
 import { blocImportEleves } from './import-eleves.js';
 import { vueProgression } from './progression.js';
-import { vueRecevoir } from '../../transfert/ecrans.js';
+import { vueEnvoyer, vueRecevoir } from '../../transfert/ecrans.js';
 import { attribuerCodes, changerCode } from '../../noyau/espace.js';
 
 const EMPREINTE_PAR_DEFAUT = '74id85';
@@ -428,7 +428,7 @@ const PAGES = [
   { id: 'eleves', icone: '👥', titre: 'Gestion des élèves', texte: 'Listes, codes, liste protégée' },
   { id: 'observables', icone: '👁️', titre: 'Observables par APSA', texte: 'Critères, contrats, fiches, options' },
   { id: 'progression', icone: '📈', titre: 'Progression des élèves', texte: 'Dossier de chaque élève' },
-  { id: 'recevoir', icone: '📥', titre: 'Recevoir les données', texte: 'QR codes ou fichiers des tablettes' },
+  { id: 'recevoir', icone: '🔄', titre: 'Échanger les données', texte: 'Recevoir des tablettes, renvoyer aux élèves' },
   { id: 'code', icone: '🔑', titre: "Code d'accès", texte: "Code de l'espace enseignant" },
 ];
 export const titrePageEnseignant = () => PAGES.find((p) => p.id === pageEnseignant)?.titre || 'Espace enseignant';
@@ -468,7 +468,7 @@ export function vueEnseignant() {
     case 'progression':
       return vueProgression();
     case 'recevoir':
-      return `${titre('📥 Recevoir les données')}${vueRecevoir()}`;
+      return `${titre('🔄 Échanger les données')}${vueRecevoir()}${vueEnvoyer()}`;
     case 'code':
       return `${titre("🔑 Code d'accès")}${carteCode()}`;
     default:

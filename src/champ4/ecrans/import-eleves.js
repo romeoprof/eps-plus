@@ -2,6 +2,7 @@
 import { etat, sauver } from '../../noyau/etat.js';
 import { declarerActions, notifier, rafraichir } from '../../noyau/interface.js';
 import { FICHIER_ELEVES, lireElevesProteges } from '../donnees/export.js';
+import { remplacerListe } from '../donnees/doublons.js';
 
 async function importer() {
   const champ = document.querySelector('#mot-de-passe-eleves');
@@ -14,11 +15,14 @@ async function importer() {
   } catch {
     return notifier('Liste inaccessible : vérifie la connexion internet.');
   }
+  let liste;
   try {
-    etat.eleves = await lireElevesProteges(paquet, champ.value);
+    liste = await lireElevesProteges(paquet, champ.value);
   } catch {
     return notifier('Mot de passe incorrect.');
   }
+  /* La liste publiée fait foi ; les observations déjà notées suivent ses identifiants. */
+  remplacerListe(etat, liste);
   sauver();
   rafraichir();
   notifier(`${etat.eleves.length} élève${etat.eleves.length > 1 ? 's' : ''} importé${etat.eleves.length > 1 ? 's' : ''} ✔`);

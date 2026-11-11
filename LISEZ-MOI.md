@@ -35,7 +35,11 @@ Si un fichier est ajouté, l'inscrire dans la liste de `sw.js`. Après toute mod
 
 **Codes des élèves** : créés par l'application à l'import de la liste. Espace enseignant → Gestion des élèves → « Codes des élèves » : liste par classe, impression, nouveau code. Les codes lisibles ne sont que sur la tablette enseignant ; la liste protégée n'en contient qu'une empreinte. Après un import ou un nouveau code : recréer la liste protégée et la déposer sur le site. Un code à 4 chiffres évite les confusions, ce n'est pas une vraie sécurité.
 
-**Envoyer les données** (espace élève) : la tablette affiche des QR codes qui défilent ; l'enseignant les lit dans Recevoir les données (caméra). Les données restent aussi sur la tablette élève. Secours : fichier chiffré. Les QR codes ne sont pas chiffrés (prénoms, initiales, résultats), ils ne passent que d'un écran à une caméra proche. Bibliothèques : `src/vendor/qrcode.js` (qrcode-generator, MIT) et `src/vendor/jsQR.js` (jsQR, Apache 2.0) ; le lecteur utilise d'abord celui intégré à Chrome quand il existe.
+**Échanger les données** (dans les deux espaces) : la tablette élève affiche des QR codes qui défilent ; l'enseignant les lit avec la caméra. Dans l'autre sens, l'enseignant envoie les résultats de toute la classe aux tablettes élèves : chaque élève identifié y voit alors toutes ses performances, toutes tablettes confondues (seulement les siennes).
+
+**Élèves en double** : un même élève (même prénom + initiale, même classe) peut avoir deux identifiants si les tablettes n'ont pas la même liste. L'application le reconnaît à son nom et sa classe : à la réception de résultats, à l'import d'une liste et à l'ouverture, toutes ses données sont regroupées sur un seul élève (celui qui a un code), sans rien perdre (`src/champ4/donnees/doublons.js`).
+
+Envoi des données par QR code : la tablette affiche des QR codes qui défilent ; l'autre tablette les lit avec sa caméra. Les données restent aussi sur la tablette élève. Secours : fichier chiffré. Les QR codes ne sont pas chiffrés (prénoms, initiales, résultats), ils ne passent que d'un écran à une caméra proche. Bibliothèques : `src/vendor/qrcode.js` (qrcode-generator, MIT) et `src/vendor/jsQR.js` (jsQR, Apache 2.0) ; le lecteur utilise d'abord celui intégré à Chrome quand il existe.
 
 ## Mettre à jour la liste d'élèves sur les tablettes
 

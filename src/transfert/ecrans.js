@@ -4,7 +4,7 @@
  */
 import { bip, garderEcranAllume, vibrer } from '../noyau/appareil.js';
 import { etat, sauver } from '../noyau/etat.js';
-import { eleveConnecte } from '../noyau/espace.js';
+import { eleveConnecte, estEnseignant } from '../noyau/espace.js';
 import { apresDessin, declarerActions, notifier, rafraichir } from '../noyau/interface.js';
 import { esc } from '../noyau/outils.js';
 import { aDesResultats, fusionnerResultats, paquetResultats } from '../champ4/donnees/fusion.js';
@@ -46,7 +46,7 @@ async function lancerDiffusion() {
   } catch {
     return notifier('QR codes indisponibles : utilise le fichier chiffré.');
   }
-  const paquet = { ...paquetResultats(etat), envoyePar: eleveConnecte()?.nom || '' };
+  const paquet = { ...paquetResultats(etat), envoyePar: estEnseignant() ? 'Enseignant' : eleveConnecte()?.nom || '' };
   const id = Math.random().toString(36).slice(2, 8);
   const morceaux = decouper(await encoderPaquet(paquet), id);
   diffusion.images = morceaux.map((texte) => {
@@ -65,9 +65,13 @@ async function lancerDiffusion() {
 
 export function vueEnvoyer() {
   const enCours = diffusion.images.length > 0;
-  return `<div class="carte"><h2 class="carte-titre">📤 Envoyer les données de cette tablette</h2>
+  const enseignant = estEnseignant();
+  const explication = enseignant
+    ? "Pour que chaque élève voie toutes ses performances, toutes tablettes confondues : sur la tablette élève, Échanger les données → « Lire les QR codes », puis vise cet écran. La tablette reçoit les résultats de toute la classe, mais un élève identifié ne voit que les siens."
+    : "Montre l'écran à la caméra de la tablette de ton enseignant (Espace enseignant → Échanger les données). Les données restent aussi sur cette tablette.";
+  return `<div class="carte"><h2 class="carte-titre">📤 ${enseignant ? 'Envoyer les résultats aux tablettes élèves' : 'Envoyer les données de cette tablette'}</h2>
       <p><b>${resumeResultats()}</b> sur cette tablette.</p>
-      <p class="aide">Les données restent aussi sur cette tablette. Montre l'écran à la caméra de la tablette de ton enseignant (Espace enseignant → Recevoir les données) : ${enCours && diffusion.images.length > 1 ? 'les QR codes défilent seuls, garde l’écran face à la caméra jusqu’au message « Reçu ».' : 'elle lit le QR code.'}</p>
+      <p class="aide">${explication}${enCours && diffusion.images.length > 1 ? ' Les QR codes défilent seuls : garde l’écran face à la caméra jusqu’au message « Reçu ».' : ''}</p>
       ${
         enCours
           ? `<div class="qr-cadre"><div id="qr-zone" class="qr-zone" role="img" aria-label="QR code des résultats"></div><p id="qr-legende" class="qr-legende"></p></div>
@@ -189,8 +193,11 @@ async function demarrerLecture() {
 
 export function vueRecevoir() {
   const actif = !!lecteur.flux;
-  return `<div class="carte"><h2 class="carte-titre">📷 Lire les QR codes des tablettes</h2>
-      <p class="aide">Sur la tablette élève : « Envoyer les données », puis « Afficher les QR codes ». Ici, vise l'écran avec la caméra : quand tous les QR codes sont lus, les résultats sont ajoutés sans rien effacer, et sans doublon.</p>
+  const source = estEnseignant()
+    ? 'Sur la tablette élève : Échanger les données → « Afficher les QR codes ».'
+    : 'Sur la tablette de ton enseignant : Échanger les données → « Envoyer les résultats aux tablettes élèves ».';
+  return `<div class="carte"><h2 class="carte-titre">📷 ${estEnseignant() ? 'Lire les QR codes des tablettes élèves' : 'Recevoir les résultats de l’enseignant'}</h2>
+      <p class="aide">${source} Ici, vise l'écran avec la caméra : quand tous les QR codes sont lus, les résultats sont ajoutés sans rien effacer, et sans doublon.</p>
       ${actif ? '<div data-place="lecteur-qr" class="qr-lecteur"></div>' : ''}
       <p id="qr-etat" class="qr-etat" aria-live="polite">${esc(actif ? etatLecture : '')}</p>
       <button class="btn ${actif ? 'secondaire' : 'bouton-large'}" data-action="${actif ? 'qr-lecture-stop' : 'qr-lecture'}">${actif ? '⏹ Arrêter la caméra' : '📷 Lire les QR codes'}</button>

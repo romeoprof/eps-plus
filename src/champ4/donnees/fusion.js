@@ -7,6 +7,7 @@ import { chiffrer, dechiffrer } from '../../noyau/chiffrement.js';
 import { avancementCourse, courseAvecDonnees } from '../../demifond/calculs.js';
 import { reporterVmaDemifond } from '../../testvma/cooper.js';
 import { lireSauvegarde } from './migration.js';
+import { alignerPaquet, reparerDoublons } from './doublons.js';
 
 const TYPE_RESULTATS = 'eps-resultats';
 
@@ -110,8 +111,10 @@ function arreterChrono(match, exporteLe) {
   return { ...match, duree: match.duree + Math.max(0, (fin - match.departChrono) / 1000), departChrono: 0 };
 }
 
-export function fusionnerResultats(etat, paquet) {
+export function fusionnerResultats(etat, paquetRecu) {
   const bilan = { ajoutes: 0, misAJour: 0, dejaPresents: 0 };
+  /* Un élève déjà connu ici sous un autre identifiant n'est pas ajouté une seconde fois. */
+  const paquet = alignerPaquet(etat, paquetRecu);
   const matchs = (paquet.matchs || []).filter((m) => m.evenements?.length);
 
   (paquet.eleves || []).forEach((eleve) => {
@@ -146,6 +149,7 @@ export function fusionnerResultats(etat, paquet) {
   fusionnerCourses(etat, paquet, bilan);
   fusionnerTestsVma(etat, paquet, bilan);
   fusionnerTempsPf(etat, paquet, bilan);
+  reparerDoublons(etat);
   return bilan;
 }
 

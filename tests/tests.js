@@ -43,6 +43,7 @@ import {
 } from '../src/demifond/calculs.js';
 import { empreinte } from '../src/noyau/outils.js';
 import { attribuerCodes, changerCode, codeValide } from '../src/noyau/espace.js';
+import { reparerDoublons, remplacerListe } from '../src/champ4/donnees/doublons.js';
 import { assembler, decoderPaquet, decouper, encoderPaquet, envoiComplet, lireMorceau, nouvelleReception, recevoirMorceau } from '../src/transfert/qr.js';
 import {
   ajouterPassage,
@@ -847,6 +848,50 @@ test('Codes élèves : un code à 4 chiffres par élève, seule son empreinte vo
   // Le paquet de résultats (QR code) ne contient même pas l'empreinte
   etat.testsVma = [{ id: 't', eleveId: 'e1', date: 1, distance: 1200, vma: 12 }];
   vrai(!paquetResultats(etat).eleves.some((e) => 'cle' in e), 'empreinte dans le paquet');
+});
+
+test('Doublons : un élève reçu sous un autre identifiant n’est pas ajouté deux fois', () => {
+  const etat = etatInitial();
+  etat.eleves = [{ id: 'nouveau', nom: 'Léa M.', classe: '5A' }];
+  etat.codesEleves = { nouveau: '1234' };
+  const autre = etatInitial();
+  autre.eleves = [{ id: 'ancien', nom: 'Léa M.', classe: '5A' }];
+  autre.testsVma = [{ id: 't1', type: 'demi-cooper', eleveId: 'ancien', nom: 'Léa M.', classe: '5A', date: 1, distance: 1200, vma: 12 }];
+  fusionnerResultats(etat, JSON.parse(JSON.stringify(paquetResultats(autre))));
+  egal(etat.eleves.map((e) => e.id), ['nouveau']);
+  egal(etat.testsVma[0].eleveId, 'nouveau');
+});
+
+test('Doublons déjà présents : regroupés, avec toutes leurs données, sans perdre le code', () => {
+  const etat = etatInitial();
+  etat.eleves = [
+    { id: 'a', nom: 'Léa M.', classe: '5A' },
+    { id: 'b', nom: 'Tom B.', classe: '5A' },
+    { id: 'a2', nom: 'Léa M.', classe: '5A' },
+    { id: 'c', nom: 'Léa M. (2)', classe: '5A' },
+  ];
+  etat.codesEleves = { a2: '4321' };
+  etat.equipes = [{ id: 'eq', nom: 'Bleus', membres: ['a', 'a2', 'b'] }];
+  etat.coureurs = [{ id: 'a', eleveId: 'a', vma: null }, { id: 'a2', eleveId: 'a2', vma: 12 }];
+  etat.tempsPf = [{ id: 'x', courseId: 'pf', eleveId: 'a', t: 8000 }];
+  etat.contrats = { a: { Badminton: 'ctr1' } };
+  egal(reparerDoublons(etat), 1);
+  egal(etat.eleves.map((e) => e.id), ['b', 'a2', 'c']); // « Léa M. (2) » est une autre élève
+  egal(etat.equipes[0].membres, ['a2', 'b']);
+  egal(etat.coureurs, [{ id: 'a2', eleveId: 'a2', vma: 12 }]);
+  egal(etat.tempsPf[0].eleveId, 'a2');
+  egal(etat.contrats, { a2: { Badminton: 'ctr1' } });
+  egal(etat.codesEleves, { a2: '4321' });
+  egal(reparerDoublons(etat), 0);
+});
+
+test('Nouvelle liste protégée : les observations suivent les nouveaux identifiants', () => {
+  const etat = etatInitial();
+  etat.eleves = [{ id: 'vieux', nom: 'Léa M.', classe: '5A' }, { id: 'parti', nom: 'Max K.', classe: '5A' }];
+  etat.testsVma = [{ id: 't', eleveId: 'vieux', date: 1, vma: 12 }];
+  remplacerListe(etat, [{ id: 'neuf', nom: 'Léa M.', classe: '5A', cle: 'xyz' }]);
+  egal(etat.eleves.map((e) => e.id), ['neuf', 'parti']);
+  egal(etat.testsVma[0].eleveId, 'neuf');
 });
 
 test('QR codes : découpage, ordre quelconque et assemblage', () => {

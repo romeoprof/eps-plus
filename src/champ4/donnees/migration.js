@@ -2,6 +2,7 @@
 import { APSA } from '../contenu/apsa.js';
 import { etatInitial, VERSION_DONNEES } from './modele.js';
 import { possesseur } from '../calculs/match.js';
+import { reparerDoublons } from './doublons.js';
 
 const versCritere = ([cle, libelle, points]) => ({ cle, libelle, points });
 
@@ -82,12 +83,14 @@ export function lireSauvegarde(contenu) {
   if (!contenu || typeof contenu !== 'object') throw new Error('Fichier invalide');
   if (contenu.version === VERSION_DONNEES) {
     const base = etatInitial();
-    return {
+    const etat = {
       ...base,
       ...contenu,
       reglages: { ...base.reglages, ...contenu.reglages },
       affichage: { ...base.affichage, ...contenu.affichage },
     };
+    reparerDoublons(etat); // élèves en double d'anciennes versions : regroupés à l'ouverture
+    return etat;
   }
   if (Array.isArray(contenu.matches) || Array.isArray(contenu.teams)) return migrerV3(contenu);
   throw new Error('Fichier non reconnu');

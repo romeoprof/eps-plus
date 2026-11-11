@@ -9,7 +9,7 @@ import { declarerActions, notifier, rafraichir, vue } from '../noyau/interface.j
 import { esc } from '../noyau/outils.js';
 import { vueEleve } from '../champ4/ecrans/progression.js';
 import { blocImportEleves } from '../champ4/ecrans/import-eleves.js';
-import { vueEnvoyer } from '../transfert/ecrans.js';
+import { vueEnvoyer, vueRecevoir } from '../transfert/ecrans.js';
 
 let classeChoisie = '';
 let eleveChoisi = '';
@@ -112,11 +112,11 @@ export function vueMaProgression() {
   const eleve = eleveConnecte();
   if (!eleve) return vueConnexion();
   return `<div class="carte"><h2 class="carte-titre">📈 Ma progression <small>${esc(eleve.nom)} · ${esc(eleve.classe)}</small></h2>
-      <p class="aide">Ce qui a été observé sur cette tablette. Ton enseignant a le dossier complet, avec les autres tablettes.</p></div>
+      <p class="aide">Tes résultats sur cette tablette. Pour voir aussi ceux des autres tablettes, ton enseignant les envoie ici : Échanger les données → « Recevoir les résultats de l’enseignant ».</p></div>
     ${vueEleve(eleve)}`;
 }
 
-export const vueEnvoi = () => vueEnvoyer();
+export const vueEnvoi = () => `<h2 class="titre-section">🔄 Échanger les données</h2>${vueEnvoyer()}${vueRecevoir()}`;
 
 export const vueListeEleves = () => `
   <div class="carte"><h2 class="carte-titre">👥 Liste des élèves</h2>
@@ -128,7 +128,7 @@ export const vueListeEleves = () => `
 export function bandeauEleve() {
   const eleve = eleveConnecte();
   const outils = `<div class="rangee sans-marge">
-      <button class="btn secondaire" data-action="envoyer-donnees">📤 Envoyer les données</button>
+      <button class="btn secondaire" data-action="envoyer-donnees">🔄 Échanger les données</button>
       <button class="btn secondaire" data-action="liste-eleves">👥 Liste des élèves</button>
     </div>`;
   if (eleve) {
