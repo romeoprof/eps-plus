@@ -43,7 +43,9 @@ export const exporterSauvegarde = (etat) =>
 
 /* Fichier des élèves à déposer sur le site : chiffré, donc illisible sans le mot de passe. */
 export async function exporterElevesProteges(etat, motDePasse) {
-  const paquet = await chiffrer(JSON.stringify(etat.eleves), motDePasse);
+  /* Chaque élève : prénom + initiale, classe et empreinte de son code (cle), jamais le code lisible. */
+  const eleves = etat.eleves.map(({ id, nom, classe, cle }) => ({ id, nom, classe, cle }));
+  const paquet = await chiffrer(JSON.stringify(eleves), motDePasse);
   telecharger(FICHIER_ELEVES, JSON.stringify(paquet), 'application/json');
 }
 

@@ -21,6 +21,9 @@ export const etatInitial = () => ({
   /* Test VMA : réglages personnalisés et test en cours */
   testVma: { ...PARAMETRES_DEFAUT, depart: null, arret: null, mode: 'paliers', cooper: { plots: 50, nom: '', classe: '', eleveId: '', test: null } },
   testsVma: [], // résultats des élèves : { id, type, eleveId, nom, classe, date, distance, vma }
+  espace: null, // 'eleve' : la tablette rouvre l'espace élève ; l'espace enseignant redemande toujours le code
+  eleveConnecte: null, // élève identifié dans l'espace élève
+  codesEleves: {}, // codes à 4 chiffres lisibles : seulement sur la tablette enseignant
   tempsPf: [], // temps PhotoFinish attribués : { id, courseId, eleveId, nom, classe, date, libelle, t, rang, partants }
   /* null = valeur réglée dans l'espace enseignant */
   prepCourse: { selection: [], pct: {}, type: null, distance: null, duree: null, plots: null, tolerance: null },

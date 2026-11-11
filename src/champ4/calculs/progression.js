@@ -82,6 +82,8 @@ function suiviSport(etat, apsa, rencontres, idEleve) {
     pointsContre: 0,
     parts: [],
     contrat: suiviContrat(etat, rencontres, idEleve),
+    /* Noms de ceux qui ont observé ces rencontres (enseignant ou élève identifié). */
+    observateurs: [...new Set(rencontres.map(({ match }) => match.observePar?.nom).filter(Boolean))],
   };
   const criteres = new Map();
   const projets = new Map();

@@ -49,23 +49,29 @@ async function recuperer(_, champ) {
 
 declarerActions({ 'recolte-envoyer': envoyer, 'recolte-recuperer': recuperer });
 
-export function vueRecolte() {
+/* Ce que la tablette a enregistré, en une phrase. */
+export function resumeResultats() {
   const observes = etat.matchs.filter((m) => m.evenements.length).length;
   const courses = etat.courses.filter(courseAvecDonnees).length;
   const tests = (etat.testsVma || []).length;
   const temps = (etat.tempsPf || []).length;
-  return `
-    <div class="carte"><h2 class="carte-titre">📤 Envoyer les résultats de cette tablette</h2>
-      <p class="aide">À faire sur chaque tablette d'élèves. Le fichier est chiffré, puis tu l'envoies par Drive, Quick Share ou e-mail vers la tablette enseignant. Les résultats restent aussi sur cette tablette.</p>
-      <p><b>${observes} match${observes > 1 ? 's' : ''} observé${observes > 1 ? 's' : ''}, ${courses} course${courses > 1 ? 's' : ''}, ${tests} test${tests > 1 ? 's' : ''} VMA et ${temps} temps PhotoFinish</b> sur cette tablette.</p>
+  return `${observes} match${observes > 1 ? 's' : ''} observé${observes > 1 ? 's' : ''}, ${courses} course${courses > 1 ? 's' : ''}, ${tests} test${tests > 1 ? 's' : ''} VMA et ${temps} temps PhotoFinish`;
+}
+
+/* Secours si le QR code ne passe pas : fichier chiffré envoyé par Drive, Quick Share ou e-mail. */
+export const carteEnvoiFichier = () => `
+    <div class="carte"><h2 class="carte-titre">📎 Autre moyen : fichier chiffré</h2>
+      <p class="aide">Si le QR code ne passe pas : le fichier est chiffré avec un mot de passe donné par l'enseignant, puis envoyé par Drive, Quick Share ou e-mail vers la tablette enseignant.</p>
       <div class="rangee">
         <input id="mot-de-passe-envoi" class="etire" type="password" autocomplete="new-password" placeholder="Mot de passe (10 caractères ou plus)" aria-label="Mot de passe du fichier de résultats">
         <button class="btn" data-action="recolte-envoyer">📤 Créer et envoyer le fichier</button>
       </div>
-    </div>
+    </div>`;
 
-    <div class="carte"><h2 class="carte-titre">📥 Récupérer les résultats des autres tablettes</h2>
-      <p class="aide">À faire sur la tablette enseignant. Saisis le mot de passe, puis choisis un ou plusieurs fichiers reçus. Ils sont ajoutés à cette tablette sans rien effacer, et récupérer deux fois le même fichier ne crée pas de doublon.</p>
+export function carteReceptionFichier() {
+  return `
+    <div class="carte"><h2 class="carte-titre">📎 Recevoir des fichiers chiffrés</h2>
+      <p class="aide">Saisis le mot de passe, puis choisis un ou plusieurs fichiers reçus. Ils sont ajoutés à cette tablette sans rien effacer, et récupérer deux fois le même fichier ne crée pas de doublon.</p>
       <div class="rangee">
         <input id="mot-de-passe-recolte" class="etire" type="password" autocomplete="off" placeholder="Mot de passe des fichiers" aria-label="Mot de passe des fichiers de résultats">
         <label class="btn">📥 Choisir les fichiers<input type="file" accept=".txt,.json,text/plain,application/json" multiple hidden data-choix="recolte-recuperer"></label>

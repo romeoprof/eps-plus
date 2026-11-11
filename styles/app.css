@@ -797,6 +797,49 @@ body.grands .plateau-raquette .critere { min-height: 80px; }
   .pf-commandes { grid-template-columns: 1fr; }
 }
 
+/* Écran d'arrivée : logo et choix de l'espace */
+.choix-espace { max-width: 860px; margin: 0 auto; }
+.logo-accueil { display: flex; flex-direction: column; align-items: center; margin: 10px 0 22px; text-align: center; }
+.logo-eps { display: block; width: clamp(130px, 22vw, 190px); height: auto; filter: drop-shadow(0 8px 16px rgba(29, 78, 216, .3)); }
+.logo-accueil h2 { margin: 12px 0 0; color: var(--titre); font-size: 2.4rem; font-style: italic; font-weight: 900; }
+.logo-accueil p { margin: 2px 0 0; color: var(--texte-doux); font-weight: 800; }
+.grille-espaces { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.carte-espace { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px 20px; background: var(--carte); border: 4px solid var(--bordure); border-radius: 24px; color: var(--titre); text-align: center; font: inherit; }
+.carte-espace b { font-size: 1.6rem; font-weight: 900; }
+.carte-espace small { color: var(--texte-doux); font-weight: 700; }
+.carte-espace .tuile-icone { font-size: 3rem; }
+.carte-espace.eleve { cursor: pointer; border-color: var(--turquoise); }
+.carte-espace.eleve:active { transform: translateY(3px); }
+.carte-espace.enseignant { border-color: var(--bleu); }
+.carte-espace input { width: 100%; max-width: 260px; margin: 0; text-align: center; }
+.carte-espace .btn { min-width: 160px; }
+
+/* Menu de l'espace enseignant */
+.grille-menu { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.tuile-menu { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-height: 130px; padding: 16px 18px; background: var(--carte); border: 3px solid var(--bordure); border-radius: 20px; color: var(--titre); text-align: left; font: inherit; cursor: pointer; box-shadow: 0 4px 0 rgba(0, 0, 0, .08); }
+.tuile-menu:active { transform: translateY(3px); box-shadow: none; }
+.tuile-menu .tuile-icone { font-size: 2rem; }
+.tuile-menu b { font-size: 1.15rem; font-weight: 900; }
+.tuile-menu small { color: var(--texte-doux); font-weight: 700; }
+.table-codes td, .table-codes th { padding: 6px 10px; }
+.code-eleve { font: 900 1.3rem/1 ui-monospace, monospace; letter-spacing: 4px; color: var(--titre); }
+
+/* Espace élève */
+.bandeau-eleve { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; border-color: var(--turquoise); }
+.bandeau-eleve-nom { font-size: 1.2rem; color: var(--titre); }
+.bandeau-eleve-nom small { display: block; color: var(--texte-doux); font-size: .9rem; font-weight: 700; }
+.carte-connexion { max-width: 520px; margin-left: auto; margin-right: auto; }
+.champ-code { max-width: 200px; font-size: 2rem !important; letter-spacing: 12px; text-align: center; }
+
+/* Envoi et réception par QR codes */
+.qr-cadre { display: flex; flex-direction: column; align-items: center; margin: 10px 0; }
+.qr-zone { width: min(80vw, 420px); padding: 10px; background: #fff; border-radius: 16px; }
+.qr-zone svg { display: block; width: 100%; height: auto; }
+.qr-legende { margin: 6px 0 0; color: var(--titre); font-weight: 900; }
+.qr-lecteur { margin: 10px 0; }
+.qr-video { display: block; width: 100%; max-width: 560px; max-height: 50vh; margin: 0 auto; background: #000; border-radius: 14px; }
+.qr-etat { color: var(--titre); font-weight: 800; }
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }

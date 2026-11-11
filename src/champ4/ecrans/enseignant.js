@@ -8,16 +8,53 @@ import { aUnDefautChoisi, contratsApsa, criteresApsa, listeEditable } from '../r
 import { vueReglagesDemifond } from '../../demifond/ecrans/reglages.js';
 import { blocImportEleves } from './import-eleves.js';
 import { vueProgression } from './progression.js';
-import { vueRecolte } from './recolte.js';
+import { vueRecevoir } from '../../transfert/ecrans.js';
+import { attribuerCodes, changerCode } from '../../noyau/espace.js';
 
 const EMPREINTE_PAR_DEFAUT = '74id85';
 const POINTS_MAX = 10;
 const DEMIFOND = 'demifond'; // sport réglé à part : ses réglages ont leur propre écran
 
-let deverrouille = false;
-let pageEnseignant = 'reglages';
+let pageEnseignant = 'menu';
 let apsaEditee = null;
 let messageImport = '';
+let classeCodes = '';
+
+export const pageEnseignantCourante = () => pageEnseignant;
+export function ouvrirPageEnseignant(page) {
+  pageEnseignant = page;
+  if (page === 'eleves' && attribuerCodes(etat)) sauver();
+}
+
+/* Code de l'espace enseignant (celui déjà défini, modifiable dans « Code d'accès »). */
+export const codeEnseignantValide = (code) => empreinte(code) === (etat.reglages.codeEmpreinte || EMPREINTE_PAR_DEFAUT);
+
+/* Liste imprimable des codes, une classe par page. */
+function imprimerCodes(classe) {
+  const classes = classe ? [classe] : [...new Set(etat.eleves.map((e) => e.classe))].sort();
+  const pages = classes
+    .map((c) => {
+      const lignes = etat.eleves
+        .filter((e) => e.classe === c)
+        .sort((a, b) => a.nom.localeCompare(b.nom))
+        .map((e) => `<tr><td>${esc(e.nom)}</td><td class="code">${esc(etat.codesEleves?.[e.id] || '')}</td></tr>`)
+        .join('');
+      return `<section><h1>EPS + · Codes élèves · ${esc(c)}</h1><table><tr><th>Élève</th><th>Code</th></tr>${lignes}</table>
+        <p>Chaque élève garde son code pour lui : il sert à s'identifier dans l'espace élève.</p></section>`;
+    })
+    .join('');
+  const cadre = document.createElement('iframe');
+  cadre.style.cssText = 'position:fixed;width:0;height:0;border:0';
+  document.body.appendChild(cadre);
+  cadre.contentDocument.write(`<!doctype html><html lang="fr"><meta charset="utf-8"><title>Codes élèves</title>
+    <style>body{font-family:sans-serif}section{page-break-after:always}table{border-collapse:collapse;width:100%}
+    td,th{border:1px solid #333;padding:10px 12px;text-align:left;font-size:16px}.code{font:700 22px monospace;letter-spacing:4px}</style>${pages}</html>`);
+  cadre.contentDocument.close();
+  setTimeout(() => {
+    cadre.contentWindow.print();
+    setTimeout(() => cadre.remove(), 1000);
+  }, 300);
+}
 
 /* Copie les critères par défaut avant la première modification. */
 function criteresModifiables(apsa) {
@@ -44,15 +81,23 @@ async function lireTexte(fichier) {
 }
 
 declarerActions({
-  'ens-entrer': () => {
-    const attendu = etat.reglages.codeEmpreinte || EMPREINTE_PAR_DEFAUT;
-    if (empreinte(document.querySelector('#code').value) === attendu) {
-      deverrouille = true;
-      rafraichir();
-    } else {
-      notifier('Code incorrect.');
-    }
+  'ens-code-classe': (_, champ) => {
+    classeCodes = champ.value;
+    rafraichir();
   },
+  'ens-code-nouveau': async ({ id }) => {
+    const eleve = etat.eleves.find((e) => e.id === id);
+    const ok = await demander({
+      titre: `Nouveau code pour ${eleve?.nom || 'cet élève'} ?`,
+      texte: "L'ancien code ne marchera plus. Pense à recréer et déposer la liste protégée pour les autres tablettes.",
+      confirmer: 'Nouveau code',
+    });
+    if (!ok) return;
+    changerCode(etat, id);
+    sauver();
+    rafraichir();
+  },
+  'ens-imprimer-codes': ({ classe }) => imprimerCodes(classe || ''),
   'ens-bonus-actif': (_, champ) => {
     etat.reglages.contratBonus = champ.checked;
     sauver();
@@ -63,11 +108,8 @@ declarerActions({
     sauver();
   },
   'ens-page': ({ page }) => {
-    pageEnseignant = page;
-    rafraichir();
-  },
-  'ens-verrouiller': () => {
-    deverrouille = false;
+    ouvrirPageEnseignant(page);
+    window.scrollTo(0, 0);
     rafraichir();
   },
   'ens-conseil': (_, champ) => {
@@ -165,7 +207,8 @@ declarerActions({
     const fichier = champ.files[0];
     if (!fichier) return;
     const ajoutes = importerEleves(etat, await lireTexte(fichier));
-    messageImport = `${ajoutes} élève${ajoutes > 1 ? 's' : ''} importé${ajoutes > 1 ? 's' : ''}.`;
+    attribuerCodes(etat);
+    messageImport = `${ajoutes} élève${ajoutes > 1 ? 's' : ''} importé${ajoutes > 1 ? 's' : ''}, avec leur code.`;
     sauver();
     rafraichir();
   },
@@ -178,6 +221,7 @@ declarerActions({
     });
     if (!ok) return;
     etat.eleves = [];
+    etat.codesEleves = {};
     messageImport = '';
     sauver();
     rafraichir();
@@ -186,6 +230,8 @@ declarerActions({
     const champ = document.querySelector('#mot-de-passe-publication');
     if (!etat.eleves.length) return notifier("Importe d'abord une liste d'élèves.");
     if (champ.value.length < 10) return notifier('Choisis un mot de passe de 10 caractères ou plus.');
+    attribuerCodes(etat);
+    sauver();
     await exporterElevesProteges(etat, champ.value);
     champ.value = '';
     notifier('Fichier créé : dépose-le sur le site.');
@@ -204,13 +250,6 @@ declarerActions({
     notifier('Code modifié ✔');
   },
 });
-
-const vueVerrou = () => `
-  <div class="carte verrou"><h2 class="carte-titre">🔒 Espace enseignant</h2>
-    <label class="etiquette" for="code">Code d'accès</label>
-    <input id="code" type="password" inputmode="text" autocapitalize="off" autocorrect="off" autocomplete="off" placeholder="Code">
-    <button class="btn" data-action="ens-entrer">Entrer</button>
-  </div>`;
 
 const choixDuSport = (apsa) => `
   <div class="choix-sports" role="group" aria-label="Sport à régler">
@@ -329,7 +368,7 @@ function carteEleves() {
 
 const carteEnvoiEleves = () => `
   <div class="carte"><h2 class="carte-titre">🔐 Envoyer la liste aux autres tablettes</h2>
-    <p class="aide">1. Choisis un mot de passe et crée le fichier protégé. 2. Dépose-le sur le site, à côté de index.html. 3. Sur chaque tablette : onglet Équipes, mot de passe, puis « Importer les élèves ». Le mot de passe n'est enregistré nulle part : retiens-le bien.</p>
+    <p class="aide">1. Choisis un mot de passe et crée le fichier protégé (il contient les élèves et une empreinte de leur code, jamais le code lisible). 2. Dépose-le sur le site, à côté de index.html. 3. Sur chaque tablette : espace élève, « Liste des élèves », mot de passe, puis « Importer les élèves ». Le mot de passe n'est enregistré nulle part : retiens-le bien.</p>
     <div class="rangee">
       <input id="mot-de-passe-publication" class="etire" type="password" autocomplete="new-password" placeholder="Mot de passe (10 caractères ou plus)" aria-label="Mot de passe de la liste">
       <button class="btn" data-action="ens-publier-eleves">Créer le fichier protégé</button>
@@ -354,19 +393,53 @@ const carteCode = () => `
     </div>
   </div>`;
 
-export function vueEnseignant() {
-  if (!deverrouille) return vueVerrou();
+/* Codes à 4 chiffres des élèves, par classe. */
+function carteCodes() {
+  const classes = [...new Set(etat.eleves.map((e) => e.classe))].sort();
+  if (!classes.length) return '';
+  const classe = classes.includes(classeCodes) ? classeCodes : classes[0];
+  const lignes = etat.eleves
+    .filter((e) => e.classe === classe)
+    .sort((a, b) => a.nom.localeCompare(b.nom))
+    .map(
+      (e) => `<tr><td>${esc(e.nom)}</td><td class="code-eleve">${esc(etat.codesEleves?.[e.id] || '–')}</td>
+        <td><button class="btn-mini" data-action="ens-code-nouveau" data-id="${esc(e.id)}">🔄 Nouveau code</button></td></tr>`,
+    )
+    .join('');
+  return `<div class="carte carte-large"><h2 class="carte-titre">🔢 Codes des élèves</h2>
+    <p class="aide">Chaque élève s'identifie dans l'espace élève avec ce code. Les codes lisibles ne sont que sur cette tablette. Après un import ou un nouveau code, recrée la liste protégée (carte ci-dessous) et dépose-la sur le site : les autres tablettes y prennent les codes.</p>
+    <div class="rangee">
+      <select data-choix="ens-code-classe" aria-label="Classe">${classes.map((c) => `<option ${c === classe ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
+      <button class="btn secondaire" data-action="ens-imprimer-codes" data-classe="${esc(classe)}">🖨️ Imprimer cette classe</button>
+      <button class="btn secondaire" data-action="ens-imprimer-codes">🖨️ Imprimer toutes les classes</button>
+    </div>
+    <div class="defile"><table class="table-codes"><tr><th>Élève</th><th>Code</th><th></th></tr>${lignes}</table></div>
+  </div>`;
+}
+
+const PAGES = [
+  { id: 'activites', icone: '🏅', titre: 'Activités', texte: 'Observer, chronométrer, PhotoFinish' },
+  { id: 'eleves', icone: '👥', titre: 'Gestion des élèves', texte: 'Listes, codes, liste protégée' },
+  { id: 'observables', icone: '👁️', titre: 'Observables par APSA', texte: 'Critères, contrats, fiches, demi-fond' },
+  { id: 'progression', icone: '📈', titre: 'Progression des élèves', texte: 'Dossier de chaque élève' },
+  { id: 'recevoir', icone: '📥', titre: 'Recevoir les données', texte: 'QR codes ou fichiers des tablettes' },
+  { id: 'options', icone: '⚙️', titre: 'Options et synchronisation', texte: 'Options, config.json' },
+  { id: 'code', icone: '🔑', titre: "Code d'accès", texte: "Code de l'espace enseignant" },
+];
+export const titrePageEnseignant = () => PAGES.find((p) => p.id === pageEnseignant)?.titre || 'Espace enseignant';
+
+const vueMenu = () => `
+  <div class="accueil-titre"><h2>Espace enseignant</h2><p>Que veux-tu faire ?</p></div>
+  <div class="grille-menu">${PAGES.map(
+    (p) => `<button class="tuile-menu" ${p.id === 'activites' ? 'data-action="ens-activites"' : `data-action="ens-page" data-page="${p.id}"`}>
+      <span class="tuile-icone">${p.icone}</span><b>${p.titre}</b><small>${p.texte}</small></button>`,
+  ).join('')}</div>`;
+
+function vueObservables() {
   const apsa = apsaEditee === DEMIFOND || APSA[apsaEditee] ? apsaEditee : etat.apsa || DEMIFOND;
   apsaEditee = apsa;
   const a = esc(apsa);
-  const onglet = (id, libelle) =>
-    `<button role="tab" aria-selected="${pageEnseignant === id}" class="onglet ${pageEnseignant === id ? 'actif' : ''}" data-action="ens-page" data-page="${id}">${libelle}</button>`;
-  const navigation = `<div class="onglets marge-bas" role="tablist">${onglet('reglages', '⚙️ Réglages')}${onglet('progression', '📈 Progression')}${onglet('recolte', '🔄 Récupérer les données')}</div>`;
-  if (pageEnseignant === 'progression') return navigation + vueProgression();
-  if (pageEnseignant === 'recolte') return navigation + vueRecolte();
-  return `${navigation}
-    <h2 class="titre-section">Réglages par sport</h2>
-    ${choixDuSport(apsa)}
+  return `${choixDuSport(apsa)}
     ${
       apsa === DEMIFOND
         ? vueReglagesDemifond()
@@ -376,14 +449,25 @@ export function vueEnseignant() {
              ${carteListe('fiche', "📋 Fiche d'observation", "Critère de la fiche d'observation", apsa, a)}
              ${carteListe('projets', '🎯 Projets de jeu proposés', 'Projet de jeu', apsa, a)}
            </div>`
-    }
-    <h2 class="titre-section">Réglages généraux</h2>
-    <div class="grille-reglages">
-      ${carteOptions()}
-      ${carteEleves()}
-      ${carteEnvoiEleves()}
-      ${carteSynchro()}
-      ${carteCode()}
-    </div>
-    <button class="btn secondaire" data-action="ens-verrouiller">🔒 Verrouiller</button>`;
+    }`;
+}
+
+export function vueEnseignant() {
+  const titre = (texte) => `<h2 class="titre-section">${texte}</h2>`;
+  switch (pageEnseignant) {
+    case 'eleves':
+      return `${titre('👥 Gestion des élèves')}<div class="grille-reglages">${carteEleves()}${carteCodes()}${carteEnvoiEleves()}</div>`;
+    case 'observables':
+      return `${titre('👁️ Observables par APSA')}${vueObservables()}`;
+    case 'progression':
+      return vueProgression();
+    case 'recevoir':
+      return `${titre('📥 Recevoir les données')}${vueRecevoir()}`;
+    case 'options':
+      return `${titre('⚙️ Options et synchronisation')}<div class="grille-reglages">${carteOptions()}${carteSynchro()}</div>`;
+    case 'code':
+      return `${titre("🔑 Code d'accès")}${carteCode()}`;
+    default:
+      return vueMenu();
+  }
 }

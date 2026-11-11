@@ -42,6 +42,8 @@ import {
   zoneDe,
 } from '../src/demifond/calculs.js';
 import { empreinte } from '../src/noyau/outils.js';
+import { attribuerCodes, changerCode, codeValide } from '../src/noyau/espace.js';
+import { assembler, decoderPaquet, decouper, encoderPaquet, envoiComplet, lireMorceau, nouvelleReception, recevoirMorceau } from '../src/transfert/qr.js';
 import {
   ajouterPassage,
   analyserImage,
@@ -828,6 +830,40 @@ test('PhotoFinish : les temps attribués vont dans le dossier des élèves et pa
   vrai(enseignant.eleves.some((e) => e.id === 'e2'), 'élève transmis');
 });
 
+test('Codes élèves : un code à 4 chiffres par élève, seule son empreinte voyage', () => {
+  const etat = etatInitial();
+  etat.eleves = [{ id: 'e1', nom: 'Léa M.', classe: '5A' }, { id: 'e2', nom: 'Tom B.', classe: '5A' }];
+  egal(attribuerCodes(etat), 2);
+  egal(attribuerCodes(etat), 0); // les codes déjà donnés ne changent pas
+  const code = etat.codesEleves.e1;
+  vrai(/^\d{4}$/.test(code), 'code à 4 chiffres');
+  vrai(codeValide(etat.eleves[0], code), 'bon code accepté');
+  vrai(!codeValide(etat.eleves[0], code === '0000' ? '1111' : '0000'), 'mauvais code refusé');
+  vrai(!codeValide(etat.eleves[1], code) || etat.codesEleves.e2 === code, 'le code de Léa ne vaut pas pour Tom');
+  vrai(!JSON.stringify(etat.eleves).includes(`"${code}"`), 'code lisible dans la liste');
+  const ancien = etat.eleves[0].cle;
+  changerCode(etat, 'e1');
+  vrai(etat.eleves[0].cle !== ancien && !codeValide(etat.eleves[0], code), 'ancien code refusé');
+  // Le paquet de résultats (QR code) ne contient même pas l'empreinte
+  etat.testsVma = [{ id: 't', eleveId: 'e1', date: 1, distance: 1200, vma: 12 }];
+  vrai(!paquetResultats(etat).eleves.some((e) => 'cle' in e), 'empreinte dans le paquet');
+});
+
+test('QR codes : découpage, ordre quelconque et assemblage', () => {
+  const texte = 'z'.padEnd(1500, 'abc');
+  const morceaux = decouper(texte, 'id1', 600);
+  egal(morceaux.length, 3);
+  const reception = nouvelleReception();
+  let envoi;
+  [2, 0, 2, 1].forEach((i) => {
+    envoi = recevoirMorceau(reception, morceaux[i]);
+  });
+  vrai(envoiComplet(envoi), 'envoi incomplet');
+  egal(assembler(envoi), texte);
+  egal(lireMorceau('autre chose'), null);
+  egal(lireMorceau('EPS+|x|3|2|abc'), null);
+});
+
 test('Une ancienne sauvegarde reçoit bien les défauts vides', () => {
   const ancienne = etatInitial();
   delete ancienne.reglages.defauts;
@@ -920,6 +956,15 @@ async function testsAsynchrones() {
     refuse = true;
   }
   resultats.push([refuse, 'Liste protégée : un mauvais mot de passe est refusé']);
+
+  try {
+    const envoi = { ...paquetResultats(etatChiffre), envoyePar: 'Léa M.' };
+    const relu = await decoderPaquet(await encoderPaquet(envoi));
+    egal(relu, JSON.parse(JSON.stringify(envoi)));
+    resultats.push([true, 'QR codes : les résultats compressés sont relus à l’identique']);
+  } catch (erreur) {
+    resultats.push([false, `QR codes : ${erreur.message}`]);
+  }
 }
 
 test('La configuration partagée ne peut pas contenir d\'élèves', () => {

@@ -1,7 +1,8 @@
 /* Navigation, actions des boutons, messages et demandes de confirmation. */
 import { esc } from './outils.js';
 
-export const vue = { ecran: 'accueil', onglet: 'match', ongletDF: 'coureurs' };
+/* espace : null (écran de choix), 'enseignant' ou 'eleve' */
+export const vue = { ecran: 'choix', espace: null, onglet: 'match', ongletDF: 'coureurs' };
 
 let dessiner = () => {};
 export const definirDessin = (fonction) => {

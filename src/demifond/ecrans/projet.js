@@ -2,6 +2,7 @@
 import { etat, sauver } from '../../noyau/etat.js';
 import { declarerActions, notifier, rafraichir, vue } from '../../noyau/interface.js';
 import { decimal, esc, formatChrono, uid } from '../../noyau/outils.js';
+import { observateur } from '../../noyau/espace.js';
 import { PCT_MAX, PCT_MIN, PCT_PAS } from '../contenu.js';
 import { projetCoureur, vitesseCible, zoneDe } from '../calculs.js';
 import { coureurDe, courseEnCours, reglagesDemifond } from '../etat.js';
@@ -63,6 +64,7 @@ declarerActions({
       depart: null,
       finLe: null,
       journal: [],
+      observePar: observateur(),
       coureurs: coureurs.map((c) => {
         const pct = pctDe(c.id);
         return {

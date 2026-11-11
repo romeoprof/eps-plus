@@ -1,6 +1,7 @@
 /* Demi-Cooper, utilisable par les élèves : un gros bouton à chaque repère, la vitesse en direct. */
 import { bip, garderEcranAllume, vibrer } from '../noyau/appareil.js';
 import { etat, sauver } from '../noyau/etat.js';
+import { observateur } from '../noyau/espace.js';
 import { declarerActions, demander, notifier, rafraichir, vue } from '../noyau/interface.js';
 import { decimal, esc, formatChrono } from '../noyau/outils.js';
 import { allureFinale, annulerPassage, distanceAuPlot, distanceFinaleValide, enregistrerPassage } from '../demifond/calculs.js';
@@ -172,6 +173,7 @@ declarerActions({
     c.distanceFinale = metres;
     const enregistrement = enregistrementCooper(test);
     if (enregistrement) {
+      enregistrement.observePar = observateur();
       ajouterTestVma(etat, enregistrement);
       reporterVmaDemifond(etat, enregistrement.eleveId);
     }

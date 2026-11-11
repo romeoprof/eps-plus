@@ -26,12 +26,23 @@ Ouvrir http://localhost:8765/tests/ : tous les tests doivent être verts.
 
 Si un fichier est ajouté, l'inscrire dans la liste de `sw.js`. Après toute modification, changer `VERSION` dans ce même fichier.
 
+## Espaces enseignant et élève
+
+À l'ouverture : logo, puis **Espace élève** (sans code) ou **Espace enseignant** (code enseignant). « ⇄ Changer d'espace » ramène à ce choix. Une tablette laissée dans l'espace élève y revient seule ; l'espace enseignant redemande toujours le code.
+
+- **Espace enseignant** : un menu de boutons. Activités (toutes, PhotoFinish compris), Gestion des élèves, Observables par APSA, Progression des élèves, Recevoir les données, Options et synchronisation, Code d'accès (`src/champ4/ecrans/enseignant.js`).
+- **Espace élève** : Sports, Demi-fond, Test VMA ; équipes, poules, VMA modifiables ; Liste des élèves et Mise à jour. L'élève peut s'identifier (classe, prénom, code à 4 chiffres) : il voit alors **sa** progression, et ses observations portent « observé par » son nom. Identifié ou non, il peut observer n'importe quel camarade : la performance va à l'élève observé (`src/ecrans/eleve.js`, `src/noyau/espace.js`).
+
+**Codes des élèves** : créés par l'application à l'import de la liste. Espace enseignant → Gestion des élèves → « Codes des élèves » : liste par classe, impression, nouveau code. Les codes lisibles ne sont que sur la tablette enseignant ; la liste protégée n'en contient qu'une empreinte. Après un import ou un nouveau code : recréer la liste protégée et la déposer sur le site. Un code à 4 chiffres évite les confusions, ce n'est pas une vraie sécurité.
+
+**Envoyer les données** (espace élève) : la tablette affiche des QR codes qui défilent ; l'enseignant les lit dans Recevoir les données (caméra). Les données restent aussi sur la tablette élève. Secours : fichier chiffré. Les QR codes ne sont pas chiffrés (prénoms, initiales, résultats), ils ne passent que d'un écran à une caméra proche. Bibliothèques : `src/vendor/qrcode.js` (qrcode-generator, MIT) et `src/vendor/jsQR.js` (jsQR, Apache 2.0) ; le lecteur utilise d'abord celui intégré à Chrome quand il existe.
+
 ## Mettre à jour la liste d'élèves sur les tablettes
 
 1. Espace enseignant : importer le CSV (colonnes Nom ; Prénom ; Classe). Seuls le prénom et l'initiale du nom sont conservés.
 2. Saisir un mot de passe de 10 caractères ou plus, puis « Créer le fichier protégé ».
 3. Déposer `eleves-proteges.json` sur le site, à côté de `index.html`, en remplaçant l'ancien.
-4. Sur chaque tablette : onglet Équipes, saisir le mot de passe, puis « Importer les élèves ».
+4. Sur chaque tablette : espace élève → « Liste des élèves » (ou onglet Équipes), saisir le mot de passe, puis « Importer les élèves ».
 
 Le fichier en ligne est chiffré et le mot de passe n'est enregistré nulle part. Un mot de passe long est indispensable, car le fichier reste téléchargeable par tous. Le code de l'espace enseignant est distinct : il évite seulement les modifications par erreur.
 

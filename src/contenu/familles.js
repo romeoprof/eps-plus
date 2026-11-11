@@ -1,7 +1,8 @@
 /*
  * MENU PRINCIPAL : les activités rangées par famille, dans l'ordre d'affichage.
  * Pour une activité du Champ 4, le nom doit être celui de champ4/contenu/apsa.js.
- * « module » ouvre un module à part, « bientot: true » affiche l'activité sans l'ouvrir.
+ * « module » ouvre un module à part, « bientot: true » affiche l'activité sans l'ouvrir,
+ * « enseignant: true » la réserve à l'espace enseignant.
  */
 export const FAMILLES = [
   {
@@ -10,7 +11,7 @@ export const FAMILLES = [
     activites: [
       { nom: 'Demi-fond', icone: '🏃', module: 'demifond' },
       { nom: 'Test VMA', icone: '📈', module: 'testvma' },
-      { nom: 'PhotoFinish', icone: '📸', module: 'photofinish' },
+      { nom: 'PhotoFinish', icone: '📸', module: 'photofinish', enseignant: true },
     ],
   },
   {

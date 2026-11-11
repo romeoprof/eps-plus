@@ -1,6 +1,7 @@
 import { etat, sauver } from '../../noyau/etat.js';
 import { declarerActions, notifier, rafraichir } from '../../noyau/interface.js';
 import { esc, formatChrono } from '../../noyau/outils.js';
+import { observateur } from '../../noyau/espace.js';
 import { APSA, NIVEAUX_PROJET } from '../contenu/apsa.js';
 import { compte, coupPossible, libelleDe, possesseur, score, tempsEcoule } from '../calculs/match.js';
 import { contratDuMatch, membresDuCote } from '../calculs/progression.js';
@@ -92,6 +93,7 @@ declarerActions({
     }
     if (!m.evenements.length) {
       figerContrats(m);
+      m.observePar = observateur(); // enseignant, élève identifié, ou personne
       panneauOuvert = false; // le terrain reprend sa place dès le premier point
     }
     if (!m.criteres) m.criteres = criteresDuMatch(m).map((c) => ({ ...c }));

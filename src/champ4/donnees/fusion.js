@@ -36,7 +36,8 @@ export function paquetResultats(etat, maintenant = Date.now()) {
     tempsPf,
     equipes,
     poules: etat.poules.filter((p) => idsPoules.has(p.id)),
-    eleves: etat.eleves.filter((e) => idsEleves.has(e.id)),
+    /* Sans l'empreinte du code : le paquet peut passer en QR code, non chiffré. */
+    eleves: etat.eleves.filter((e) => idsEleves.has(e.id)).map(({ cle, ...e }) => e),
   };
 }
 

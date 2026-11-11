@@ -27,6 +27,8 @@ declarerActions({
 });
 
 const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
+/* Qui a observé : l'enseignant, un élève identifié, ou « – » (élève non identifié). */
+const observePar = (donnee) => esc(donnee?.observePar?.nom || '–');
 
 /* Écart entre la première et la dernière rencontre, en points de pourcentage. */
 function evolution(parts) {
@@ -72,6 +74,7 @@ function carteSport(s) {
       <small>${pluriel(s.rencontres, 'rencontre')}</small></h2>
     <p>${s.terminees ? `<b>${pluriel(s.victoires, 'victoire')}</b> · ${pluriel(s.nuls, 'nul')} · ${pluriel(s.defaites, 'défaite')}` : 'Aucune rencontre terminée'}
       — ${s.pointsPour} points gagnés, ${s.pointsContre} perdus</p>
+    ${s.observateurs.length ? `<p class="aide">Observé par : ${s.observateurs.map(esc).join(', ')}</p>` : ''}
     ${blocContrat(s.contrat)}
     ${s.parts.length ? `<h4>Part des points gagnés par rencontre</h4>${courbe(s.parts)}${evolution(s.parts)}` : ''}
     ${lignes ? `<h4>Actions observées</h4><div class="defile"><table>${lignes}</table></div>` : ''}
@@ -89,7 +92,7 @@ function carteDemifond(df) {
   const parts = df.lignes.map((l) => (max > min ? 0.15 + ((l.moyenne - min) / (max - min)) * 0.7 : 0.5));
   const lignes = df.lignes
     .map(
-      (l) => `<tr><td>${dateCourte(l.course.finLe)}</td><td>${vitesse(l.coureur.cible)}<br><small>${l.coureur.pct} % VMA</small></td><td><b>${vitesse(l.moyenne)}</b></td><td>${avecSigne(l.ecart)}</td><td>${l.distance} m</td><td>${formatChrono(l.temps)}</td><td>${l.regularite ?? '–'}</td><td>${l.atteint ? '✅' : '–'}</td></tr>`,
+      (l) => `<tr><td>${dateCourte(l.course.finLe)}</td><td>${vitesse(l.coureur.cible)}<br><small>${l.coureur.pct} % VMA</small></td><td><b>${vitesse(l.moyenne)}</b></td><td>${avecSigne(l.ecart)}</td><td>${l.distance} m</td><td>${formatChrono(l.temps)}</td><td>${l.regularite ?? '–'}</td><td>${l.atteint ? '✅' : '–'}</td><td>${observePar(l.course)}</td></tr>`,
     )
     .join('');
   const derniereVma = df.lignes[df.lignes.length - 1].coureur.vma;
@@ -99,7 +102,7 @@ function carteDemifond(df) {
     <h4>Vitesse moyenne à chaque course (km/h)</h4>
     ${courbe(parts, 'Vitesse moyenne à chaque course', df.lignes.map((l) => vitesse(l.moyenne)))}
     <div class="defile"><table>
-      <tr><th>Date</th><th>Projet</th><th>Réalisé</th><th>Écart</th><th>Distance</th><th>Temps</th><th>Régularité</th><th>Objectif</th></tr>
+      <tr><th>Date</th><th>Projet</th><th>Réalisé</th><th>Écart</th><th>Distance</th><th>Temps</th><th>Régularité</th><th>Objectif</th><th>Observé par</th></tr>
       ${lignes}
     </table></div>
   </div>`;
@@ -111,12 +114,12 @@ function carteTestsVma(tests) {
   const max = Math.max(...tests.map((t) => t.vma));
   const parts = tests.map((t) => (max > min ? 0.15 + ((t.vma - min) / (max - min)) * 0.7 : 0.5));
   const lignes = tests
-    .map((t) => `<tr><td>${dateCourte(t.date)}</td><td>Demi-Cooper</td><td>${t.distance} m</td><td><b>${vitesse(t.vma)} km/h</b></td></tr>`)
+    .map((t) => `<tr><td>${dateCourte(t.date)}</td><td>Demi-Cooper</td><td>${t.distance} m</td><td><b>${vitesse(t.vma)} km/h</b></td><td>${observePar(t)}</td></tr>`)
     .join('');
   return `<div class="carte">
     <h2 class="carte-titre"><span class="icone-titre">📈</span> Tests VMA <small>${pluriel(tests.length, 'test')} · dernière VMA ${vitesse(tests[tests.length - 1].vma)} km/h</small></h2>
     ${tests.length > 1 ? `<h4>VMA à chaque test (km/h)</h4>${courbe(parts, 'VMA à chaque test', tests.map((t) => vitesse(t.vma)))}` : ''}
-    <div class="defile"><table><tr><th>Date</th><th>Test</th><th>Distance</th><th>VMA</th></tr>${lignes}</table></div>
+    <div class="defile"><table><tr><th>Date</th><th>Test</th><th>Distance</th><th>VMA</th><th>Observé par</th></tr>${lignes}</table></div>
   </div>`;
 }
 
@@ -143,7 +146,7 @@ function cartePhotofinish(temps) {
   </div>`;
 }
 
-function vueEleve(eleve) {
+export function vueEleve(eleve) {
   const suivi = suiviEleve(etat, eleve.id);
   const df = suiviDemifond(etat, eleve.id);
   const tests = testsVmaEleve(etat, eleve.id);
