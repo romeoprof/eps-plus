@@ -10,6 +10,7 @@ export const FAMILLES = [
     activites: [
       { nom: 'Demi-fond', icone: '🏃', module: 'demifond' },
       { nom: 'Test VMA', icone: '📈', module: 'testvma' },
+      { nom: 'PhotoFinish', icone: '📸', module: 'photofinish' },
     ],
   },
   {

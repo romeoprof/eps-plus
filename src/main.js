@@ -14,6 +14,9 @@ import { ONGLETS_DF, vueDemifond } from './demifond/ecrans/module.js';
 import { oublierChoixCourse } from './demifond/ecrans/reglages.js';
 import { vueTestVma } from './testvma/ecran.js';
 import { cooperEnCours } from './testvma/ecran-cooper.js';
+import { coursePfEnCours, photofinishEnAttente, vuePhotofinish } from './photofinish/ecran.js';
+
+const photofinishActif = () => coursePfEnCours() || photofinishEnAttente();
 
 const testVmaEnCours = () => !!etat.testVma.depart && !etat.testVma.arret;
 
@@ -100,16 +103,19 @@ function dessinerEnTete() {
   const champ4 = vue.ecran === 'champ4';
   const demifond = vue.ecran === 'demifond';
   const testVma = vue.ecran === 'testvma';
+  const photofinish = vue.ecran === 'photofinish';
   const sousTitre = champ4
     ? esc(etat.apsa)
     : demifond
       ? 'Demi-fond'
       : testVma
         ? 'Test VMA'
-        : vue.ecran === 'enseignant'
-          ? 'Espace enseignant'
-          : 'Saint-Joseph Auneau';
-  const icone = champ4 ? APSA[etat.apsa].icone : demifond ? '🏃' : testVma ? '📈' : '🏅';
+        : photofinish
+          ? 'PhotoFinish'
+          : vue.ecran === 'enseignant'
+            ? 'Espace enseignant'
+            : 'Saint-Joseph Auneau';
+  const icone = champ4 ? APSA[etat.apsa].icone : demifond ? '🏃' : testVma ? '📈' : photofinish ? '📸' : '🏅';
   document.querySelector('#entete').innerHTML = `
     <div class="marque"><span class="marque-icone">${icone}</span><div><h1>EPS +</h1><small>${sousTitre}</small></div></div>
     <div class="commandes">
@@ -123,7 +129,10 @@ function dessinerEnTete() {
 
 function dessinerNavigation() {
   const barre = document.querySelector('#navigation');
-  if (vue.ecran === 'enseignant' || vue.ecran === 'testvma') {
+  if (vue.ecran === 'photofinish') {
+    /* Pas de retour au menu pendant une course : la caméra serait coupée. */
+    barre.innerHTML = photofinishActif() ? '' : `<button class="btn-retour" data-action="accueil">← Menu principal</button>`;
+  } else if (vue.ecran === 'enseignant' || vue.ecran === 'testvma') {
     barre.innerHTML = `<button class="btn-retour" data-action="accueil">← Menu principal</button>`;
   } else if (vue.ecran === 'champ4') {
     barre.innerHTML = `<button class="btn-retour" data-action="menu-principal">← Menu principal</button>
@@ -145,6 +154,7 @@ function contenu() {
   if (vue.ecran === 'accueil') return vueAccueil();
   if (vue.ecran === 'demifond') return vueDemifond();
   if (vue.ecran === 'testvma') return vueTestVma();
+  if (vue.ecran === 'photofinish') return vuePhotofinish();
   return ONGLETS.find((o) => o.id === vue.onglet).vue();
 }
 
@@ -160,7 +170,8 @@ definirDessin(() => {
   const testEnCours = vue.ecran === 'testvma' && (testVmaEnCours() || cooperEnCours());
   const match = vue.ecran === 'champ4' && vue.onglet === 'match' ? matchCourant() : null;
   const raquetteEnCours = !!match && !match.termine && !!APSA[match.apsa]?.terrain;
-  document.body.classList.toggle('en-course', testEnCours || raquetteEnCours || (vue.ecran === 'demifond' && vue.ongletDF === 'course' && !!etat.courseEnCours));
+  const pfEnCours = vue.ecran === 'photofinish' && photofinishActif();
+  document.body.classList.toggle('en-course', pfEnCours || testEnCours || raquetteEnCours ||(vue.ecran === 'demifond' && vue.ongletDF === 'course' && !!etat.courseEnCours));
   dessinerEnTete();
   dessinerNavigation();
   document.querySelector('#contenu').innerHTML = contenu();
@@ -183,6 +194,8 @@ if (etat.courseEnCours) {
 if (testVmaEnCours() || cooperEnCours() || (etat.testVma.cooper?.test && etat.testVma.cooper.test.coureurs[0].distanceFinale == null)) {
   vue.ecran = 'testvma';
 }
+/* Une course PhotoFinish en cours reprend aussi (le chrono part de l'heure du départ). */
+if (coursePfEnCours()) vue.ecran = 'photofinish';
 rafraichir();
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

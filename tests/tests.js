@@ -42,6 +42,20 @@ import {
   zoneDe,
 } from '../src/demifond/calculs.js';
 import { empreinte } from '../src/noyau/outils.js';
+import {
+  ajouterPassage,
+  analyserImage,
+  analyseSon,
+  estSifflet,
+  formatTemps,
+  lignesCsvCourse,
+  luminositesLignes,
+  nouveauDetecteur,
+  nouvelleCourse,
+  partEnMouvement,
+  passagesTries,
+  seuilMouvement,
+} from '../src/photofinish/calculs.js';
 
 const resultats = [];
 function test(nom, fonction) {
@@ -734,6 +748,58 @@ test('Demi-Cooper : la VMA du test le plus récent passe dans la fiche Demi-fond
   const local = etatInitial();
   fusionnerResultats(local, JSON.parse(JSON.stringify(paquetResultats(etat))));
   egal(local.coureurs.find((c) => c.id === 'e1').vma, 13);
+});
+
+test('PhotoFinish : temps au centième, tronqué comme un chrono', () => {
+  egal(formatTemps(9876), '9,87');
+  egal(formatTemps(62345), '1:02,34');
+  egal(formatTemps(0), '0,00');
+  egal(formatTemps(null), '–');
+});
+
+test('PhotoFinish : mouvement sur la ligne, sans compter un changement de lumière', () => {
+  const bande = (valeurs) => {
+    const pixels = new Uint8ClampedArray(valeurs.length * 2 * 4);
+    valeurs.forEach((v, y) => [0, 1].forEach((x) => pixels.set([v, v, v, 255], (y * 2 + x) * 4)));
+    return luminositesLignes(pixels, 2, valeurs.length);
+  };
+  const fond = bande(Array(10).fill(100));
+  egal(partEnMouvement(bande(Array(10).fill(160)), fond), 0); // toute l'image s'éclaire
+  egal(partEnMouvement(bande([100, 100, 100, 30, 30, 30, 30, 100, 100, 100]), fond), 0.4); // un coureur
+  egal(partEnMouvement(fond, null), 0);
+});
+
+test('PhotoFinish : un passage par coureur, puis réarmement quand la ligne est calme', () => {
+  const det = nouveauDetecteur();
+  const seuil = seuilMouvement(60);
+  const parts = [0, 0.5, 0.6, 0.4, 0, 0, 0.5, 0.5, 0];
+  const passages = parts.map((p, i) => analyserImage(det, p, i * 33, seuil)).map((v, i) => (v ? i : null)).filter((v) => v != null);
+  egal(passages, [1, 6]);
+  vrai(seuilMouvement(100) < seuilMouvement(5), 'plus sensible = seuil plus bas');
+});
+
+test('PhotoFinish : le sifflet est un son fort et aigu, pas un bruit général', () => {
+  const hz = 48000 / 1024;
+  const spectre = (fond, pic) => {
+    const o = new Uint8Array(512).fill(fond);
+    for (let i = Math.round(2900 / hz); i <= Math.round(3100 / hz); i += 1) o[i] = pic;
+    return o;
+  };
+  vrai(estSifflet(analyseSon(spectre(80, 220), hz), 50), 'sifflet reconnu');
+  vrai(!estSifflet(analyseSon(spectre(200, 220), hz), 50), 'bruit large refusé');
+  vrai(!estSifflet(analyseSon(spectre(40, 110), hz), 50), 'sifflet trop lointain');
+});
+
+test('PhotoFinish : plusieurs passages classés et exportés', () => {
+  const course = nouvelleCourse({ methode: 'sifflet', classe: '5A' }, 1000);
+  ajouterPassage(course, 8120.4, 'camera').eleveId = 'e1';
+  ajouterPassage(course, 7950, 'camera').nom = 'Dossard 4';
+  ajouterPassage(course, 8120, 'toucher');
+  egal(passagesTries(course).map((p) => p.t), [7950, 8120, 8120]);
+  egal(new Set(course.passages.map((p) => p.id)).size, 3);
+  const lignes = lignesCsvCourse(course, [{ id: 'e1', nom: 'Léa M.', classe: '5A' }]);
+  egal(lignes[1], ['1', '7,95', 'Dossard 4', '5A']);
+  egal(lignes[2], ['2', '8,12', 'Léa M.', '5A']);
 });
 
 test('Une ancienne sauvegarde reçoit bien les défauts vides', () => {

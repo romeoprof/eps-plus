@@ -749,6 +749,52 @@ body.grands .plateau-raquette .critere { min-height: 80px; }
   .non-imprime { display: none !important; }
 }
 
+/* PhotoFinish */
+.pf-scene { position: relative; width: fit-content; max-width: 100%; margin: 0 auto 10px; overflow: hidden; background: #000; border: 3px solid var(--bordure); border-radius: 14px; touch-action: none; cursor: ew-resize; }
+.pf-scene.verrouillee { cursor: default; }
+.pf-scene video { display: block; max-width: 100%; max-height: 42vh; }
+.pf-ligne { position: absolute; top: 0; bottom: 0; width: 3px; margin-left: -1.5px; background: #ef4444; box-shadow: 0 0 0 1px rgba(255, 255, 255, .8); pointer-events: none; }
+.pf-ligne.mouvement { width: 5px; margin-left: -2.5px; background: #22c55e; }
+.pf-zone { position: absolute; left: 0; right: 0; background: rgba(0, 0, 0, .5); pointer-events: none; }
+.pf-zone-haut { top: 0; }
+.pf-zone-bas { bottom: 0; }
+.pf-reglages input[type=range], .pf-curseur-seul input[type=range] { width: 100%; padding: 0; border: 0; background: none; accent-color: var(--bleu); }
+.pf-curseur-seul { display: block; max-width: 420px; margin-bottom: 8px; font-weight: 800; }
+.pf-ligne-jauge { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 10px; margin: 6px 0 10px; font-size: .9rem; font-weight: 800; }
+.pf-jauge { position: relative; height: 16px; overflow: hidden; background: var(--fond); border: 2px solid var(--gris); border-radius: 8px; }
+.pf-jauge i { display: block; width: 0; height: 100%; background: var(--bleu); }
+.pf-jauge .seuil { position: absolute; top: 0; bottom: 0; width: 3px; background: var(--rouge); }
+.pf-bandeau { margin-bottom: 10px; overflow-x: auto; background: #111; border: 3px solid var(--bordure); border-radius: 12px; }
+.pf-piste { position: relative; display: flex; height: 180px; overflow: hidden; cursor: crosshair; }
+.pf-morceau { flex: none; width: 1200px; height: 180px; }
+.pf-marqueurs { position: absolute; inset: 0; pointer-events: none; }
+.pf-marqueur { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; padding: 0; background: #facc15; border: 0; pointer-events: auto; cursor: pointer; }
+.pf-marqueur span { position: absolute; bottom: 3px; left: 3px; padding: 1px 6px; background: #facc15; border-radius: 6px; color: #111; font-size: .78rem; font-weight: 900; white-space: nowrap; }
+.pf-marqueur.choisi { width: 3px; background: #f97316; }
+.pf-marqueur.choisi span { background: #f97316; color: #fff; }
+.pf-chrono { font-size: clamp(3rem, 10vw, 5.5rem) !important; }
+.pf-compte { color: var(--titre); font-size: 1.6rem; font-weight: 900; }
+.pf-commandes { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 10px; align-items: stretch; }
+.pf-bouton-passage { min-height: 24vh; }
+.pf-liste-direct { max-height: 30vh; margin: 0; padding: 8px; overflow: auto; background: var(--carte); border: 2px solid var(--bordure); border-radius: 16px; list-style: none; }
+.pf-liste-direct li { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 6px; padding: 4px 6px; border-bottom: 1px solid var(--gris); font-variant-numeric: tabular-nums; }
+.pf-liste-direct li b { color: var(--texte-doux); }
+.pf-liste-direct li span { color: var(--titre); font-size: 1.5rem; font-weight: 900; }
+.pf-attente { margin: 10px 0; color: var(--titre); font-size: clamp(2rem, 6vw, 3.4rem); font-weight: 900; text-align: center; }
+.pf-decaler { margin: 4px 0 12px; }
+.pf-decaler b { min-width: 90px; font-size: 1.4rem; text-align: center; font-variant-numeric: tabular-nums; }
+.pf-liste { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+.pf-resultat { display: grid; grid-template-columns: 44px 96px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 6px 8px; background: var(--fond); border: 2px solid transparent; border-radius: 12px; }
+.pf-resultat.choisi { border-color: var(--orange); }
+.pf-resultat select, .pf-resultat input { margin: 0; }
+.pf-rang { width: 40px; height: 40px; padding: 0; background: var(--bleu); border: 0; border-radius: 50%; color: #fff; font-size: 1.05rem; font-weight: 900; cursor: pointer; }
+.pf-temps { color: var(--titre); font-size: 1.35rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.pf-historique { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.pf-historique li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; background: var(--fond); border-radius: 10px; }
+@media (max-width: 640px) {
+  .pf-commandes { grid-template-columns: 1fr; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; }
 }

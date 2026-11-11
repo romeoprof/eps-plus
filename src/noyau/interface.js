@@ -7,7 +7,13 @@ let dessiner = () => {};
 export const definirDessin = (fonction) => {
   dessiner = fonction;
 };
-export const rafraichir = () => dessiner();
+/* Les écrans qui gardent un élément vivant (vidéo de la caméra) le replacent après chaque dessin. */
+const suites = [];
+export const apresDessin = (fonction) => suites.push(fonction);
+export const rafraichir = () => {
+  dessiner();
+  suites.forEach((f) => f());
+};
 
 /* Les écrans déclarent leurs actions ; le HTML les appelle avec
    data-action (clic), data-saisie (frappe) ou data-choix (changement). */

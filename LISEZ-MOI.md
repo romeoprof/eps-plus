@@ -61,6 +61,14 @@ Demi-Cooper (`src/testvma/cooper.js`) : 6 minutes, le plus loin possible. Un él
 
 Paliers : se règlent vitesse initiale, incrémentation, durée d'un palier et distance entre repères (`src/testvma/calculs.js` pour les valeurs d'origine). Le test ne change qu'après « Valider ces valeurs ». Un bip retentit à chaque repère, plus aigu et plus long au premier repère de chaque palier. À l'arrêt : VMA = vitesse du palier + incrément × part du palier réalisée ; VO₂max estimée = VMA × 3,5. Les résultats ne sont pas rattachés à un élève et ne partent pas dans le regroupement des tablettes.
 
+## PhotoFinish
+
+Menu principal → Activités athlétiques → PhotoFinish (`src/photofinish/`). La tablette est posée sur le côté de la piste, dans l'alignement de la ligne d'arrivée. On place la ligne rouge sur l'image en glissant le doigt, on règle la zone surveillée et la sensibilité (la ligne devient verte quand quelqu'un passe).
+
+Départ au choix : coup de sifflet (micro, avec un essai sans lancer le chrono), toucher du bouton Départ, ou décompte sonore (« À vos marques », « Prêts », bip aigu après un délai variable). Chaque coureur qui franchit la ligne donne un temps ; le bouton « Passage » ajoute un temps à la main. Plusieurs coureurs, plusieurs temps dans la même course.
+
+Après « Terminer » : le bandeau photo-finish montre la ligne filmée image après image. Toucher le bandeau ajoute un passage oublié ; un numéro choisi se décale image par image. Les temps se nomment (élève de la classe ou nom libre) et s'exportent en CSV. Précision : une image, soit 1/30 s environ ; le sifflet ajoute quelques centièmes de retard. Les courses restent sur la tablette (50 dernières) ; elles ne partent pas avec « Récupérer les données ». Le bandeau n'est pas enregistré : il disparaît au rechargement ou à la course suivante.
+
 ## Regrouper les résultats sur la tablette enseignant
 
 Espace enseignant → « Récupérer les données ». Sur chaque tablette : saisir un mot de passe, créer et envoyer le fichier chiffré. Sur la tablette enseignant : saisir le même mot de passe et choisir les fichiers reçus.
