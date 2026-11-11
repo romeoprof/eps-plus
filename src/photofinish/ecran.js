@@ -1,8 +1,8 @@
 /*
  * PhotoFinish : la caméra filme la ligne d'arrivée de profil.
  * Le chrono part au coup de sifflet, au toucher de l'écran ou après un décompte ;
- * chaque coureur qui franchit la ligne donne un temps. Le bandeau « photo-finish »
- * (la ligne filmée image après image) permet ensuite de vérifier et d'ajouter des passages.
+ * chaque coureur qui franchit la ligne donne un temps et quelques photos prises autour
+ * de son passage : à la fin, on choisit l'image exacte et on attribue le temps à un élève.
  */
 import { bip, garderEcranAllume, vibrer } from '../noyau/appareil.js';
 import { etat, sauver } from '../noyau/etat.js';
@@ -26,10 +26,9 @@ import {
   seuilSifflet,
 } from './calculs.js';
 
-const COLONNE = 3; // largeur d'une image dans le bandeau (px)
-const HAUTEUR_BANDEAU = 180;
-const LARGEUR_MORCEAU = 1200;
-const MAX_COLONNES = 12000; // environ 6 minutes à 30 images par seconde
+const PHOTO_L = 480; // largeur des photos d'arrivée (px)
+const AVANT = 3; // images gardées avant chaque passage
+const APRES = 3; // et après
 const BANDE_L = 4;
 const BANDE_H = 96;
 const METHODES = [
@@ -72,10 +71,17 @@ const direct = {
   etape: '',
   minuteurs: [],
   micro: null,
-  bandeau: null,
-  selection: null,
+  recentes: [], // dernières images de la course : { t, toile }
+  captures: [], // passages qui attendent encore leurs images « après »
+  photos: new Map(), // id du passage → { images: [{ t, src }], k: image choisie }
   imagesParSeconde: 0,
 };
+/* Photos : seulement en mémoire (trop lourdes pour la sauvegarde). */
+function oublierPhotos() {
+  direct.recentes = [];
+  direct.captures = [];
+  direct.photos = new Map();
+}
 export const photofinishEnAttente = () => !!direct.attente && direct.attente !== 'test-sifflet';
 
 /* Horloge d'un événement (toucher) : la même que performance.now(), sinon l'heure actuelle. */
@@ -222,97 +228,41 @@ function traiterImage(temps) {
   if (jauge) jauge.style.width = `${Math.min(100, (part / 0.6) * 100)}%`;
 
   if (coursePfEnCours() && direct.t0 != null) {
-    ajouterColonne(video, sx, largeur, vh, temps);
+    garderImage(video, vw, vh, temps - direct.t0);
     if (analyserImage(direct.detecteur, part, temps, seuil)) noterPassage(temps - direct.t0, 'camera');
   }
 }
 
-/* ---------- Bandeau photo-finish : la ligne filmée, image après image ---------- */
-function nouveauBandeau(courseId) {
-  const el = document.createElement('div');
-  el.className = 'pf-bandeau';
-  el.innerHTML = `<div class="pf-piste" style="width:0"><div class="pf-marqueurs"></div></div>`;
-  direct.bandeau = { courseId, el, piste: el.firstElementChild, morceaux: [], temps: [], seconde: -1 };
-  return direct.bandeau;
-}
+/* ---------- Photos d'arrivée : quelques images avant et après chaque passage ---------- */
+const enPhoto = (image) => ({ t: Math.max(0, Math.round(image.t)), src: image.toile.toDataURL('image/jpeg', 0.75) });
 
-function ajouterColonne(video, sx, largeur, vh, temps) {
-  const b = direct.bandeau;
-  if (!b || b.courseId !== laCourse().id || b.temps.length >= MAX_COLONNES) return;
-  const n = b.temps.length;
-  const k = Math.floor((n * COLONNE) / LARGEUR_MORCEAU);
-  if (!b.morceaux[k]) {
-    const toile = document.createElement('canvas');
-    toile.width = LARGEUR_MORCEAU;
-    toile.height = HAUTEUR_BANDEAU;
-    toile.className = 'pf-morceau';
-    b.piste.insertBefore(toile, b.piste.querySelector('.pf-marqueurs'));
-    b.morceaux[k] = toile.getContext('2d');
+function garderImage(video, vw, vh, t) {
+  const hauteur = Math.round((PHOTO_L * vh) / vw);
+  const toile = direct.recentes.length > AVANT ? direct.recentes.shift().toile : document.createElement('canvas');
+  if (toile.width !== PHOTO_L || toile.height !== hauteur) {
+    toile.width = PHOTO_L;
+    toile.height = hauteur;
   }
-  const ctx = b.morceaux[k];
-  const x = n * COLONNE - k * LARGEUR_MORCEAU;
-  ctx.drawImage(video, sx, 0, largeur, vh, x, 0, COLONNE, HAUTEUR_BANDEAU);
-  const t = temps - direct.t0;
-  const seconde = Math.floor(t / 1000);
-  if (seconde !== b.seconde && t >= 0) {
-    b.seconde = seconde;
-    ctx.fillStyle = 'rgba(255,255,255,.85)';
-    ctx.fillRect(x, 0, 1, 12);
-    ctx.font = 'bold 11px sans-serif';
-    ctx.fillText(`${seconde} s`, x + 3, 11);
-  }
-  b.temps.push(t);
-  b.piste.style.width = `${(n + 1) * COLONNE}px`;
-  if (coursePfEnCours()) b.el.scrollLeft = b.el.scrollWidth;
+  const ctx = toile.getContext('2d');
+  ctx.drawImage(video, 0, 0, PHOTO_L, hauteur);
+  /* La ligne d'arrivée est tracée sur la photo, pour juger le passage du torse. */
+  ctx.fillStyle = '#ef4444';
+  ctx.fillRect(Math.round(reglages().ligne * PHOTO_L) - 1, 0, 2, hauteur);
+  const image = { t, toile };
+  direct.recentes.push(image);
+  direct.captures = direct.captures.filter((capture) => {
+    capture.images.push(enPhoto(image));
+    capture.reste -= 1;
+    return capture.reste > 0;
+  });
 }
 
-/* Colonne du bandeau la plus proche d'un temps. */
-function colonneDe(t) {
-  const temps = direct.bandeau?.temps || [];
-  let bas = 0;
-  let haut = temps.length - 1;
-  if (haut < 0) return -1;
-  while (bas < haut) {
-    const milieu = Math.floor((bas + haut) / 2);
-    if (temps[milieu] < t) bas = milieu + 1;
-    else haut = milieu;
-  }
-  return bas > 0 && Math.abs(temps[bas - 1] - t) < Math.abs(temps[bas] - t) ? bas - 1 : bas;
+function photographierPassage(passage) {
+  if (!direct.recentes.length) return;
+  const entree = { images: direct.recentes.map(enPhoto), k: direct.recentes.length - 1 };
+  direct.photos.set(passage.id, entree);
+  direct.captures.push({ images: entree.images, reste: APRES });
 }
-const bandeauDisponible = () => !!direct.bandeau && direct.bandeau.courseId === laCourse()?.id && direct.bandeau.temps.length > 0;
-
-function majMarqueurs() {
-  if (!bandeauDisponible()) return;
-  const conteneur = direct.bandeau.piste.querySelector('.pf-marqueurs');
-  conteneur.innerHTML = passagesTries(laCourse())
-    .map((p, i) => {
-      const x = colonneDe(p.t) * COLONNE + COLONNE / 2;
-      return `<button class="pf-marqueur ${p.id === direct.selection ? 'choisi' : ''}" style="left:${x}px" data-action="pf-choisir" data-id="${esc(p.id)}" aria-label="Passage ${i + 1} : ${formatTemps(p.t)}"><span>${i + 1} · ${formatTemps(p.t)}</span></button>`;
-    })
-    .join('');
-}
-
-function montrerSelection() {
-  if (!bandeauDisponible() || !direct.selection) return;
-  const p = laCourse().passages.find((q) => q.id === direct.selection);
-  if (!p) return;
-  const el = direct.bandeau.el;
-  el.scrollLeft = Math.max(0, colonneDe(p.t) * COLONNE - el.clientWidth / 2);
-}
-
-/* Toucher le bandeau (course terminée) ajoute un passage à cet instant. */
-document.addEventListener('click', (e) => {
-  const piste = e.target.closest?.('.pf-piste');
-  if (!piste || e.target.closest('.pf-marqueur') || coursePfEnCours() || !bandeauDisponible()) return;
-  const x = e.clientX - piste.getBoundingClientRect().left;
-  const temps = direct.bandeau.temps;
-  const t = temps[Math.min(temps.length - 1, Math.max(0, Math.floor(x / COLONNE)))];
-  const p = ajouterPassage(laCourse(), t, 'image');
-  direct.selection = p.id;
-  sauverCourse();
-  rafraichir();
-  notifier(`Passage ajouté : ${formatTemps(t)} s`);
-});
 
 /* ---------- Départ ---------- */
 function demarrer(heure, methode) {
@@ -323,8 +273,7 @@ function demarrer(heure, methode) {
   pf().course = course;
   direct.t0 = heure;
   direct.detecteur = nouveauDetecteur();
-  direct.selection = null;
-  nouveauBandeau(course.id);
+  oublierPhotos();
   bip(1200, 0.25, 0.3);
   vibrer(80);
   garderEcranAllume();
@@ -349,7 +298,6 @@ function reprendre() {
   if (!course || course.fin || direct.t0 != null) return;
   direct.t0 = performance.now() - (Date.now() - course.depart);
   direct.detecteur = nouveauDetecteur();
-  nouveauBandeau(course.id);
   lancerChrono();
 }
 
@@ -444,7 +392,7 @@ function arreterMicro() {
 function noterPassage(t, source) {
   const course = laCourse();
   if (!coursePfEnCours()) return;
-  ajouterPassage(course, t, source);
+  photographierPassage(ajouterPassage(course, t, source));
   vibrer(30);
   bip(1500, 0.06, 0.15);
   sauver();
@@ -457,7 +405,6 @@ function majDirect() {
   if (liste) liste.innerHTML = listeDirect(course);
   const compte = document.querySelector('#pf-compte');
   if (compte) compte.textContent = texteCompte(course);
-  majMarqueurs();
 }
 
 const texteCompte = (course) => `${course.passages.length} passage${course.passages.length > 1 ? 's' : ''}`;
@@ -485,14 +432,6 @@ apresDessin(() => {
     placeScene.appendChild(direct.scene);
     majScene();
     if (direct.flux && direct.video.paused) direct.video.play().catch(() => {});
-  }
-  const placeBandeau = document.querySelector('[data-place="bandeau"]');
-  /* Pendant la course, le bandeau est placé dès le départ, encore vide. */
-  if (placeBandeau && direct.bandeau && direct.bandeau.courseId === laCourse()?.id) {
-    placeBandeau.appendChild(direct.bandeau.el);
-    majMarqueurs();
-    if (coursePfEnCours()) direct.bandeau.el.scrollLeft = direct.bandeau.el.scrollWidth;
-    else montrerSelection();
   }
 });
 
@@ -566,32 +505,44 @@ declarerActions({
     if (!ok) return;
     pf().course = null;
     direct.t0 = null;
-    direct.bandeau = null;
+    oublierPhotos();
     sauver();
     rafraichir();
   },
-  'pf-choisir': ({ id }) => {
-    direct.selection = direct.selection === id ? null : id;
-    rafraichir();
-  },
-  'pf-decaler': ({ sens }) => {
-    const p = laCourse()?.passages.find((q) => q.id === direct.selection);
-    if (!p) return;
-    const pas = Number(sens);
-    if (bandeauDisponible()) {
-      const temps = direct.bandeau.temps;
-      const k = Math.min(temps.length - 1, Math.max(0, colonneDe(p.t) + pas));
-      p.t = Math.max(0, Math.round(temps[k]));
-    } else {
-      p.t = Math.max(0, p.t + pas * 10);
-    }
+  /* Image avant / après : le temps devient celui de l'image choisie. */
+  'pf-image': ({ id, sens }) => {
+    const p = laCourse()?.passages.find((q) => q.id === id);
+    const entree = direct.photos.get(id);
+    if (!p || !entree) return;
+    entree.k = Math.min(entree.images.length - 1, Math.max(0, entree.k + Number(sens)));
+    p.t = entree.images[entree.k].t;
     sauverCourse();
     rafraichir();
+  },
+  /* Sans photo (après un rechargement) : correction au centième. */
+  'pf-decaler': ({ id, sens }) => {
+    const p = laCourse()?.passages.find((q) => q.id === id);
+    if (!p) return;
+    p.t = Math.max(0, p.t + Number(sens) * 10);
+    sauverCourse();
+    rafraichir();
+  },
+  /* Deux coureurs arrivés ensemble : un second temps sur les mêmes images. */
+  'pf-dupliquer': ({ id }) => {
+    const course = laCourse();
+    const p = course?.passages.find((q) => q.id === id);
+    if (!p) return;
+    const copie = ajouterPassage(course, p.t, p.source);
+    const entree = direct.photos.get(id);
+    if (entree) direct.photos.set(copie.id, { images: entree.images, k: entree.k });
+    sauverCourse();
+    rafraichir();
+    notifier('Temps ajouté : choisis l’image où passe le second coureur.');
   },
   'pf-supprimer': ({ id }) => {
     const course = laCourse();
     course.passages = course.passages.filter((p) => p.id !== id);
-    if (direct.selection === id) direct.selection = null;
+    direct.photos.delete(id);
     sauverCourse();
     rafraichir();
   },
@@ -623,8 +574,7 @@ declarerActions({
     p.historique = p.historique.slice(0, 50);
     p.course = null;
     direct.t0 = null;
-    direct.bandeau = null;
-    direct.selection = null;
+    oublierPhotos();
     sauver();
     rafraichir();
   },
@@ -698,8 +648,8 @@ function carteDepart() {
     ${explications[r.depart]}
     <div class="grille-parametres marge-haut">
       <label>Nom de la course (facultatif)<input value="${esc(r.libelle)}" placeholder="ex. 50 m – série 2" autocomplete="off" data-saisie="pf-libelle"></label>
-      ${choixClasse(r.classe)}
     </div>
+    <p class="aide">Les coureurs se choisissent à la fin de la course, temps par temps, à l'aide des photos d'arrivée.</p>
   </div>`;
 }
 
@@ -758,7 +708,7 @@ function vueCourse(course) {
       <div><span>${esc(course.libelle || 'Chrono')}</span><b id="pf-chrono" class="pf-chrono">${formatTemps(performance.now() - direct.t0)}</b></div>
       <div class="pf-compte" id="pf-compte">${texteCompte(course)}</div>
     </div>
-    ${direct.flux ? '<div data-place="scene"></div><div data-place="bandeau"></div>' : '<p class="aide centre">Caméra coupée : touche « Passage » à chaque arrivée, ou <button class="btn-mini" data-action="pf-camera">réactive la caméra</button>.</p>'}
+    ${direct.flux ? '<div data-place="scene"></div>' :'<p class="aide centre">Caméra coupée : touche « Passage » à chaque arrivée, ou <button class="btn-mini" data-action="pf-camera">réactive la caméra</button>.</p>'}
     <div class="pf-commandes">
       <button class="bouton-repere pf-bouton-passage" data-pf-passage aria-label="Ajouter un passage maintenant">👆 PASSAGE<small>touche à chaque arrivée</small></button>
       <ol class="pf-liste-direct" id="pf-liste-direct">${listeDirect(course)}</ol>
@@ -780,48 +730,61 @@ function champNom(course, p) {
   return `<input value="${esc(p.nom)}" placeholder="Nom ou dossard" autocomplete="off" data-saisie="pf-nom" data-id="${esc(p.id)}" aria-label="Nom">`;
 }
 
+function photoArrivee(p, rang) {
+  const entree = direct.photos.get(p.id);
+  const id = esc(p.id);
+  if (!entree) {
+    return `<div class="rangee centre-rangee pf-sans-photo">
+      <button class="btn-mini" data-action="pf-decaler" data-id="${id}" data-sens="-1">− 0,01 s</button>
+      <span class="aide">photo non disponible</span>
+      <button class="btn-mini" data-action="pf-decaler" data-id="${id}" data-sens="1">+ 0,01 s</button>
+    </div>`;
+  }
+  const n = entree.images.length;
+  return `<figure class="pf-photo">
+      <img src="${entree.images[entree.k].src}" alt="Arrivée n° ${rang} : image ${entree.k + 1} sur ${n}">
+      <figcaption>
+        <button class="btn secondaire" data-action="pf-image" data-id="${id}" data-sens="-1" ${entree.k === 0 ? 'disabled' : ''}>◀ Image avant</button>
+        <span>${entree.k + 1} / ${n}</span>
+        <button class="btn secondaire" data-action="pf-image" data-id="${id}" data-sens="1" ${entree.k === n - 1 ? 'disabled' : ''}>Image après ▶</button>
+      </figcaption>
+    </figure>`;
+}
+
 function vueResultats(course) {
   const tries = passagesTries(course);
-  const choisi = tries.find((p) => p.id === direct.selection);
-  const bandeau = bandeauDisponible();
   const attribues = (etat.tempsPf || []).filter((r) => r.courseId === course.id).length;
-  const lignes = tries
+  const avecPhotos = tries.some((p) => direct.photos.has(p.id));
+  const arrivees = tries
     .map(
-      (p, i) => `<li class="pf-resultat ${p.id === direct.selection ? 'choisi' : ''}">
-        <button class="pf-rang" data-action="pf-choisir" data-id="${esc(p.id)}" aria-label="Choisir le passage ${i + 1}">${i + 1}</button>
-        <b class="pf-temps">${formatTemps(p.t)}</b>
+      (p, i) => `<li class="pf-arrivee">
+        <div class="pf-arrivee-haut">
+          <span class="pf-rang">${i + 1}</span>
+          <b class="pf-temps">${formatTemps(p.t)} s</b>
+          <button class="btn-mini" data-action="pf-dupliquer" data-id="${esc(p.id)}" title="Deux coureurs arrivés ensemble">👥 + 1 coureur</button>
+          <button class="btn-mini" data-action="pf-supprimer" data-id="${esc(p.id)}" aria-label="Supprimer ce temps">✕</button>
+        </div>
+        ${photoArrivee(p, i + 1)}
         ${champNom(course, p)}
-        <button class="btn-mini" data-action="pf-supprimer" data-id="${esc(p.id)}" aria-label="Supprimer ce temps">✕</button>
       </li>`,
     )
     .join('');
-  return `<div class="carte"><h2 class="carte-titre">🏁 Résultats${course.libelle ? ` · ${esc(course.libelle)}` : ''}</h2>
-      <p class="aide">Départ : ${esc(course.methode)} · ${tries.length} temps. Les temps sont donnés à l'image près (${direct.imagesParSeconde || 30} images par seconde environ).</p>
+  return `<div class="carte"><h2 class="carte-titre">🏁 Arrivées${course.libelle ? ` · ${esc(course.libelle)}` : ''}</h2>
+      <p class="aide">Départ : ${esc(course.methode)} · ${tries.length} temps, à l'image près (${direct.imagesParSeconde || 30} images par seconde environ).</p>
       ${
-        bandeau
-          ? `<h4>Bandeau photo-finish</h4>
-        <p class="aide">Chaque colonne est la ligne d'arrivée filmée à un instant. <b>Touche le bandeau</b> pour ajouter un passage oublié, ou un numéro pour le vérifier.</p>
-        <div data-place="bandeau"></div>`
-          : ''
-      }
-      ${
-        choisi
-          ? `<div class="pf-decaler rangee centre-rangee">
-        <button class="btn secondaire" data-action="pf-decaler" data-sens="-1">◀ ${bandeau ? 'Image précédente' : '− 0,01 s'}</button>
-        <b>${formatTemps(choisi.t)} s</b>
-        <button class="btn secondaire" data-action="pf-decaler" data-sens="1">${bandeau ? 'Image suivante' : '+ 0,01 s'} ▶</button>
-      </div>`
-          : ''
+        avecPhotos
+          ? `<p class="aide">Pour chaque temps, la photo du passage sur la <b style="color:#ef4444">ligne rouge</b>. Si le torse n'est pas encore sur la ligne, passe à l'image suivante : le temps se corrige. Deux coureurs sur la même image : « + 1 coureur ».</p>`
+          : `<p class="aide">Les photos ne sont gardées que jusqu'à la course suivante ou au rechargement de l'application.</p>`
       }
       <h4>Attribuer les temps</h4>
       <p class="aide">${
         course.classe
-          ? 'Choisis l’élève à côté de chaque temps : le temps et le rang vont dans son dossier (Espace enseignant → Progression des élèves), visible seulement avec le code enseignant.'
+          ? 'Choisis l’élève sous chaque photo : le temps et le rang vont dans son dossier (Espace enseignant → Progression des élèves), visible seulement avec le code enseignant.'
           : 'Choisis la classe pour attribuer chaque temps à un élève de la liste (il ira dans son dossier). Sinon, écris un nom ou un dossard : ce temps n’est pas gardé dans un dossier.'
       }</p>
       <div class="grille-parametres">${choixClasse(course.classe)}</div>
       ${attribues ? `<p class="enregistre">✔ ${attribues} temps enregistré${attribues > 1 ? 's' : ''} dans le dossier des élèves</p>` : ''}
-      <ol class="pf-liste">${lignes || '<li class="aide">Aucun passage.</li>'}</ol>
+      <ol class="pf-arrivees">${arrivees || '<li class="aide">Aucun passage.</li>'}</ol>
     </div>
     <div class="rangee centre-rangee">
       <button class="btn secondaire" data-action="pf-csv">⬇ Exporter (CSV)</button>
