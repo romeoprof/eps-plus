@@ -8,6 +8,7 @@ import { avancementCourse, courseAvecDonnees } from '../../demifond/calculs.js';
 import { reporterVmaDemifond } from '../../testvma/cooper.js';
 import { lireSauvegarde } from './migration.js';
 import { alignerPaquet, reparerDoublons } from './doublons.js';
+import { elevesCirque, fusionnerCirque, paquetCirque } from '../../cirque/calculs.js';
 
 const TYPE_RESULTATS = 'eps-resultats';
 
@@ -28,6 +29,8 @@ export function paquetResultats(etat, maintenant = Date.now()) {
   testsVma.forEach((t) => idsEleves.add(t.eleveId));
   const tempsPf = etat.tempsPf || [];
   tempsPf.forEach((t) => idsEleves.add(t.eleveId));
+  const cirque = paquetCirque(etat);
+  elevesCirque(etat).forEach((id) => idsEleves.add(id));
   return {
     type: TYPE_RESULTATS,
     exporteLe: maintenant,
@@ -35,6 +38,7 @@ export function paquetResultats(etat, maintenant = Date.now()) {
     courses,
     testsVma,
     tempsPf,
+    cirque,
     equipes,
     poules: etat.poules.filter((p) => idsPoules.has(p.id)),
     /* Sans l'empreinte du code : le paquet peut passer en QR code, non chiffré. */
@@ -46,7 +50,9 @@ export const aDesResultats = (etat) =>
   etat.matchs.some((m) => m.evenements.length) ||
   (etat.courses || []).some(courseAvecDonnees) ||
   (etat.testsVma || []).length > 0 ||
-  (etat.tempsPf || []).length > 0;
+  (etat.tempsPf || []).length > 0 ||
+  (etat.cirque?.troupes || []).length > 0 ||
+  Object.keys(paquetCirque(etat).carnets).length > 0;
 
 /* Temps PhotoFinish : la version reçue d'une course remplace celle de cette tablette
    (l'attribution a pu être corrigée après un premier envoi). */
@@ -149,6 +155,7 @@ export function fusionnerResultats(etat, paquetRecu) {
   fusionnerCourses(etat, paquet, bilan);
   fusionnerTestsVma(etat, paquet, bilan);
   fusionnerTempsPf(etat, paquet, bilan);
+  fusionnerCirque(etat, paquet.cirque, bilan);
   reparerDoublons(etat);
   return bilan;
 }

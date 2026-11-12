@@ -44,6 +44,16 @@ import {
 import { empreinte } from '../src/noyau/outils.js';
 import { attribuerCodes, changerCode, codeValide } from '../src/noyau/espace.js';
 import { reparerDoublons, remplacerListe } from '../src/champ4/donnees/doublons.js';
+import {
+  ajouterMembre,
+  carnetVide,
+  meilleurNiveau,
+  niveauCumul,
+  nouvelleTroupe,
+  retirerMembre,
+  suiviCirque,
+  tableauSuivant,
+} from '../src/cirque/calculs.js';
 import { assembler, decoderPaquet, decouper, encoderPaquet, envoiComplet, lireMorceau, nouvelleReception, recevoirMorceau } from '../src/transfert/qr.js';
 import {
   ajouterPassage,
@@ -892,6 +902,52 @@ test('Nouvelle liste protégée : les observations suivent les nouveaux identifi
   remplacerListe(etat, [{ id: 'neuf', nom: 'Léa M.', classe: '5A', cle: 'xyz' }]);
   egal(etat.eleves.map((e) => e.id), ['neuf', 'parti']);
   egal(etat.testsVma[0].eleveId, 'neuf');
+});
+
+test('Cirque : niveau par cumul de difficultés, acrobatie par niveau choisi', () => {
+  egal([0, 1, 2, 3, 5].map(niveauCumul), [0, 1, 2, 3, 3]);
+  const carnet = carnetVide();
+  carnet.manipulation[0].criteres = ['Sauter', 'Lancer haut'];
+  carnet.manipulation.push({ titre: 'Massues', criteres: ['Sauter'], perso: [], desc: '' });
+  carnet.acrobatie[0].niveau = 3;
+  egal(meilleurNiveau(carnet, 'manipulation'), 2);
+  egal(meilleurNiveau(carnet, 'equilibre'), 0);
+  egal(meilleurNiveau(carnet, 'acrobatie'), 3);
+});
+
+test('Cirque : la troupe, les tableaux et la progression de l’élève', () => {
+  const etat = etatInitial();
+  etat.eleves = [{ id: 'e1', nom: 'Léa M.', classe: '5A' }, { id: 'e2', nom: 'Tom B.', classe: '5A' }];
+  const troupe = nouvelleTroupe({ classe: '5A', nom: 'Groupe 1' }, 1000);
+  ajouterMembre(troupe, { id: 'e1', nom: 'Léa M.', eleveId: 'e1' });
+  ajouterMembre(troupe, { id: 'e2', nom: 'Tom B.', eleveId: 'e2' });
+  vrai(!ajouterMembre(troupe, { id: 'e1', nom: 'Léa M.', eleveId: 'e1' }), 'artiste en double');
+  const t2 = tableauSuivant(troupe.etapes[0].tableaux[0]);
+  t2.positions.e1.x = 80;
+  vrai(troupe.etapes[0].tableaux[0].positions.e1.x !== 80, 'le tableau suivant est une copie');
+  troupe.etapes[1].choregraphes = ['e2'];
+  troupe.etapes[1].evaluation = '4';
+  etat.cirque.troupes.push(troupe);
+  egal(suiviCirque(etat, 'e1'), null); // carnet vide, pas chorégraphe
+  etat.cirque.carnets.e1 = { ...carnetVide(), majLe: 5 };
+  etat.cirque.carnets.e1.acrobatie[0].niveau = 2;
+  egal(suiviCirque(etat, 'e1').carnet.acrobatie[0].niveau, 2);
+  egal(suiviCirque(etat, 'e2').troupes[0].etapes.map((x) => x.rang), [1]);
+  vrai(elevesSuivis(etat).some((e) => e.id === 'e2'), 'membre de troupe suivi');
+  retirerMembre(troupe, 'e2');
+  egal(troupe.etapes[1].choregraphes, []);
+});
+
+test('Cirque : échange entre tablettes, la version la plus récente l’emporte', () => {
+  const tablette = etatInitial();
+  tablette.eleves = [{ id: 'e1', nom: 'Léa M.', classe: '5A' }];
+  tablette.cirque.carnets.e1 = { ...carnetVide(), majLe: 10, evaluation: '2' };
+  const enseignant = etatInitial();
+  enseignant.eleves = [{ id: 'neuf', nom: 'Léa M.', classe: '5A' }];
+  enseignant.cirque.carnets.neuf = { ...carnetVide(), majLe: 5, evaluation: '1' };
+  fusionnerResultats(enseignant, JSON.parse(JSON.stringify(paquetResultats(tablette))));
+  egal(enseignant.cirque.carnets.neuf.evaluation, '2'); // même élève reconnu, version plus récente
+  egal(Object.keys(enseignant.cirque.carnets), ['neuf']);
 });
 
 test('QR codes : découpage, ordre quelconque et assemblage', () => {

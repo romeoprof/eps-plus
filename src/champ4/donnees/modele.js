@@ -24,6 +24,7 @@ export const etatInitial = () => ({
   espace: null, // 'eleve' : la tablette rouvre l'espace élève ; l'espace enseignant redemande toujours le code
   eleveConnecte: null, // élève identifié dans l'espace élève
   codesEleves: {}, // codes à 4 chiffres lisibles : seulement sur la tablette enseignant
+  cirque: { troupes: [], carnets: {}, troupeCourante: null }, // arts du cirque : voir src/cirque/calculs.js
   tempsPf: [], // temps PhotoFinish attribués : { id, courseId, eleveId, nom, classe, date, libelle, t, rang, partants }
   /* null = valeur réglée dans l'espace enseignant */
   prepCourse: { selection: [], pct: {}, type: null, distance: null, duree: null, plots: null, tolerance: null },

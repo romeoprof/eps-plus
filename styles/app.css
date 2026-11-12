@@ -797,6 +797,75 @@ body.grands .plateau-raquette .critere { min-height: 80px; }
   .pf-commandes { grid-template-columns: 1fr; }
 }
 
+/* Arts du cirque */
+.cq-membres { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
+.cq-membre { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; background: var(--fond); border: 2px solid var(--gris); border-radius: 999px; font-weight: 800; }
+.cq-membre small { color: var(--texte-doux); font-weight: 600; }
+.cq-pastille { display: inline-block; flex: none; width: 12px; height: 12px; margin-right: 4px; border-radius: 50%; }
+.cq-eleves { margin-top: 8px; }
+.cq-etapes .choix-sport { font-size: .9rem; }
+.cq-puces { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+.cq-puce-groupe { display: inline-flex; align-items: center; }
+.cq-puce { padding: 7px 12px; background: var(--carte); border: 2px solid var(--bordure); border-radius: 999px; color: var(--texte); font: inherit; font-size: .92rem; font-weight: 700; cursor: pointer; }
+.cq-puce.actif { background: var(--turquoise); border-color: #0f766e; color: #fff; }
+.cq-puce.actif.choreo { background: #f59e0b; border-color: #b45309; }
+.cq-puce.coulisse { background: var(--fond); border-style: dashed; color: var(--texte-doux); }
+.cq-puce-x { margin-left: -6px; padding: 2px 7px; background: var(--rouge); border: 0; border-radius: 999px; color: #fff; font-weight: 900; cursor: pointer; }
+.cq-tableaux { align-items: center; }
+.cq-animer { margin-left: auto; background: var(--orange); }
+.cq-piste { position: relative; height: clamp(260px, 46vh, 440px); margin: 10px 0 6px; overflow: hidden; background: repeating-linear-gradient(90deg, #fde68a 0 40px, #fcd34d 40px 80px); border: 4px solid #92400e; border-radius: 18px; touch-action: none; user-select: none; }
+.cq-fond, .cq-public { position: absolute; left: 0; right: 0; padding: 3px; background: rgba(120, 53, 15, .85); color: #fff; font-size: .75rem; font-weight: 900; text-align: center; letter-spacing: .1em; }
+.cq-fond { top: 0; }
+.cq-public { bottom: 0; }
+.cq-coulisse { position: absolute; top: 22px; bottom: 22px; width: 26px; display: flex; align-items: center; justify-content: center; background: rgba(127, 29, 29, .75); color: #fff; font-size: .65rem; font-weight: 900; writing-mode: vertical-rl; }
+.cq-coulisse.gauche { left: 0; }
+.cq-coulisse.droite { right: 0; }
+.cq-fleches { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.cq-fantome, .cq-pion { position: absolute; display: flex; align-items: center; justify-content: center; transform: translate(-50%, -50%); border-radius: 50%; color: #fff; font-weight: 900; }
+.cq-fantome { width: 30px; height: 30px; font-size: .65rem; opacity: .35; border: 2px dashed #fff; }
+.cq-pion { width: 52px; height: 52px; font-size: .72rem; border: 3px solid #fff; box-shadow: 0 3px 8px rgba(0, 0, 0, .35); cursor: grab; touch-action: none; transition: left .05s, top .05s; }
+.cq-pion.choreo { border-color: #facc15; }
+.cq-pion i { position: absolute; top: -16px; font-style: normal; font-size: 1rem; }
+.cq-pion[hidden] { display: none; }
+.cq-piste.anime .cq-pion { transition: left 1.4s ease-in-out, top 1.4s ease-in-out; cursor: default; }
+.cq-piste.anime .cq-fantomes, .cq-piste.anime .cq-fleches { display: none; }
+.cq-note-anime { position: absolute; left: 50%; top: 26px; margin: 0; transform: translateX(-50%); padding: 3px 12px; background: var(--orange); border-radius: 999px; color: #fff; font-weight: 800; }
+.cq-note-anime:empty { display: none; }
+.cq-element { margin-bottom: 10px; padding: 10px 12px; background: var(--fond); border: 2px solid var(--gris); border-radius: 14px; }
+.cq-element-haut { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 4px; }
+.cq-element-titre { flex: 1 1 180px; margin: 0; font-weight: 900; }
+.cq-element input { margin-bottom: 0; }
+.cq-niveau { padding: 3px 10px; background: var(--carte); border: 2px solid var(--gris); border-radius: 999px; color: var(--texte-doux); font-size: .85rem; font-weight: 800; white-space: nowrap; }
+.cq-niveau.n1 { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
+.cq-niveau.n2 { background: #ffedd5; border-color: #f97316; color: #c2410c; }
+.cq-niveau.n3 { background: #fef9c3; border-color: #eab308; color: #854d0e; }
+.cq-acro { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.cq-niveau-bouton { padding: 7px 12px; background: var(--carte); border: 2px solid var(--bordure); border-radius: 10px; font: inherit; font-weight: 800; cursor: pointer; }
+.cq-niveau-bouton.actif.n1 { background: #3b82f6; border-color: #1d4ed8; color: #fff; }
+.cq-niveau-bouton.actif.n2 { background: #f97316; border-color: #c2410c; color: #fff; }
+.cq-niveau-bouton.actif.n3 { background: #eab308; border-color: #854d0e; color: #fff; }
+.cq-evaluation { margin-top: 10px; padding: 12px; background: rgba(22, 163, 74, .08); border: 2px solid #86efac; border-radius: 14px; }
+.cq-evaluation textarea { margin: 8px 0 0; }
+.cq-evaluation p { margin: 4px 0 0; }
+.cq-eval-boutons { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; margin-top: 8px; }
+.cq-eval { padding: 9px; background: var(--carte); border: 2px solid var(--bordure); border-radius: 12px; font: inherit; font-weight: 800; cursor: pointer; }
+.cq-eval.actif { background: var(--titre); border-color: var(--titre); color: #fff; }
+.cq-eval-texte { font-size: .85rem; font-weight: 800; }
+.cq-conseil { color: #166534; font-style: italic; }
+body.sombre .cq-conseil { color: #86efac; }
+.cq-profils, .cq-etapes-bilan { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.cq-profil, .cq-etape-bilan { padding: 10px; background: var(--fond); border-radius: 12px; }
+.cq-profil-haut, .cq-etape-titre { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; }
+.cq-profil ul, .cq-resume { margin: 6px 0 0; padding-left: 4px; list-style: none; }
+.cq-profil li, .cq-resume li { margin-bottom: 4px; font-size: .9rem; }
+.cq-etape-bilan p { margin: 6px 0; font-size: .88rem; }
+.cq-mini-piste { position: relative; height: 120px; overflow: hidden; background: #fde68a; border: 2px solid #92400e; border-radius: 10px; }
+.cq-mini-piste svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cq-mini-pion { position: absolute; display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; transform: translate(-50%, -50%); border-radius: 50%; color: #fff; font-size: .62rem; font-weight: 900; }
+@media print {
+  #entete, #navigation, .non-imprime { display: none !important; }
+}
+
 .trois-colonnes { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0 12px; }
 
 /* Bilan demi-fond : verdict, puis statistiques rangées par thème */

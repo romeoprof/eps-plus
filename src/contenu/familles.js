@@ -34,6 +34,6 @@ export const FAMILLES = [
   {
     titre: "Activités d'expression",
     couleur: 'orange',
-    activites: [{ nom: 'Arts du cirque', icone: '🎪', bientot: true }],
+    activites: [{ nom: 'Arts du cirque', icone: '🎪', module: 'cirque' }],
   },
 ];

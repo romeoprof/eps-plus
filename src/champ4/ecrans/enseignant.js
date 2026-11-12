@@ -6,6 +6,7 @@ import { exporterConfiguration, exporterElevesProteges } from '../donnees/export
 import { importerEleves } from '../donnees/operations.js';
 import { aUnDefautChoisi, contratsApsa, criteresApsa, listeEditable } from '../reglages.js';
 import { vueReglagesDemifond } from '../../demifond/ecrans/reglages.js';
+import { vueReglagesCirque } from '../../cirque/reglages.js';
 import { blocImportEleves } from './import-eleves.js';
 import { vueProgression } from './progression.js';
 import { vueEnvoyer, vueRecevoir } from '../../transfert/ecrans.js';
@@ -14,6 +15,7 @@ import { attribuerCodes, changerCode } from '../../noyau/espace.js';
 const EMPREINTE_PAR_DEFAUT = '74id85';
 const POINTS_MAX = 10;
 const DEMIFOND = 'demifond'; // sport réglé à part : ses réglages ont leur propre écran
+const CIRQUE = 'cirque'; // de même pour les arts du cirque
 
 let pageEnseignant = 'menu';
 let apsaEditee = null;
@@ -258,6 +260,7 @@ declarerActions({
 const choixDuSport = (apsa) => `
   <div class="choix-sports" role="group" aria-label="Sport à régler">
     <button class="choix-sport ${apsa === DEMIFOND ? 'actif' : ''}" aria-pressed="${apsa === DEMIFOND}" data-action="ens-apsa" data-apsa="${DEMIFOND}"><span aria-hidden="true">🏃</span>Demi-fond</button>
+    <button class="choix-sport ${apsa === CIRQUE ? 'actif' : ''}" aria-pressed="${apsa === CIRQUE}" data-action="ens-apsa" data-apsa="${CIRQUE}"><span aria-hidden="true">🎪</span>Arts du cirque</button>
     ${Object.keys(APSA)
       .map(
         (k) => `<button class="choix-sport ${k === apsa ? 'actif' : ''}" aria-pressed="${k === apsa}" data-action="ens-apsa" data-apsa="${esc(k)}"><span aria-hidden="true">${APSA[k].icone}</span>${esc(k)}</button>`,
@@ -442,14 +445,16 @@ const vueMenu = () => `
   <div class="marge-haut">${carteSynchro()}</div>`;
 
 function vueObservables() {
-  const apsa = apsaEditee === DEMIFOND || APSA[apsaEditee] ? apsaEditee : etat.apsa || DEMIFOND;
+  const apsa = apsaEditee === DEMIFOND || apsaEditee === CIRQUE || APSA[apsaEditee] ? apsaEditee : etat.apsa || DEMIFOND;
   apsaEditee = apsa;
   const a = esc(apsa);
   return `${choixDuSport(apsa)}
     ${
       apsa === DEMIFOND
         ? vueReglagesDemifond()
-        : `${carteCriteres(apsa, a)}
+        : apsa === CIRQUE
+          ? vueReglagesCirque()
+          : `${carteCriteres(apsa, a)}
            ${APSA[apsa].terrain ? carteContratsEnseignant(apsa, a) : ''}
            <div class="grille-reglages">
              ${carteListe('fiche', "📋 Fiche d'observation", "Critère de la fiche d'observation", apsa, a)}

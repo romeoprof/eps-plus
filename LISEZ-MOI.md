@@ -76,6 +76,17 @@ Demi-Cooper (`src/testvma/cooper.js`) : 6 minutes, le plus loin possible. Un él
 
 Paliers : se règlent vitesse initiale, incrémentation, durée d'un palier et distance entre repères (`src/testvma/calculs.js` pour les valeurs d'origine). Le test ne change qu'après « Valider ces valeurs ». Un bip retentit à chaque repère, plus aigu et plus long au premier repère de chaque palier. À l'arrêt : VMA = vitesse du palier + incrément × part du palier réalisée ; VO₂max estimée = VMA × 3,5. Les résultats ne sont pas rattachés à un élève et ne partent pas dans le regroupement des tablettes.
 
+## Arts du cirque
+
+Menu principal → Activités d'expression → Arts du cirque (`src/cirque/`). Repris de l'application cirque-eps d'un collègue, avec les élèves et la Progression d'EPS +. Quatre onglets :
+
+- **Troupe** : jusqu'à 10 artistes, choisis dans la liste d'élèves (classe puis prénoms) ou par un nom libre ; nom de la troupe et titre du spectacle.
+- **Chorégraphe** : les 5 étapes du récit (situation initiale → situation finale). Pour chacune : chorégraphe(s), émotion, espace, temps ; jusqu'à 5 tableaux où l'on place les artistes au doigt sur la piste (pointillés depuis le tableau précédent), coulisses, et « ▶ Animer » pour voir les déplacements s'enchaîner.
+- **Artiste** : le carnet de chaque artiste. Manipulation et équilibre : niveau par cumul de difficultés (1, 2, 3 ou plus) ; acrobatie : niveau 1, 2 ou 3 de la fiche. Un élève identifié ouvre son carnet, mais peut remplir celui d'un camarade (ça va dans le carnet du camarade).
+- **Bilan** : profils des artistes et fiche des 5 étapes avec la piste, à imprimer.
+
+L'évaluation (Insuffisant → Très bien) et les conseils, de l'artiste comme du chorégraphe, ne se donnent que dans l'espace enseignant ; les élèves les voient. Le carnet d'un élève de la liste et les étapes qu'il a chorégraphiées apparaissent dans sa Progression et partent avec « Échanger les données » (la version la plus récente l'emporte). Les listes de difficultés, d'émotions, d'espace et de temps se règlent dans Espace enseignant → Observables par APSA → Arts du cirque.
+
 ## PhotoFinish
 
 Menu principal → Activités athlétiques → PhotoFinish (`src/photofinish/`). La tablette est posée sur le côté de la piste, dans l'alignement de la ligne d'arrivée. On place la ligne rouge sur l'image en glissant le doigt, on règle la zone surveillée et la sensibilité (la ligne devient verte quand quelqu'un passe).

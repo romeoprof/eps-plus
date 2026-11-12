@@ -6,6 +6,9 @@ import { bilanCoureur, suiviDemifond } from '../../demifond/calculs.js';
 import { graphique } from '../../demifond/ecrans/bilan.js';
 import { testsVmaEleve } from '../../testvma/cooper.js';
 import { formatTemps, tempsPfEleve } from '../../photofinish/calculs.js';
+import { ETAPES, EVALUATIONS, FAMILLES_CIRQUE } from '../../cirque/contenu.js';
+import { meilleurNiveau, suiviCirque } from '../../cirque/calculs.js';
+import { resumeCarnet } from '../../cirque/ecran.js';
 import { dateCourte } from '../../demifond/etat.js';
 import { APSA, NIVEAUX_PROJET } from '../contenu/apsa.js';
 import { bonusContrat, elevesSuivis, suiviEleve } from '../calculs/progression.js';
@@ -163,12 +166,38 @@ function cartePhotofinish(temps) {
   </div>`;
 }
 
-/* Activités où l'élève a des résultats : sports, Demi-fond, Tests VMA, PhotoFinish. */
+/* Bloc Arts du cirque : carnet d'artiste (meilleur niveau par famille) et étapes chorégraphiées. */
+function carteCirque(cq) {
+  const c = cq.carnet;
+  const niveaux = FAMILLES_CIRQUE.map((f) => {
+    const n = c ? meilleurNiveau(c, f.id) : 0;
+    return `<div class="tuile-stat"><b>${n ? `Niv. ${n}` : '–'}</b><span>${f.icone} ${f.nom}</span></div>`;
+  }).join('');
+  const choregraphies = cq.troupes
+    .flatMap(({ troupe, etapes }) =>
+      etapes.map(
+        ({ rang, etape }) => `<li>👑 ${ETAPES[rang].titre} <small>${esc(troupe.titre ? `« ${troupe.titre} »` : troupe.nom)}</small> : <b>${etape.evaluation ? EVALUATIONS[etape.evaluation] : 'non évalué'}</b>${etape.conseil ? ` — <em>${esc(etape.conseil)}</em>` : ''}</li>`,
+      ),
+    )
+    .join('');
+  const troupes = cq.troupes.map(({ troupe }) => esc([troupe.nom, troupe.titre && `« ${troupe.titre} »`].filter(Boolean).join(' '))).join(', ');
+  return `<div class="carte">
+    <h2 class="carte-titre"><span class="icone-titre">🎪</span> Arts du cirque <small>${troupes ? `Troupe : ${troupes}` : ''}</small></h2>
+    <div class="tuiles-stats">${niveaux}</div>
+    ${c ? `<h4>🤸 Carnet d'artiste · ${c.evaluation ? EVALUATIONS[c.evaluation] : 'non évalué'} <small>${observePar(c) !== '–' ? `dernière modification : ${observePar(c)}` : ''}</small></h4>
+      <ul class="cq-resume">${resumeCarnet(c) || '<li class="aide">Aucune difficulté cochée.</li>'}</ul>
+      ${c.conseil ? `<p class="cq-conseil">💬 « ${esc(c.conseil)} »</p>` : ''}` : ''}
+    ${choregraphies ? `<h4>🎬 Chorégraphe</h4><ul class="cq-resume">${choregraphies}</ul>` : ''}
+  </div>`;
+}
+
+/* Activités où l'élève a des résultats : sports, Demi-fond, Tests VMA, PhotoFinish, cirque. */
 function activitesEleve(eleve) {
   const liste = suiviEleve(etat, eleve.id).sports.map((s) => ({ id: s.apsa, libelle: `${APSA[s.apsa]?.icone || ''} ${s.apsa}` }));
   if (suiviDemifond(etat, eleve.id).courses) liste.push({ id: 'demifond', libelle: '🏃 Demi-fond' });
   if (testsVmaEleve(etat, eleve.id).length) liste.push({ id: 'testvma', libelle: '📈 Tests VMA' });
   if (tempsPfEleve(etat, eleve.id).length) liste.push({ id: 'photofinish', libelle: '📸 PhotoFinish' });
+  if (suiviCirque(etat, eleve.id)) liste.push({ id: 'cirque', libelle: '🎪 Arts du cirque' });
   return liste;
 }
 
@@ -178,15 +207,17 @@ export function vueEleve(eleve, apsa = '') {
   const df = suiviDemifond(etat, eleve.id);
   const tests = testsVmaEleve(etat, eleve.id);
   const temps = tempsPfEleve(etat, eleve.id);
-  if (!suivi.rencontres && !df.courses && !tests.length && !temps.length) {
-    return `<div class="carte centre"><p class="aide">Aucun match observé pour ${esc(eleve.nom)} sur cette tablette.</p></div>`;
+  const cq = suiviCirque(etat, eleve.id);
+  if (!suivi.rencontres && !df.courses && !tests.length && !temps.length && !cq) {
+    return `<div class="carte centre"><p class="aide">Aucun résultat pour ${esc(eleve.nom)} sur cette tablette.</p></div>`;
   }
+  if (apsa === 'cirque') return cq ? carteCirque(cq) : '';
   if (apsa === 'demifond') return df.courses ? carteDemifond(df) : '';
   if (apsa === 'testvma') return tests.length ? carteTestsVma(tests) : '';
   if (apsa === 'photofinish') return temps.length ? cartePhotofinish(temps) : '';
   if (apsa) return suivi.sports.filter((s) => s.apsa === apsa).map(carteSport).join('');
   const tuile = (valeur, libelle) => `<div class="tuile-stat"><b>${valeur}</b><span>${libelle}</span></div>`;
-  const nbSports = suivi.sports.length + (df.courses ? 1 : 0) + (tests.length ? 1 : 0) + (temps.length ? 1 : 0);
+  const nbSports = suivi.sports.length + (df.courses ? 1 : 0) + (tests.length ? 1 : 0) + (temps.length ? 1 : 0) + (cq ? 1 : 0);
   return `
     <div class="tuiles-stats">
       ${tuile(nbSports, nbSports > 1 ? 'sports' : 'sport')}
@@ -199,6 +230,7 @@ export function vueEleve(eleve, apsa = '') {
     </div>
     ${tests.length ? carteTestsVma(tests) : ''}
     ${temps.length ? cartePhotofinish(temps) : ''}
+    ${cq ? carteCirque(cq) : ''}
     ${suivi.sports.map(carteSport).join('')}
     ${df.courses ? carteDemifond(df) : ''}`;
 }
@@ -231,7 +263,7 @@ export function vueProgression() {
             ${activites.map((a) => `<option value="${esc(a.id)}" ${a.id === apsa ? 'selected' : ''}>${esc(a.libelle)}</option>`).join('')}
           </select></div>
       </div>
-      <p class="aide">En sport collectif, l'élève reçoit les statistiques de son équipe. Sont comptés les matchs et les courses de cette tablette, et ceux récupérés des autres (onglet « Récupérer les données »).</p>
+      <p class="aide">En sport collectif, l'élève reçoit les statistiques de son équipe. Sont comptés les matchs et les courses de cette tablette, et ceux récupérés des autres (« Échanger les données »).</p>
     </div>
     ${eleve ? vueEleve(eleve, apsa) : ''}`;
 }

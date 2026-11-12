@@ -18,6 +18,7 @@ import { oublierChoixCourse } from './demifond/ecrans/reglages.js';
 import { vueTestVma } from './testvma/ecran.js';
 import { cooperEnCours } from './testvma/ecran-cooper.js';
 import { coursePfEnCours, photofinishEnAttente, vuePhotofinish } from './photofinish/ecran.js';
+import { ONGLETS_CIRQUE, vueCirque } from './cirque/ecran.js';
 
 const photofinishActif = () => coursePfEnCours() || photofinishEnAttente();
 const testVmaEnCours = () => !!etat.testVma.depart && !etat.testVma.arret;
@@ -166,7 +167,7 @@ function libelleEspace() {
 }
 
 function dessinerEnTete() {
-  const titres = { demifond: ['Demi-fond', '🏃'], testvma: ['Test VMA', '📈'], photofinish: ['PhotoFinish', '📸'] };
+  const titres = { demifond: ['Demi-fond', '🏃'], testvma: ['Test VMA', '📈'], photofinish: ['PhotoFinish', '📸'], cirque: ['Arts du cirque', '🎪'] };
   const [titre, icone] =
     vue.ecran === 'champ4' ? [esc(etat.apsa), APSA[etat.apsa].icone] : titres[vue.ecran] || [libelleEspace(), estEnseignant() ? '🎓' : '🏅'];
   const sousTitre = titres[vue.ecran] || vue.ecran === 'champ4' ? `${titre} · ${libelleEspace()}` : titre;
@@ -200,6 +201,11 @@ function dessinerNavigation() {
       <div class="onglets" role="tablist">${ONGLETS.map(
         (o) => `<button role="tab" aria-selected="${o.id === vue.onglet}" class="onglet ${o.id === vue.onglet ? 'actif' : ''}" data-action="onglet" data-onglet="${o.id}">${o.libelle}</button>`,
       ).join('')}</div>`;
+  } else if (vue.ecran === 'cirque') {
+    barre.innerHTML = `${versMenu}
+      <div class="onglets" role="tablist">${ONGLETS_CIRQUE.map(
+        (o) => `<button role="tab" aria-selected="${o.id === vue.ongletCirque}" class="onglet ${o.id === vue.ongletCirque ? 'actif' : ''}" data-action="cq-onglet" data-onglet="${o.id}">${o.libelle}</button>`,
+      ).join('')}</div>`;
   } else if (vue.ecran === 'demifond') {
     barre.innerHTML = `${versMenu}
       <div class="onglets" role="tablist">${ONGLETS_DF.map(
@@ -232,6 +238,8 @@ function contenu() {
       return vueTestVma();
     case 'photofinish':
       return vuePhotofinish();
+    case 'cirque':
+      return vueCirque();
     default:
       return ONGLETS.find((o) => o.id === vue.onglet).vue();
   }

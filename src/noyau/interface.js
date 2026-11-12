@@ -2,7 +2,7 @@
 import { esc } from './outils.js';
 
 /* espace : null (écran de choix), 'enseignant' ou 'eleve' */
-export const vue = { ecran: 'choix', espace: null, onglet: 'match', ongletDF: 'coureurs' };
+export const vue = { ecran: 'choix', espace: null, onglet: 'match', ongletDF: 'coureurs', ongletCirque: 'troupe' };
 
 let dessiner = () => {};
 export const definirDessin = (fonction) => {

@@ -2,6 +2,7 @@
    Seuls comptent les élèves de la liste choisis dans une équipe ou comme joueur seul.
    Les événements étant notés par équipe, un élève reçoit ceux de son équipe. */
 import { compte, libelleDe, pointsDe, score } from './match.js';
+import { elevesCirque } from '../../cirque/calculs.js';
 
 export const elevesSuivis = (etat) => {
   const membres = new Set(etat.equipes.flatMap((t) => t.membres || []));
@@ -12,6 +13,7 @@ export const elevesSuivis = (etat) => {
   );
   (etat.testsVma || []).forEach((t) => membres.add(t.eleveId));
   (etat.tempsPf || []).forEach((t) => membres.add(t.eleveId));
+  elevesCirque(etat).forEach((id) => membres.add(id));
   return etat.eleves.filter((e) => membres.has(e.id));
 };
 
