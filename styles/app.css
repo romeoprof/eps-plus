@@ -798,6 +798,10 @@ body.grands .plateau-raquette .critere { min-height: 80px; }
 }
 
 /* Arts du cirque */
+.cq-bandeau { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; border-color: var(--orange); }
+.cq-bandeau b { color: var(--titre); font-size: 1.1rem; }
+.cq-bandeau span { font-weight: 800; }
+.cq-bandeau small { display: block; color: var(--texte-doux); font-weight: 700; }
 .cq-membres { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
 .cq-membre { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 10px; background: var(--fond); border: 2px solid var(--gris); border-radius: 999px; font-weight: 800; }
 .cq-membre small { color: var(--texte-doux); font-weight: 600; }
@@ -866,6 +870,8 @@ body.sombre .cq-conseil { color: #86efac; }
   #entete, #navigation, .non-imprime { display: none !important; }
 }
 
+.liste-rencontres { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.liste-rencontres li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; background: var(--fond); border-radius: 10px; }
 .trois-colonnes { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0 12px; }
 
 /* Bilan demi-fond : verdict, puis statistiques rangées par thème */

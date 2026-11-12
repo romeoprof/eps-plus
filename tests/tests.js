@@ -44,6 +44,9 @@ import {
 import { empreinte } from '../src/noyau/outils.js';
 import { attribuerCodes, changerCode, codeValide } from '../src/noyau/espace.js';
 import { reparerDoublons, remplacerListe } from '../src/champ4/donnees/doublons.js';
+import { cumulEquipe, rencontresObservees } from '../src/champ4/calculs/stats.js';
+import { feuillesStats } from '../src/champ4/donnees/export.js';
+import { crc32, creerClasseur } from '../src/noyau/classeur.js';
 import {
   ajouterMembre,
   carnetVide,
@@ -948,6 +951,29 @@ test('Cirque : échange entre tablettes, la version la plus récente l’emporte
   fusionnerResultats(enseignant, JSON.parse(JSON.stringify(paquetResultats(tablette))));
   egal(enseignant.cirque.carnets.neuf.evaluation, '2'); // même élève reconnu, version plus récente
   egal(Object.keys(enseignant.cirque.carnets), ['neuf']);
+});
+
+test('Bilan : cumul de toutes les rencontres d’une équipe', () => {
+  const m1 = match('Badminton', [[0, 'gag'], [0, 'gag'], [1, 'gag']], { id: 'r1', a: 'A', b: 'B' });
+  const m2 = match('Badminton', [[1, 'gag'], [1, 'gag'], [0, 'gag']], { id: 'r2', a: 'C', b: 'A' });
+  [m1, m2].forEach((m, i) => Object.assign(m, { termine: true, termineLe: 10 + i }));
+  const rencontres = rencontresObservees([m1, m2], 'Badminton', 'A');
+  egal(rencontres.map(([m, cote]) => [m.id, cote]), [['r1', 0], ['r2', 1]]);
+  const c = cumulEquipe(rencontres);
+  egal([c.rencontres, c.victoires, c.defaites, c.pour, c.contre], [2, 2, 0, 4, 2]);
+  egal(c.lignes[0], ['Points', 4, 2, '2,0']);
+});
+
+test('Export Excel : un vrai fichier .xlsx, avec ses trois feuilles', () => {
+  egal(crc32(new TextEncoder().encode('123456789')), 0xcbf43926);
+  const etat = etatSuivi();
+  etat.matchs = [Object.assign(match('Badminton', [[0, 'gag']], { id: 'm1' }), { termine: true, termineLe: 5 })];
+  const feuilles = feuillesStats(etat, 'Badminton', 0);
+  egal(feuilles.map((f) => f.nom), ['Rencontres', 'Détail des rencontres', 'Cumul par équipe']);
+  const fichier = creerClasseur(feuilles);
+  egal([...fichier.slice(0, 4)], [0x50, 0x4b, 0x03, 0x04]);
+  const texte = new TextDecoder().decode(fichier);
+  vrai(texte.includes('xl/worksheets/sheet3.xml') && texte.includes('Cumul par équipe'), 'contenu du classeur');
 });
 
 test('QR codes : découpage, ordre quelconque et assemblage', () => {

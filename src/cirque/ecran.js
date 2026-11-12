@@ -377,7 +377,23 @@ declarerActions({
     noterCarnet(artisteVu);
   },
   'cq-imprimer': () => window.print(),
+  /* Tout est déjà enregistré à chaque geste ; ce bouton le confirme au groupe avant de rendre la tablette. */
+  'cq-sauvegarder': () => {
+    const t = troupe();
+    if (!t) return;
+    noterTroupe(t);
+    rafraichir();
+    notifier(`Projet « ${t.titre || t.nom} » sauvegardé sur cette tablette ✔`);
+  },
 });
+
+/* Bandeau de la troupe ouverte : on la reconnaît et on sauvegarde depuis chaque onglet. */
+function bandeauTroupe(t) {
+  const heure = t.majLe ? new Date(t.majLe).toLocaleString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+  return `<div class="carte cq-bandeau"><div><b>🎪 ${esc([t.classe, t.nom].filter(Boolean).join(' · '))}</b>${t.titre ? ` <span>« ${esc(t.titre)} »</span>` : ''}
+      <small>${heure ? `Dernier enregistrement : ${heure}` : ''}</small></div>
+    <button class="btn" data-action="cq-sauvegarder">💾 Sauvegarder le projet</button></div>`;
+}
 
 /* ---------- Affichage commun ---------- */
 const badgeNiveau = (n) => (n ? `<span class="cq-niveau n${n}">Niveau ${n}</span>` : '<span class="cq-niveau">Non défini</span>');
@@ -683,8 +699,11 @@ function vueBilanCirque() {
 
 export function vueCirque() {
   const onglet = vue.ongletCirque || 'troupe';
-  if (onglet === 'choregraphe') return vueChoregraphe();
-  if (onglet === 'artiste') return vueArtiste();
-  if (onglet === 'bilan') return vueBilanCirque();
-  return vueTroupe();
+  const t = troupe();
+  const haut = t ? bandeauTroupe(t) : '';
+  if (onglet === 'choregraphe') return haut + vueChoregraphe();
+  if (onglet === 'artiste') return haut + vueArtiste();
+  if (onglet === 'bilan') return haut + vueBilanCirque();
+  return `${haut}${vueTroupe()}
+    <p class="aide centre">Le projet reste sur cette tablette : à la prochaine séance, le groupe choisit sa troupe dans la liste et reprend là où il s'était arrêté.</p>`;
 }

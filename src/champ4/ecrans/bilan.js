@@ -4,9 +4,9 @@ import { esc, lireNombre } from '../../noyau/outils.js';
 import { APSA, NIVEAUX_FICHE, NIVEAUX_PROJET, REPERES } from '../contenu/apsa.js';
 import { nomZone, TERRAINS } from '../contenu/terrains.js';
 import { score } from '../calculs/match.js';
-import { indicateurs } from '../calculs/stats.js';
+import { cumulEquipe, indicateurs, rencontresObservees } from '../calculs/stats.js';
 import { profilJoueur, rencontresParEquipe } from '../calculs/suivi.js';
-import { exporterCsv, exporterSauvegarde } from '../donnees/export.js';
+import { exporterClasseur, exporterSauvegarde } from '../donnees/export.js';
 import { lireSauvegarde } from '../donnees/migration.js';
 import { reinitialiserBilans } from '../donnees/operations.js';
 import { nomCote, nomEquipe } from '../reglages.js';
@@ -21,14 +21,33 @@ const matchAffiche = () => {
   return liste.find((m) => m.id === etat.matchBilan) || liste[0];
 };
 
+/* Bilan rencontre par rencontre, ou cumul de toutes les rencontres d'une équipe / d'un joueur. */
+let modeBilan = 'rencontre';
+let equipeCumul = '';
+
 declarerActions({
+  'bilan-mode': ({ mode }) => {
+    modeBilan = mode;
+    rafraichir();
+  },
+  'bilan-equipe': (_, champ) => {
+    equipeCumul = champ.value;
+    rafraichir();
+  },
+  'bilan-voir-match': ({ id }) => {
+    etat.matchBilan = id;
+    modeBilan = 'rencontre';
+    sauver();
+    rafraichir();
+    window.scrollTo(0, 0);
+  },
   'bilan-match': (_, champ) => {
     etat.matchBilan = champ.value;
     sauver();
     rafraichir();
   },
   'bilan-fiche': ({ cote }) => afficherFiche(matchAffiche(), Number(cote)),
-  'bilan-csv': () => exporterCsv(etat),
+  'bilan-csv': () => exporterClasseur(etat, etat.apsa),
   'bilan-sauvegarder': () => exporterSauvegarde(etat),
   'bilan-restaurer': async (_, champ) => {
     const fichier = champ.files[0];
@@ -161,9 +180,52 @@ function carteSuivi() {
   return html ? `<div class="carte"><h2 class="carte-titre">🎯 Suivi des projets de jeu</h2>${html}</div>` : '';
 }
 
+/* Une équipe ou un joueur, toutes ses rencontres réunies sur un seul écran. */
+function carteCumul() {
+  const ids = [...new Set(matchsObserves().flatMap((x) => [x.a, x.b]))].sort((p, q) => nomEquipe(p).localeCompare(nomEquipe(q)));
+  if (!ids.length) return `<div class="carte centre"><p class="aide">Aucun match observé pour cette APSA.</p></div>`;
+  if (!ids.includes(equipeCumul)) equipeCumul = ids[0];
+  const rencontres = rencontresObservees(etat.matchs, etat.apsa, equipeCumul);
+  const c = cumulEquipe(rencontres);
+  const nom = nomEquipe(equipeCumul);
+  const tuile = (valeur, libelle) => `<div class="tuile-stat"><b>${valeur}</b><span>${libelle}</span></div>`;
+  const lignes = c.lignes
+    .map(([libelle, a, b, moy]) => `<tr><td>${esc(libelle)}</td><td><b>${esc(a)}</b></td><td>${esc(b)}</td><td>${esc(moy) || '–'}</td></tr>`)
+    .join('');
+  const liste = rencontres
+    .map(([m, cote], rang) => {
+      const pour = score(m, cote);
+      const contre = score(m, 1 - cote);
+      const resultat = !m.termine ? 'en cours' : pour > contre ? 'victoire' : pour < contre ? 'défaite' : 'nul';
+      return `<li><span>Rencontre ${rang + 1} · contre <b>${esc(nomCote(m, 1 - cote))}</b> · ${pour}-${contre} <small>(${resultat})</small></span>
+        <button class="btn-mini" data-action="bilan-voir-match" data-id="${esc(m.id)}">Voir le détail</button></li>`;
+    })
+    .join('');
+  return `<div class="carte"><h2 class="carte-titre">🧮 Cumul de toutes les rencontres</h2>
+      <label class="etiquette" for="bilan-equipe">Équipe ou joueur</label>
+      <select id="bilan-equipe" data-choix="bilan-equipe">${ids.map((id) => `<option value="${esc(id)}" ${id === equipeCumul ? 'selected' : ''}>${esc(nomEquipe(id))}</option>`).join('')}</select>
+      <div class="tuiles-stats marge-haut">
+        ${tuile(c.rencontres, c.rencontres > 1 ? 'rencontres' : 'rencontre')}
+        ${tuile(`${c.victoires} / ${c.nuls} / ${c.defaites}`, 'V / N / D')}
+        ${tuile(`${c.pour} – ${c.contre}`, 'points pour – contre')}
+      </div>
+      <div class="defile"><table>
+        <tr><th>Indicateur</th><th>${esc(nom)}</th><th>Adversaires</th><th>Moyenne par rencontre</th></tr>
+        ${lignes}
+      </table></div>
+      <p class="aide">Totaux sur toutes les rencontres observées ; les pourcentages sont recalculés sur l'ensemble.</p>
+    </div>
+    <div class="carte"><h2 class="carte-titre">📅 Rencontre par rencontre</h2><ul class="liste-rencontres">${liste}</ul></div>`;
+}
+
 export function vueBilan() {
   const liste = matchsObserves();
   const m = matchAffiche();
+  const choixMode = `<div class="choix-sports choix-test">
+      <button class="choix-sport ${modeBilan === 'rencontre' ? 'actif' : ''}" aria-pressed="${modeBilan === 'rencontre'}" data-action="bilan-mode" data-mode="rencontre">📊 Par rencontre</button>
+      <button class="choix-sport ${modeBilan === 'cumul' ? 'actif' : ''}" aria-pressed="${modeBilan === 'cumul'}" data-action="bilan-mode" data-mode="cumul">🧮 Cumul d'une équipe / d'un joueur</button>
+    </div>`;
+  if (modeBilan === 'cumul') return `${choixMode}${carteCumul()}${carteExport()}`;
   const carteMatch = m
     ? `<div class="carte"><h2 class="carte-titre">📊 Bilan du match</h2>
         <select data-choix="bilan-match">${liste
@@ -180,16 +242,20 @@ export function vueBilan() {
       </div>`
     : `<div class="carte centre"><p class="aide">Aucun match observé pour cette APSA.</p></div>`;
   return `
+    ${choixMode}
     ${carteMatch}
     ${carteProgression()}
     ${carteSuivi()}
+    ${carteExport()}
+    <button class="btn secondaire" data-action="bilan-reinitialiser">Réinitialiser les bilans</button>`;
+}
+
+const carteExport = () => `
     <div class="carte"><h2 class="carte-titre">💾 Exporter et sauvegarder</h2>
       <div class="rangee">
-        <button class="btn" data-action="bilan-csv">Exporter les stats (Excel)</button>
+        <button class="btn" data-action="bilan-csv">📗 Exporter les stats (Excel)</button>
         <button class="btn secondaire" data-action="bilan-sauvegarder">Sauvegarder</button>
         <label class="btn secondaire">Restaurer<input type="file" accept=".json" hidden data-choix="bilan-restaurer"></label>
       </div>
-      <p class="aide">« Restaurer » accepte aussi les fichiers sauvegarde_eps.json de l'ancienne version.</p>
-    </div>
-    <button class="btn secondaire" data-action="bilan-reinitialiser">Réinitialiser les bilans</button>`;
-}
+      <p class="aide">Le fichier Excel a trois feuilles : la liste des rencontres, le détail de chaque rencontre et le cumul de chaque équipe ou joueur. « Restaurer » accepte aussi les fichiers sauvegarde_eps.json de l'ancienne version.</p>
+    </div>`;
