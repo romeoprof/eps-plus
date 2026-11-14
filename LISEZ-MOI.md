@@ -82,7 +82,7 @@ Paliers : se règlent vitesse initiale, incrémentation, durée d'un palier et d
 
 ## Utilitaires : Vidéo laps
 
-Menu principal → Utilitaires → Vidéo laps (`src/utilitaires/`). La caméra filme et l'écran montre l'image avec un retard réglable de 0 (direct) à 30 secondes : l'élève fait son geste puis vient se voir. « ⏸ Pause » fige l'image ; on revoit alors les dernières secondes image par image (boutons ou curseur). On dessine sur l'image (crayon, trait, flèche, cercle, 5 couleurs, annuler, effacer), on peut l'enregistrer en PNG et passer en plein écran. Les images ne restent qu'en mémoire, le temps du différé (environ 25 images par seconde, en JPEG) : rien n'est enregistré ni envoyé. « Reprendre » relance le différé, qui se remplit à nouveau.
+Menu principal → Utilitaires → Vidéo laps (`src/utilitaires/`). La caméra filme et l'écran montre l'image avec un retard réglable de 0 (direct) à 30 secondes : l'élève fait son geste puis vient se voir. « ⏸ Pause » fige l'image ; on revoit alors les dernières secondes image par image (boutons ou curseur). On dessine sur l'image (crayon, trait, flèche, cercle, angle avec son ouverture en degrés, 5 couleurs, annuler, effacer). Un tracé se modifie : ses ronds blancs (extrémités, centre, sommet et bras de l'angle) se déplacent au doigt, « ✋ Déplacer » le bouge en entier, une couleur touchée s'applique au tracé choisi, « Supprimer le tracé » l'efface (`src/utilitaires/dessin.js`), on peut l'enregistrer en PNG et passer en plein écran. Les images ne restent qu'en mémoire, le temps du différé (environ 25 images par seconde, en JPEG) : rien n'est enregistré ni envoyé. « Reprendre » relance le différé, qui se remplit à nouveau.
 
 ## Bilan des sports et export Excel
 

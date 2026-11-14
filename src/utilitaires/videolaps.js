@@ -10,6 +10,7 @@ import { etat, sauver } from '../noyau/etat.js';
 import { apresDessin, declarerActions, notifier, rafraichir, vue } from '../noyau/interface.js';
 import { telecharger } from '../noyau/outils.js';
 import { aRetirer, bornerEcart, ECART_DEFAUT, ECART_MAX, formatEcart, IMAGES_PAR_SECONDE, rangAAfficher, remplissage } from './differe.js';
+import { angleDegres, brasPropose, deplacer, poignees, poigneeTouchee, traceTouche } from './dessin.js';
 
 const LARGEUR = 960; // largeur des images gardées (px)
 const MARGE = 3; // secondes gardées en plus de l'écart, pour revoir image par image
@@ -19,6 +20,8 @@ const OUTILS = [
   { id: 'trait', libelle: '📏 Trait' },
   { id: 'fleche', libelle: '➡️ Flèche' },
   { id: 'cercle', libelle: '⭕ Cercle' },
+  { id: 'angle', libelle: '📐 Angle' },
+  { id: 'modifier', libelle: '✋ Déplacer' },
 ];
 
 /* Réglages gardés d'une séance à l'autre. */
@@ -44,7 +47,9 @@ const vl = {
   outil: 'crayon',
   couleur: COULEURS[0],
   traits: [],
-  trait: null,
+  trait: null, // tracé en cours de dessin
+  selection: -1, // tracé choisi, à modifier
+  geste: null, // poignée ou tracé en cours de déplacement
 };
 
 /* ---------- Scène : écran différé + calque de dessin ---------- */
@@ -241,6 +246,40 @@ function point(e) {
   return { x: ((e.clientX - cadre.left) / cadre.width) * vl.dessin.width, y: ((e.clientY - cadre.top) / cadre.height) * vl.dessin.height };
 }
 
+/* Angle : les deux bras, l'arc et l'ouverture en degrés, écrite près du sommet. */
+function tracerAngle(ctx, trait) {
+  const [s, b, c] = trait.points;
+  ctx.beginPath();
+  ctx.moveTo(b.x, b.y);
+  ctx.lineTo(s.x, s.y);
+  ctx.lineTo(c.x, c.y);
+  ctx.stroke();
+  const a1 = Math.atan2(b.y - s.y, b.x - s.x);
+  const a2 = Math.atan2(c.y - s.y, c.x - s.x);
+  let ecart = a2 - a1;
+  while (ecart > Math.PI) ecart -= 2 * Math.PI;
+  while (ecart < -Math.PI) ecart += 2 * Math.PI;
+  const rayon = Math.max(18, Math.min(60, Math.hypot(b.x - s.x, b.y - s.y) / 3, Math.hypot(c.x - s.x, c.y - s.y) / 3));
+  ctx.save();
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.arc(s.x, s.y, rayon, a1, a1 + ecart, ecart < 0);
+  ctx.stroke();
+  const milieu = a1 + ecart / 2;
+  const texte = `${angleDegres(s, b, c)}°`;
+  ctx.font = 'bold 34px sans-serif';
+  const largeur = ctx.measureText(texte).width;
+  const tx = s.x + (rayon + 40) * Math.cos(milieu);
+  const ty = s.y + (rayon + 40) * Math.sin(milieu);
+  ctx.fillStyle = 'rgba(15, 23, 42, .78)';
+  ctx.fillRect(tx - largeur / 2 - 8, ty - 22, largeur + 16, 42);
+  ctx.fillStyle = trait.couleur;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(texte, tx, ty);
+  ctx.restore();
+}
+
 function tracer(ctx, trait) {
   const [a] = trait.points;
   const b = trait.points[trait.points.length - 1];
@@ -250,7 +289,9 @@ function tracer(ctx, trait) {
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.beginPath();
-  if (trait.outil === 'crayon') {
+  if (trait.outil === 'angle' && trait.points.length === 3) {
+    tracerAngle(ctx, trait);
+  } else if (trait.outil === 'crayon') {
     ctx.moveTo(a.x, a.y);
     trait.points.forEach((p) => ctx.lineTo(p.x, p.y));
     ctx.stroke();
@@ -273,30 +314,89 @@ function tracer(ctx, trait) {
   }
 }
 
-function redessiner() {
-  if (!vl.dessin) return;
-  const ctx = vl.dessin.getContext('2d');
-  ctx.clearRect(0, 0, vl.dessin.width, vl.dessin.height);
+/* Tous les tracés ; le tracé choisi est entouré de pointillés et montre ses poignées. */
+function peindreTraces(ctx, avecPoignees) {
+  ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
   [...vl.traits, ...(vl.trait ? [vl.trait] : [])].forEach((t) => tracer(ctx, t));
+  const choisi = vl.traits[vl.selection];
+  if (!avecPoignees || !choisi) return;
+  ctx.save();
+  poignees(choisi).forEach((i) => {
+    const p = choisi.points[i];
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 14, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = choisi.couleur === '#ffffff' ? '#0f172a' : choisi.couleur;
+    ctx.stroke();
+  });
+  if (choisi.outil === 'crayon') {
+    const xs = choisi.points.map((p) => p.x);
+    const ys = choisi.points.map((p) => p.y);
+    ctx.setLineDash([10, 8]);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffffff';
+    ctx.strokeRect(Math.min(...xs) - 12, Math.min(...ys) - 12, Math.max(...xs) - Math.min(...xs) + 24, Math.max(...ys) - Math.min(...ys) + 24);
+  }
+  ctx.restore();
 }
+
+function redessiner() {
+  if (vl.dessin) peindreTraces(vl.dessin.getContext('2d'), true);
+}
+
+/* Tolérance du doigt, en pixels de l'image (l'écran peut être plus petit ou plus grand). */
+const tolerance = () => 28 * (vl.dessin.width / Math.max(1, vl.dessin.getBoundingClientRect().width));
 
 function brancherDessin() {
   vl.dessin.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     vl.dessin.setPointerCapture?.(e.pointerId);
-    vl.trait = { outil: vl.outil, couleur: vl.couleur, points: [point(e)] };
+    const p = point(e);
+    /* Une poignée sous le doigt : on la déplace, quel que soit l'outil choisi. */
+    const poignee = poigneeTouchee(vl.traits, p, tolerance());
+    if (poignee) {
+      vl.selection = poignee.trace;
+      vl.geste = { type: 'poignee', trace: poignee.trace, point: poignee.point };
+    } else if (vl.outil === 'modifier') {
+      vl.selection = traceTouche(vl.traits, p, tolerance());
+      vl.geste = vl.selection >= 0 ? { type: 'deplacer', dernier: p } : null;
+    } else {
+      vl.selection = -1;
+      vl.trait = { outil: vl.outil, couleur: vl.couleur, points: [p] };
+    }
+    redessiner();
+    majBoutonsDessin();
   });
   vl.dessin.addEventListener('pointermove', (e) => {
-    if (!vl.trait) return;
     const p = point(e);
-    if (vl.trait.outil === 'crayon') vl.trait.points.push(p);
-    else vl.trait.points = [vl.trait.points[0], p];
+    if (vl.geste?.type === 'poignee') {
+      vl.traits[vl.geste.trace].points[vl.geste.point] = p;
+    } else if (vl.geste?.type === 'deplacer') {
+      deplacer(vl.traits[vl.selection], p.x - vl.geste.dernier.x, p.y - vl.geste.dernier.y);
+      vl.geste.dernier = p;
+    } else if (vl.trait) {
+      if (vl.trait.outil === 'crayon') vl.trait.points.push(p);
+      else vl.trait.points = [vl.trait.points[0], p];
+    } else {
+      return;
+    }
     redessiner();
   });
   const finir = () => {
-    if (!vl.trait) return;
-    if (vl.trait.points.length > 1) vl.traits.push(vl.trait);
-    vl.trait = null;
+    vl.geste = null;
+    if (vl.trait) {
+      const [a] = vl.trait.points;
+      const b = vl.trait.points[vl.trait.points.length - 1];
+      if (vl.trait.points.length > 1 && Math.hypot(b.x - a.x, b.y - a.y) > 6) {
+        /* L'angle est créé avec un 2e bras proposé, à régler ensuite par sa poignée. */
+        if (vl.trait.outil === 'angle') vl.trait.points = [a, b, brasPropose(a, b)];
+        vl.traits.push(vl.trait);
+        vl.selection = vl.traits.length - 1;
+      }
+      vl.trait = null;
+    }
     redessiner();
     majBoutonsDessin();
   };
@@ -308,6 +408,8 @@ function majBoutonsDessin() {
   document.querySelectorAll('[data-action="vl-annuler"], [data-action="vl-effacer"]').forEach((b) => {
     b.disabled = !vl.traits.length;
   });
+  const supprimer = document.querySelector('[data-action="vl-supprimer"]');
+  if (supprimer) supprimer.disabled = !vl.traits[vl.selection];
 }
 
 /* Image + dessin, enregistrés en PNG (par exemple pour la montrer en fin de séance). */
@@ -317,7 +419,11 @@ function enregistrerImage() {
   toile.height = vl.ecran.height;
   const ctx = toile.getContext('2d');
   ctx.drawImage(vl.ecran, 0, 0);
-  ctx.drawImage(vl.dessin, 0, 0);
+  const calque = document.createElement('canvas');
+  calque.width = toile.width;
+  calque.height = toile.height;
+  peindreTraces(calque.getContext('2d'), false); // sans les poignées
+  ctx.drawImage(calque, 0, 0);
   toile.toBlob((blob) => {
     const d = new Date();
     const nom = `video-laps-${d.toISOString().slice(0, 10)}-${String(d.getHours()).padStart(2, '0')}h${String(d.getMinutes()).padStart(2, '0')}.png`;
@@ -381,17 +487,29 @@ declarerActions({
     vl.outil = outil;
     rafraichir();
   },
+  /* La couleur choisie s'applique aussi au tracé sélectionné. */
   'vl-couleur': ({ couleur }) => {
     vl.couleur = couleur;
+    if (vl.traits[vl.selection]) vl.traits[vl.selection].couleur = couleur;
     rafraichir();
+    redessiner();
   },
   'vl-annuler': () => {
     vl.traits.pop();
+    if (vl.selection >= vl.traits.length) vl.selection = -1;
+    redessiner();
+    majBoutonsDessin();
+  },
+  'vl-supprimer': () => {
+    if (!vl.traits[vl.selection]) return;
+    vl.traits.splice(vl.selection, 1);
+    vl.selection = -1;
     redessiner();
     majBoutonsDessin();
   },
   'vl-effacer': () => {
     vl.traits = [];
+    vl.selection = -1;
     redessiner();
     majBoutonsDessin();
   },
@@ -434,7 +552,8 @@ export function vueVideolaps() {
         (c) => `<button class="vl-couleur ${vl.couleur === c ? 'actif' : ''}" style="background:${c}" aria-label="Couleur ${c}" aria-pressed="${vl.couleur === c}" data-action="vl-couleur" data-couleur="${c}"></button>`,
       ).join('')}</span>
       <button class="btn-mini" data-action="vl-annuler">↩ Annuler</button>
-      <button class="btn-mini" data-action="vl-effacer">🧽 Effacer</button>
+      <button class="btn-mini" data-action="vl-supprimer">🗑 Supprimer le tracé</button>
+      <button class="btn-mini" data-action="vl-effacer">🧽 Tout effacer</button>
     </div>`;
   return `<div class="carte vl-carte">
       <div class="vl-barre">
@@ -444,7 +563,7 @@ export function vueVideolaps() {
       <div data-place="vl-scene"></div>
       ${navigationImages}
       ${outils}
-      <p class="aide">Dessine directement sur l'image, en pause ou pendant le différé.${pause ? ' « Reprendre » relance le différé (il se remplit à nouveau).' : ''}</p>
+      <p class="aide">Dessine directement sur l'image, en pause ou pendant le différé. Pour modifier un tracé : fais glisser ses ronds blancs (extrémités, sommet et bras de l'angle) ; avec « ✋ Déplacer », touche un tracé pour le déplacer en entier. Une couleur touchée s'applique au tracé choisi.${pause ? ' « Reprendre » relance le différé (il se remplit à nouveau).' : ''}</p>
       <div class="rangee">
         <button class="btn secondaire" data-action="vl-photo">📷 Enregistrer l'image</button>
         <button class="btn secondaire" data-action="vl-plein-ecran">⛶ Plein écran</button>

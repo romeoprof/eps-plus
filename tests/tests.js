@@ -49,6 +49,7 @@ import { feuillesStats } from '../src/champ4/donnees/export.js';
 import { crc32, creerClasseur } from '../src/noyau/classeur.js';
 import { dossierEleve } from '../src/champ4/donnees/dossier.js';
 import { aRetirer, bornerEcart, rangAAfficher, remplissage } from '../src/utilitaires/differe.js';
+import { angleDegres, brasPropose, deplacer, poigneeTouchee, traceTouche } from '../src/utilitaires/dessin.js';
 import {
   ajouterMembre,
   carnetVide,
@@ -1006,6 +1007,26 @@ test('Vidéo laps : l’image montrée est celle filmée « écart » secondes p
   egal(remplissage(images, 3000, 6), 0.5);
   egal(aRetirer(images, 5000, 2, 1), 2); // on garde à partir de 2 s
   egal([bornerEcart(-3), bornerEcart(7.3), bornerEcart(99), bornerEcart('abc')], [0, 7.5, 30, 0]);
+});
+
+test('Vidéo laps : ouverture d’un angle et modification des tracés', () => {
+  const s = { x: 0, y: 0 };
+  egal(angleDegres(s, { x: 10, y: 0 }, { x: 0, y: 10 }), 90);
+  egal(angleDegres(s, { x: 10, y: 0 }, { x: -10, y: 0 }), 180);
+  egal(angleDegres(s, { x: 10, y: 1 }, { x: 10, y: -1 }), 11);
+  egal(angleDegres(s, { x: 10, y: 0 }, brasPropose(s, { x: 10, y: 0 })), 45);
+  const traces = [
+    { outil: 'trait', points: [{ x: 0, y: 0 }, { x: 100, y: 0 }] },
+    { outil: 'crayon', points: [{ x: 0, y: 50 }, { x: 50, y: 50 }] },
+    { outil: 'angle', points: [{ x: 200, y: 200 }, { x: 300, y: 200 }, { x: 200, y: 100 }] },
+  ];
+  egal(poigneeTouchee(traces, { x: 98, y: 3 }, 10), { trace: 0, point: 1, distance: Math.hypot(2, 3) });
+  egal(poigneeTouchee(traces, { x: 202, y: 102 }, 10)?.point, 2);
+  egal(poigneeTouchee(traces, { x: 25, y: 50 }, 10), null); // le crayon n'a pas de poignées
+  egal(traceTouche(traces, { x: 25, y: 52 }, 10), 1);
+  egal(traceTouche(traces, { x: 205, y: 150 }, 10), 2); // sur le 2e bras de l'angle
+  deplacer(traces[1], 10, -5);
+  egal(traces[1].points[0], { x: 10, y: 45 });
 });
 
 test('QR codes : découpage, ordre quelconque et assemblage', () => {
