@@ -80,6 +80,10 @@ Demi-Cooper (`src/testvma/cooper.js`) : 6 minutes, le plus loin possible. Un él
 
 Paliers : se règlent vitesse initiale, incrémentation, durée d'un palier et distance entre repères (`src/testvma/calculs.js` pour les valeurs d'origine). Le test ne change qu'après « Valider ces valeurs ». Un bip retentit à chaque repère, plus aigu et plus long au premier repère de chaque palier. À l'arrêt : VMA = vitesse du palier + incrément × part du palier réalisée ; VO₂max estimée = VMA × 3,5. Les résultats ne sont pas rattachés à un élève et ne partent pas dans le regroupement des tablettes.
 
+## Affrontements interindividuels
+
+Badminton, tennis de table (terrain à zones) et lutte. Lutte (`src/champ4/contenu/apsa.js`) : combat à deux, points comptés comme un duel : amenée au sol 2, retournement 2, immobilisation (3 s) 3, sortie de l'adversaire hors de l'aire 1 ; une faute ou un avertissement de passivité donne 1 point à l'adversaire ; « attaque tentée » et « dégagement réussi » s'observent sans point. Critères, fiche et projets se modifient dans Observables par APSA.
+
 ## Utilitaires : Vidéo laps
 
 Menu principal → Utilitaires → Vidéo laps (`src/utilitaires/`). La caméra filme et l'écran montre l'image avec un retard réglable de 0 (direct) à 30 secondes : l'élève fait son geste puis vient se voir. « ⏸ Pause » fige l'image ; on revoit alors les dernières secondes image par image (boutons ou curseur). On dessine sur l'image (crayon, trait, flèche, cercle, angle avec son ouverture en degrés, 5 couleurs, annuler, effacer). Un tracé se modifie : ses ronds blancs (extrémités, centre, sommet et bras de l'angle) se déplacent au doigt, « ✋ Déplacer » le bouge en entier, une couleur touchée s'applique au tracé choisi, « Supprimer le tracé » l'efface (`src/utilitaires/dessin.js`), on peut l'enregistrer en PNG et passer en plein écran. Les images ne restent qu'en mémoire, le temps du différé (environ 25 images par seconde, en JPEG) : rien n'est enregistré ni envoyé. « Reprendre » relance le différé, qui se remplit à nouveau.

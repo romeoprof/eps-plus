@@ -27,9 +27,9 @@ export const FAMILLES = [
     ],
   },
   {
-    titre: 'Sports de raquette',
+    titre: 'Affrontements interindividuels',
     couleur: 'violet',
-    activites: [{ nom: 'Badminton' }, { nom: 'Tennis de table' }],
+    activites: [{ nom: 'Badminton' }, { nom: 'Tennis de table' }, { nom: 'Lutte' }],
   },
   {
     titre: "Activités d'expression",

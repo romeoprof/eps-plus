@@ -1029,6 +1029,12 @@ test('Vidéo laps : ouverture d’un angle et modification des tracés', () => {
   egal(traces[1].points[0], { x: 10, y: 45 });
 });
 
+test('Lutte : les points d’un combat et la réussite', () => {
+  const m = match('Lutte', [[0, 'amen'], [0, 'immo'], [1, 'ret'], [1, 'faute']]);
+  egal([score(m, 0), score(m, 1)], [6, 2]); // 2 + 3 + la faute de B donne 1 point à A
+  egal(valeur(m, 'Points'), ['Points', 6, 2]);
+});
+
 test('QR codes : découpage, ordre quelconque et assemblage', () => {
   const texte = 'z'.padEnd(1500, 'abc');
   const morceaux = decouper(texte, 'id1', 600);

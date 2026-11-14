@@ -37,6 +37,14 @@ const PROJETS_VOLLEY = [
   'Communiquer entre partenaires',
 ];
 
+const PROJETS_LUTTE = [
+  "Déséquilibrer l'adversaire avant de l'amener au sol",
+  'Garder une position basse et stable',
+  "Enchaîner l'amenée au sol et l'immobilisation",
+  'Me dégager vite quand je suis en dessous',
+  "Pousser l'adversaire vers le bord de l'aire",
+];
+
 const PROJETS_ULTIMATE = [
   'Écarter le jeu',
   'Faire moins de passes en cloche, au-dessus du défenseur',
@@ -151,6 +159,21 @@ export const APSA = {
       critere('fil', 'Faute : filet', -1),
       critere('dehors', 'Faute : hors table', -1),
       critere('faute', 'Faute de service', -1),
+    ],
+  },
+  /* Lutte scolaire : un combat à deux, les points se comptent comme pour un duel. */
+  Lutte: {
+    icone: '🤼',
+    projets: PROJETS_LUTTE,
+    criteres: [
+      critere('amen', 'Amenée au sol', 2),
+      critere('ret', "Retournement (dos de l'adversaire vers le sol)", 2),
+      critere('immo', 'Immobilisation (3 secondes)', 3),
+      critere('sort', "Sortie de l'adversaire hors de l'aire", 1),
+      critere('tent', 'Attaque tentée (sans amenée)'),
+      critere('deg', 'Dégagement réussi'),
+      critere('faute', 'Faute / geste dangereux', -1),
+      critere('pass', 'Passivité (avertissement)', -1),
     ],
   },
 };
