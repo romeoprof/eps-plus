@@ -254,7 +254,20 @@ function colonneEquipe(m, cote) {
         <span>${contrat ? '⭐ ' : ''}${esc(c.libelle)}</span><b>${compte(m, cote, c.cle)}</b></button>`;
     })
     .join('');
-  return `<div class="colonne-equipe"><h3 class="nom-equipe cote-${cote}">${esc(nomCote(m, cote))}</h3>${boutons}</div>`;
+  /* Un grand cadre par équipe : son nom (et ses élèves) en tête, son score, et ses boutons dedans. */
+  const nom = nomCote(m, cote);
+  const eleves = membresDuCote(etat, m, cote)
+    .map((id) => etat.eleves.find((e) => e.id === id)?.nom)
+    .filter(Boolean);
+  const membres = eleves.length && !(eleves.length === 1 && eleves[0] === nom) ? eleves.join(' · ') : '';
+  return `<section class="colonne-equipe cote-${cote}" aria-label="${esc(nom)}">
+      <header class="entete-equipe">
+        <h3 class="nom-equipe">${esc(nom)}</h3>
+        <span class="score-equipe" aria-label="Score">${score(m, cote)}</span>
+        ${membres ? `<small>${esc(membres)}</small>` : ''}
+      </header>
+      <div class="boutons-equipe">${boutons}</div>
+    </section>`;
 }
 
 function terrainZones(m) {

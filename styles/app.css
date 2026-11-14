@@ -336,7 +336,14 @@ td.ligne-barres { text-align: left; font-weight: 700; }
 .balle svg { display: block; width: 32px; height: 32px; }
 
 .colonnes-equipes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex: 1; min-width: 0; margin-bottom: 14px; }
-.colonne-equipe { min-width: 0; }
+/* Écran du match : chaque équipe (ou joueur) dans un grand cadre à sa couleur, nom en valeur, boutons dedans. */
+.colonne-equipe { --couleur-equipe: var(--bleu); min-width: 0; padding: 0 10px 10px; background: rgba(37, 99, 235, .07); border: 4px solid var(--couleur-equipe); border-radius: 20px; }
+.colonne-equipe.cote-1 { --couleur-equipe: var(--orange); background: rgba(234, 88, 12, .07); }
+.entete-equipe { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 10px; margin: 0 -10px 10px; padding: 10px 14px; background: var(--couleur-equipe); border-radius: 15px 15px 0 0; color: #fff; }
+.entete-equipe .nom-equipe { margin: 0; padding: 0; background: none; color: #fff; font-size: 1.4rem; text-align: left; line-height: 1.15; }
+.entete-equipe small { grid-column: 1 / -1; font-size: .85rem; font-weight: 700; opacity: .92; overflow-wrap: anywhere; }
+.score-equipe { min-width: 52px; padding: 2px 12px; background: rgba(255, 255, 255, .22); border-radius: 12px; font-size: 1.8rem; font-weight: 900; text-align: center; font-variant-numeric: tabular-nums; }
+.boutons-equipe .critere:last-child { margin-bottom: 0; }
 .nom-equipe { margin: 0 0 8px; padding: 8px; border-radius: 12px; color: #fff; font-size: 1.05rem; font-weight: 900; text-align: center; overflow-wrap: anywhere; }
 .nom-equipe.cote-0 { background: var(--bleu); }
 .nom-equipe.cote-1 { background: var(--orange); }
@@ -412,6 +419,12 @@ body.sombre .pastille-signe.negatif { color: #fca5a5; }
 .tuile-critere.negatif { --signe: var(--rouge); }
 .tuile-critere input { margin-bottom: 8px; padding: 10px 8px; font-size: .92rem; font-weight: 700; }
 .tuile-critere-bas { display: flex; align-items: center; gap: 6px; }
+.tuile-critere-haut { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.numero-ordre { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: var(--titre); border-radius: 50%; color: #fff; font-weight: 900; }
+.ordre { display: inline-flex; gap: 4px; }
+.ordre .btn-rond { width: 34px; height: 34px; font-size: .85rem; }
+.ordre .btn-rond:disabled { opacity: .3; }
+.case-liste .ordre { flex-direction: column; margin-top: 3px; }
 .etiquette-points { color: var(--texte-doux); font-size: .85rem; font-weight: 700; }
 .valeur-points { min-width: 30px; font-size: 1.15rem; font-weight: 900; text-align: center; font-variant-numeric: tabular-nums; }
 .btn-rond {
@@ -698,7 +711,9 @@ tr.negatif td:first-child { color: var(--rouge); font-weight: 700; }
 .plateau-raquette .colonne-equipe:last-child { grid-area: b; }
 .plateau-terrain { grid-area: terrain; min-width: 0; }
 .plateau-terrain .aide { margin: 0; }
-.plateau-raquette .nom-equipe { margin-bottom: 6px; padding: 5px 8px; font-size: .95rem; }
+.plateau-raquette .entete-equipe { margin-bottom: 8px; padding: 8px 10px; }
+.plateau-raquette .entete-equipe .nom-equipe { font-size: 1.15rem; }
+.plateau-raquette .score-equipe { font-size: 1.4rem; }
 .plateau-raquette .critere { min-height: 56px; margin-bottom: 6px; padding: 6px 12px; }
 .plateau-raquette .critere b { font-size: 1.3rem; }
 body.grands .plateau-raquette .critere { min-height: 80px; }

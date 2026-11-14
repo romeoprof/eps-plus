@@ -143,6 +143,18 @@ declarerActions({
     sauver();
     rafraichir();
   },
+  'ens-ordre': ({ apsa, rang, pas }) => {
+    if (deplacerDansListe(criteresModifiables(apsa), rang, pas)) {
+      sauver();
+      rafraichir();
+    }
+  },
+  'ens-ligne-ordre': ({ type, apsa, rang, pas }) => {
+    if (deplacerDansListe(listeModifiable(type, apsa), rang, pas)) {
+      sauver();
+      rafraichir();
+    }
+  },
   'ens-ajouter': ({ apsa }) => {
     criteresModifiables(apsa).push({ cle: `c${uid()}`, libelle: 'Nouveau critère', points: 0 });
     sauver();
@@ -270,10 +282,25 @@ const choixDuSport = (apsa) => `
       .join('')}
   </div>`;
 
-function tuileCritere(c, rang, a) {
+/* ▲ ▼ : change la place d'un élément dans sa liste (même ordre sur l'écran du match). */
+const boutonsOrdre = (action, reperes, rang, total) => `<span class="ordre">
+    <button class="btn-rond" aria-label="Monter" data-action="${action}" data-pas="-1" ${reperes} ${rang === 0 ? 'disabled' : ''}>▲</button>
+    <button class="btn-rond" aria-label="Descendre" data-action="${action}" data-pas="1" ${reperes} ${rang === total - 1 ? 'disabled' : ''}>▼</button>
+  </span>`;
+
+function deplacerDansListe(liste, rang, pas) {
+  const i = Number(rang);
+  const j = i + Number(pas);
+  if (j < 0 || j >= liste.length) return false;
+  [liste[i], liste[j]] = [liste[j], liste[i]];
+  return true;
+}
+
+function tuileCritere(c, rang, a, total) {
   const signe = c.points > 0 ? 'positif' : c.points < 0 ? 'negatif' : 'neutre';
   const reperes = `data-apsa="${a}" data-rang="${rang}"`;
   return `<div class="tuile-critere ${signe}">
+    <div class="tuile-critere-haut"><span class="numero-ordre">${rang + 1}</span>${boutonsOrdre('ens-ordre', reperes, rang, total)}</div>
     <input value="${esc(c.libelle)}" aria-label="Nom du critère" data-saisie="ens-libelle" ${reperes}>
     <div class="tuile-critere-bas">
       <span class="etiquette-points">Points</span>
@@ -300,7 +327,8 @@ const carteCriteres = (apsa, a) => `
       <span class="pastille-signe neutre">0 sans point</span>
       Les changements s'appliquent aux prochains matchs.
     </p>
-    <div class="grille-criteres">${criteresApsa(apsa).map((c, rang) => tuileCritere(c, rang, a)).join('')}</div>
+    <div class="grille-criteres">${criteresApsa(apsa).map((c, rang, liste) => tuileCritere(c, rang, a, liste.length)).join('')}</div>
+    <p class="aide">▲ ▼ : l'ordre des observables est celui des boutons sur l'écran du match.</p>
     <div class="rangee sans-marge">
       <button class="btn" data-action="ens-ajouter" data-apsa="${a}">＋ Ajouter un critère</button>
       ${boutonsDefaut('criteres', apsa, a)}
@@ -334,8 +362,9 @@ function carteListe(type, titre, description, apsa, a) {
   const reperes = `data-type="${type}" data-apsa="${a}"`;
   const lignes = listeEditable(type, apsa)
     .map(
-      (texte, rang) => `<div class="case-liste">
+      (texte, rang, liste) => `<div class="case-liste">
         <span class="numero" aria-hidden="true">${rang + 1}</span>
+        ${boutonsOrdre('ens-ligne-ordre', `${reperes} data-rang="${rang}"`, rang, liste.length)}
         <textarea rows="2" placeholder="Écris ici…" aria-label="${esc(description)} ${rang + 1}" data-saisie="ens-ligne" ${reperes} data-rang="${rang}">${esc(texte)}</textarea>
         <button class="btn-rond supprimer" aria-label="Supprimer la ligne ${rang + 1}" data-action="ens-ligne-retirer" ${reperes} data-rang="${rang}">✕</button>
       </div>`,
