@@ -7,6 +7,7 @@
   --turquoise: #0d9488;
   --orange: #ea580c;
   --violet: #7c3aed;
+  --ardoise: #475569;
   --vert: #16a34a;
   --rouge: #dc2626;
   --fond: #e8f4fd;
@@ -19,6 +20,7 @@
   --teinte-turquoise: #f0fdfa;
   --teinte-orange: #fff7ed;
   --teinte-violet: #f5f3ff;
+  --teinte-ardoise: #f1f5f9;
   --titre: #1e3a8a;
 }
 
@@ -34,6 +36,7 @@ body.sombre {
   --teinte-turquoise: #1e293b;
   --teinte-orange: #1e293b;
   --teinte-violet: #1e293b;
+  --teinte-ardoise: #1e293b;
   --titre: #93c5fd;
 }
 
@@ -225,6 +228,7 @@ button.grande-carte:hover { transform: translateY(-4px); box-shadow: 0 8px 20px 
   cursor: pointer;
 }
 .tuile-apsa.violet { --couleur: var(--violet); --teinte: var(--teinte-violet); }
+.tuile-apsa.ardoise { --couleur: var(--ardoise); --teinte: var(--teinte-ardoise); }
 .tuile-apsa.orange { --couleur: var(--orange); --teinte: var(--teinte-orange); }
 .tuile-apsa.inactive { cursor: default; opacity: .75; }
 .tuile-apsa:active { transform: translateY(2px); }
@@ -870,6 +874,27 @@ body.sombre .cq-conseil { color: #86efac; }
   #entete, #navigation, .non-imprime { display: none !important; }
 }
 
+/* Vidéo laps */
+.vl-barre { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.vl-ecart { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.vl-ecart b { min-width: 64px; color: var(--titre); font-size: 1.5rem; font-weight: 900; text-align: center; font-variant-numeric: tabular-nums; }
+.vl-ecart input[type=range] { width: 180px; padding: 0; border: 0; background: none; accent-color: var(--bleu); }
+.vl-pause { min-width: 160px; font-size: 1.15rem; }
+.vl-scene { position: relative; width: fit-content; max-width: 100%; margin: 0 auto 10px; overflow: hidden; background: #000; border: 3px solid var(--bordure); border-radius: 14px; }
+.vl-ecran { display: block; max-width: 100%; max-height: 62vh; width: auto; height: auto; }
+.vl-dessin { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+.vl-badge { position: absolute; top: 8px; left: 8px; padding: 4px 12px; background: rgba(15, 23, 42, .75); border-radius: 999px; color: #fff; font-weight: 900; pointer-events: none; }
+.vl-badge:empty { display: none; }
+.vl-images { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; margin-bottom: 10px; }
+.vl-images input[type=range] { flex: 1 1 200px; padding: 0; border: 0; background: none; accent-color: var(--orange); }
+.vl-images small { width: 100%; color: var(--texte-doux); font-weight: 800; text-align: center; }
+.vl-outils { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.vl-couleurs { display: inline-flex; gap: 6px; margin: 0 6px; }
+.vl-couleur { width: 34px; height: 34px; padding: 0; border: 3px solid var(--bordure); border-radius: 50%; cursor: pointer; }
+.vl-couleur.actif { border-color: var(--titre); box-shadow: 0 0 0 3px var(--bleu-pale); }
+body.vl-plein #entete, body.vl-plein #navigation { display: none; }
+body.vl-plein .vl-ecran { max-height: 78vh; }
+
 /* Serveur de l'établissement */
 .pastille-etat.attente { background: #fef3c7; color: #92400e; }
 body.sombre .pastille-etat.attente { background: rgba(245, 158, 11, .2); color: #fcd34d; }
@@ -914,6 +939,8 @@ body.sombre .pastille-etat.attente { background: rgba(245, 158, 11, .2); color: 
 .titre-famille.turquoise { --couleur: var(--turquoise); }
 .titre-famille.violet { --couleur: var(--violet); }
 .titre-famille.orange { --couleur: var(--orange); }
+.titre-famille.ardoise { --couleur: var(--ardoise); }
+body.sombre .titre-famille.ardoise, body.sombre .tuile-apsa.ardoise { --couleur: #94a3b8; }
 
 /* Écran d'arrivée : logo et choix de l'espace */
 .choix-espace { max-width: 860px; margin: 0 auto; }

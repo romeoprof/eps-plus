@@ -19,6 +19,7 @@ import { vueTestVma } from './testvma/ecran.js';
 import { cooperEnCours } from './testvma/ecran-cooper.js';
 import { coursePfEnCours, photofinishEnAttente, vuePhotofinish } from './photofinish/ecran.js';
 import { ONGLETS_CIRQUE, vueCirque } from './cirque/ecran.js';
+import { vueVideolaps } from './utilitaires/videolaps.js';
 import { chargerListe, connecterEnseignant, deconnecterServeur, demarrerSynchro, pastilleServeur, recupererTout, serveur } from './reseau/serveur.js';
 import { remplacerListe } from './champ4/donnees/doublons.js';
 
@@ -175,7 +176,7 @@ function libelleEspace() {
 }
 
 function dessinerEnTete() {
-  const titres = { demifond: ['Demi-fond', '🏃'], testvma: ['Test VMA', '📈'], photofinish: ['PhotoFinish', '📸'], cirque: ['Arts du cirque', '🎪'] };
+  const titres = { demifond: ['Demi-fond', '🏃'], testvma: ['Test VMA', '📈'], photofinish: ['PhotoFinish', '📸'], cirque: ['Arts du cirque', '🎪'], videolaps: ['Vidéo laps', '🎥'] };
   const [titre, icone] =
     vue.ecran === 'champ4' ? [esc(etat.apsa), APSA[etat.apsa].icone] : titres[vue.ecran] || [libelleEspace(), estEnseignant() ? '🎓' : '🏅'];
   const sousTitre = titres[vue.ecran] || vue.ecran === 'champ4' ? `${titre} · ${libelleEspace()}` : titre;
@@ -203,7 +204,7 @@ function dessinerNavigation() {
     barre.innerHTML = pageEnseignantCourante() === 'menu' ? '' : retour('menu-enseignant', 'Menu enseignant');
   } else if (vue.ecran === 'accueil') {
     barre.innerHTML = estEnseignant() ? retour('menu-enseignant', 'Menu enseignant') : '';
-  } else if (vue.ecran === 'testvma' || ECRANS_ELEVE.includes(vue.ecran)) {
+  } else if (vue.ecran === 'testvma' || vue.ecran === 'videolaps' || ECRANS_ELEVE.includes(vue.ecran)) {
     barre.innerHTML = versMenu;
   } else if (vue.ecran === 'champ4') {
     barre.innerHTML = `${retour('menu-principal', 'Menu principal')}
@@ -249,6 +250,8 @@ function contenu() {
       return vuePhotofinish();
     case 'cirque':
       return vueCirque();
+    case 'videolaps':
+      return vueVideolaps();
     default:
       return ONGLETS.find((o) => o.id === vue.onglet).vue();
   }

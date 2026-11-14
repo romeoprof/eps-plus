@@ -36,4 +36,9 @@ export const FAMILLES = [
     couleur: 'orange',
     activites: [{ nom: 'Arts du cirque', icone: '🎪', module: 'cirque' }],
   },
+  {
+    titre: 'Utilitaires',
+    couleur: 'ardoise',
+    activites: [{ nom: 'Vidéo laps', icone: '🎥', module: 'videolaps' }],
+  },
 ];

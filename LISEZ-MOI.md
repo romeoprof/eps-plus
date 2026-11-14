@@ -80,6 +80,10 @@ Demi-Cooper (`src/testvma/cooper.js`) : 6 minutes, le plus loin possible. Un él
 
 Paliers : se règlent vitesse initiale, incrémentation, durée d'un palier et distance entre repères (`src/testvma/calculs.js` pour les valeurs d'origine). Le test ne change qu'après « Valider ces valeurs ». Un bip retentit à chaque repère, plus aigu et plus long au premier repère de chaque palier. À l'arrêt : VMA = vitesse du palier + incrément × part du palier réalisée ; VO₂max estimée = VMA × 3,5. Les résultats ne sont pas rattachés à un élève et ne partent pas dans le regroupement des tablettes.
 
+## Utilitaires : Vidéo laps
+
+Menu principal → Utilitaires → Vidéo laps (`src/utilitaires/`). La caméra filme et l'écran montre l'image avec un retard réglable de 0 (direct) à 30 secondes : l'élève fait son geste puis vient se voir. « ⏸ Pause » fige l'image ; on revoit alors les dernières secondes image par image (boutons ou curseur). On dessine sur l'image (crayon, trait, flèche, cercle, 5 couleurs, annuler, effacer), on peut l'enregistrer en PNG et passer en plein écran. Les images ne restent qu'en mémoire, le temps du différé (environ 25 images par seconde, en JPEG) : rien n'est enregistré ni envoyé. « Reprendre » relance le différé, qui se remplit à nouveau.
+
 ## Bilan des sports et export Excel
 
 Onglet Bilan d'un sport : « 📊 Par rencontre » (comme avant) ou « 🧮 Cumul d'une équipe / d'un joueur » : toutes ses rencontres réunies (totaux, pourcentages recalculés sur l'ensemble, moyenne par rencontre, V/N/D), avec la liste des rencontres et « Voir le détail » pour chacune.

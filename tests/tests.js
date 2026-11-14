@@ -48,6 +48,7 @@ import { cumulEquipe, rencontresObservees } from '../src/champ4/calculs/stats.js
 import { feuillesStats } from '../src/champ4/donnees/export.js';
 import { crc32, creerClasseur } from '../src/noyau/classeur.js';
 import { dossierEleve } from '../src/champ4/donnees/dossier.js';
+import { aRetirer, bornerEcart, rangAAfficher, remplissage } from '../src/utilitaires/differe.js';
 import {
   ajouterMembre,
   carnetVide,
@@ -995,6 +996,16 @@ test('Serveur : le dossier d’un élève ne contient que ce qui le concerne', (
   const tablette = etatInitial();
   fusionnerResultats(tablette, JSON.parse(JSON.stringify(d)));
   egal(suiviEleve(tablette, 'e1').rencontres, 1);
+});
+
+test('Vidéo laps : l’image montrée est celle filmée « écart » secondes plus tôt', () => {
+  const images = [0, 1000, 2000, 3000, 4000, 5000].map((t) => ({ t }));
+  egal(rangAAfficher(images, 5000, 3), 2); // à 5 s, avec 3 s d'écart : l'image de 2 s
+  egal(rangAAfficher(images, 5000, 0), 5);
+  egal(rangAAfficher(images, 2500, 3), -1); // pas encore assez filmé
+  egal(remplissage(images, 3000, 6), 0.5);
+  egal(aRetirer(images, 5000, 2, 1), 2); // on garde à partir de 2 s
+  egal([bornerEcart(-3), bornerEcart(7.3), bornerEcart(99), bornerEcart('abc')], [0, 7.5, 30, 0]);
 });
 
 test('QR codes : découpage, ordre quelconque et assemblage', () => {
