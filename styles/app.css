@@ -892,8 +892,14 @@ body.sombre .cq-conseil { color: #86efac; }
 .vl-couleurs { display: inline-flex; gap: 6px; margin: 0 6px; }
 .vl-couleur { width: 34px; height: 34px; padding: 0; border: 3px solid var(--bordure); border-radius: 50%; cursor: pointer; }
 .vl-couleur.actif { border-color: var(--titre); box-shadow: 0 0 0 3px var(--bleu-pale); }
+/* Plein écran de l'outil : l'image et ses commandes couvrent tout l'écran, même sans le plein écran du navigateur. */
+body.vl-plein { overflow: hidden; }
 body.vl-plein #entete, body.vl-plein #navigation { display: none; }
-body.vl-plein .vl-ecran { max-height: 78vh; }
+body.vl-plein .vl-carte { position: fixed; inset: 0; z-index: 60; margin: 0; padding: max(8px, env(safe-area-inset-top)) 10px 10px; overflow-y: auto; border: 0; border-radius: 0; background: #0f172a; color: #e2e8f0; }
+body.vl-plein .vl-carte .aide, body.vl-plein .vl-carte .etiquette, body.vl-plein .vl-ecart b, body.vl-plein .vl-images small { color: #cbd5e1; }
+body.vl-plein .vl-scene { border-color: #334155; }
+body.vl-plein .vl-ecran { max-height: calc(100vh - 170px); max-height: calc(100dvh - 170px); }
+body.vl-plein .vl-carte > .aide { display: none; }
 
 /* Serveur de l'établissement */
 .pastille-etat.attente { background: #fef3c7; color: #92400e; }

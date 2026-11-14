@@ -196,6 +196,11 @@ function viderMemoire() {
 }
 
 function arreterCamera() {
+  if (vl.plein) {
+    vl.plein = false;
+    document.body.classList.remove('vl-plein');
+    quitterPleinEcranNavigateur();
+  }
   vl.flux?.getTracks().forEach((p) => p.stop());
   vl.flux = null;
   if (vl.video) vl.video.srcObject = null;
@@ -431,23 +436,52 @@ function enregistrerImage() {
   }, 'image/png');
 }
 
-/* ---------- Plein écran ---------- */
-async function basculerPleinEcran() {
-  if (document.fullscreenElement) {
-    await document.exitFullscreen?.().catch(() => {});
-  } else {
-    await document.documentElement.requestFullscreen?.().catch(() => notifier('Plein écran indisponible sur cet appareil.'));
+/* ---------- Plein écran ----------
+   Beaucoup de tablettes refusent le plein écran du navigateur (iPad, certains Android, application
+   installée) : l'outil passe donc toujours en plein écran « maison » (l'image et les commandes occupent
+   tout l'écran), et demande en plus le vrai plein écran quand le navigateur l'accepte. */
+const elementPleinEcran = () => document.fullscreenElement || document.webkitFullscreenElement;
+
+function demanderPleinEcranNavigateur() {
+  const racine = document.documentElement;
+  const demande = racine.requestFullscreen || racine.webkitRequestFullscreen;
+  try {
+    const resultat = demande?.call(racine);
+    resultat?.catch?.(() => {});
+  } catch {
+    /* refusé : le plein écran de l'application suffit */
   }
 }
-document.addEventListener('fullscreenchange', () => {
-  document.body.classList.toggle('vl-plein', !!document.fullscreenElement && vue.ecran === 'videolaps');
-});
+
+function quitterPleinEcranNavigateur() {
+  if (!elementPleinEcran()) return;
+  const sortie = document.exitFullscreen || document.webkitExitFullscreen;
+  try {
+    sortie?.call(document)?.catch?.(() => {});
+  } catch {
+    /* rien à faire */
+  }
+}
+
+function pleinEcran(actif) {
+  vl.plein = actif;
+  document.body.classList.toggle('vl-plein', actif);
+  if (actif) demanderPleinEcranNavigateur();
+  else quitterPleinEcranNavigateur();
+  rafraichir();
+}
+
+const basculerPleinEcran = () => pleinEcran(!vl.plein);
 
 /* ---------- Quitter l'outil : la caméra s'arrête et la mémoire se vide ---------- */
 apresDessin(() => {
   if (vue.ecran !== 'videolaps') {
     if (vl.flux) arreterCamera();
-    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    if (vl.plein) {
+      vl.plein = false;
+      document.body.classList.remove('vl-plein');
+      quitterPleinEcranNavigateur();
+    }
     return;
   }
   const place = document.querySelector('[data-place="vl-scene"]');
@@ -559,6 +593,7 @@ export function vueVideolaps() {
       <div class="vl-barre">
         ${ecartReglage}
         <button class="btn vl-pause ${pause ? '' : 'danger'}" data-action="vl-pause">${pause ? '▶ Reprendre' : '⏸ Pause'}</button>
+        ${vl.plein ? '<button class="btn secondaire vl-sortir" data-action="vl-plein-ecran">✕ Quitter le plein écran</button>' : ''}
       </div>
       <div data-place="vl-scene"></div>
       ${navigationImages}
@@ -566,7 +601,7 @@ export function vueVideolaps() {
       <p class="aide">Dessine directement sur l'image, en pause ou pendant le différé. Pour modifier un tracé : fais glisser ses ronds blancs (extrémités, sommet et bras de l'angle) ; avec « ✋ Déplacer », touche un tracé pour le déplacer en entier. Une couleur touchée s'applique au tracé choisi.${pause ? ' « Reprendre » relance le différé (il se remplit à nouveau).' : ''}</p>
       <div class="rangee">
         <button class="btn secondaire" data-action="vl-photo">📷 Enregistrer l'image</button>
-        <button class="btn secondaire" data-action="vl-plein-ecran">⛶ Plein écran</button>
+        <button class="btn secondaire" data-action="vl-plein-ecran">${vl.plein ? '✕ Quitter le plein écran' : '⛶ Plein écran'}</button>
         <button class="btn secondaire" data-action="vl-changer-camera">🔄 Changer de caméra</button>
         <button class="btn secondaire" data-action="vl-couper">Couper la caméra</button>
       </div>
