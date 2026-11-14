@@ -19,6 +19,8 @@ import { vueTestVma } from './testvma/ecran.js';
 import { cooperEnCours } from './testvma/ecran-cooper.js';
 import { coursePfEnCours, photofinishEnAttente, vuePhotofinish } from './photofinish/ecran.js';
 import { ONGLETS_CIRQUE, vueCirque } from './cirque/ecran.js';
+import { chargerListe, connecterEnseignant, deconnecterServeur, demarrerSynchro, pastilleServeur, recupererTout, serveur } from './reseau/serveur.js';
+import { remplacerListe } from './champ4/donnees/doublons.js';
 
 const photofinishActif = () => coursePfEnCours() || photofinishEnAttente();
 const testVmaEnCours = () => !!etat.testVma.depart && !etat.testVma.arret;
@@ -75,10 +77,15 @@ async function mettreAJour() {
 
 function entrerEnseignant() {
   const champ = document.querySelector('#code-enseignant');
-  if (!codeEnseignantValide(champ?.value || '')) {
+  const code = champ?.value || '';
+  if (!codeEnseignantValide(code)) {
     if (champ) champ.value = '';
     return notifier('Code incorrect.');
   }
+  /* Avec le serveur : connexion enseignant, puis tout ce que les tablettes ont envoyé arrive ici. */
+  connecterEnseignant(code).then((ok) => {
+    if (ok) recupererTout({ silencieux: true }).then(() => rafraichir());
+  });
   vue.espace = 'enseignant';
   etat.espace = null; // au prochain lancement, le code sera redemandé
   etat.eleveConnecte = null;
@@ -98,6 +105,7 @@ declarerActions({
   },
   'espace-enseignant': entrerEnseignant,
   'changer-espace': () => {
+    deconnecterServeur();
     vue.espace = null;
     etat.espace = null;
     etat.eleveConnecte = null;
@@ -175,6 +183,7 @@ function dessinerEnTete() {
     <div class="marque"><span class="marque-icone">${icone}</span><div><h1>EPS +</h1><small>${sousTitre}</small></div></div>
     <div class="commandes">
       <span id="etat-sauvegarde">${indicateurSauvegarde()}</span>
+      <span id="etat-serveur">${pastilleServeur()}</span>
       ${vue.espace ? `<button class="btn-mini" data-action="changer-espace">⇄ Changer d'espace</button>` : ''}
       <button class="btn-mini" data-action="mettre-a-jour">⟳ Mise à jour</button>
       <button class="btn-mini" data-action="basculer-affichage" data-reglage="sombre" aria-label="Thème sombre" aria-pressed="${etat.affichage.sombre}">🌓</button>
@@ -289,5 +298,20 @@ if (etat.espace === 'eleve') {
   vue.ecran = ecranDeReprise();
 }
 rafraichir();
+
+/* Serveur de l'établissement : envoi automatique des résultats, liste d'élèves chargée si la tablette n'en a pas. */
+demarrerSynchro();
+setTimeout(async () => {
+  if (!serveur.disponible) return;
+  if (!etat.eleves.length) {
+    try {
+      remplacerListe(etat, await chargerListe());
+      sauver();
+    } catch {
+      /* liste chargée plus tard depuis « Liste des élèves » */
+    }
+  }
+  if (!document.body.classList.contains('en-course')) rafraichir(); // jamais pendant une course
+}, 3500);
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

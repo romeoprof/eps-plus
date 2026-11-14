@@ -870,6 +870,14 @@ body.sombre .cq-conseil { color: #86efac; }
   #entete, #navigation, .non-imprime { display: none !important; }
 }
 
+/* Serveur de l'établissement */
+.pastille-etat.attente { background: #fef3c7; color: #92400e; }
+body.sombre .pastille-etat.attente { background: rgba(245, 158, 11, .2); color: #fcd34d; }
+.carte-serveur { border-color: var(--vert); }
+.carte-serveur.hors-ligne { border-color: var(--orange); }
+.attente-envoi { padding: 8px 12px; background: #fef3c7; border-radius: 10px; color: #92400e; font-weight: 800; }
+.secours { margin-top: 10px; }
+.secours > summary { margin-bottom: 10px; padding: 10px 14px; background: var(--carte); border: 2px dashed var(--bordure); border-radius: 14px; color: var(--titre); font-weight: 800; cursor: pointer; }
 .liste-rencontres { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
 .liste-rencontres li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; background: var(--fond); border-radius: 10px; }
 .trois-colonnes { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0 12px; }

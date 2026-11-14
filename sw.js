@@ -1,7 +1,7 @@
 /* Fonctionnement hors connexion : réseau d'abord, copie locale si pas de réseau.
    Ajouter ici tout nouveau fichier de l'application, et changer VERSION. */
 const PREFIXE = 'eps-plus-';
-const VERSION = `${PREFIXE}29`;
+const VERSION = `${PREFIXE}30`;
 const FICHIERS = [
   './',
   'index.html',
@@ -17,6 +17,10 @@ const FICHIERS = [
   'src/ecrans/eleve.js',
   'src/noyau/espace.js',
   'src/noyau/classeur.js',
+  'src/noyau/cle-code.js',
+  'src/reseau/serveur.js',
+  'src/reseau/ecran.js',
+  'src/champ4/donnees/dossier.js',
   'src/cirque/contenu.js',
   'src/cirque/calculs.js',
   'src/cirque/ecran.js',
@@ -92,7 +96,10 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== self.location.origin) return;
+  const adresse = new URL(e.request.url);
+  if (e.request.method !== 'GET' || adresse.origin !== self.location.origin) return;
+  /* Les réponses du serveur local (dossiers d'élèves, résultats) ne sont jamais gardées en copie. */
+  if (adresse.pathname.includes('/api/')) return;
   /* « no-cache » : chaque fichier est revérifié sur le site. Sans cela, le navigateur garde
      jusqu'à 10 minutes d'anciens fichiers, qui peuvent bloquer une nouvelle version. */
   e.respondWith(

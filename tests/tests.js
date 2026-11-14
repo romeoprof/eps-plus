@@ -47,6 +47,7 @@ import { reparerDoublons, remplacerListe } from '../src/champ4/donnees/doublons.
 import { cumulEquipe, rencontresObservees } from '../src/champ4/calculs/stats.js';
 import { feuillesStats } from '../src/champ4/donnees/export.js';
 import { crc32, creerClasseur } from '../src/noyau/classeur.js';
+import { dossierEleve } from '../src/champ4/donnees/dossier.js';
 import {
   ajouterMembre,
   carnetVide,
@@ -974,6 +975,26 @@ test('Export Excel : un vrai fichier .xlsx, avec ses trois feuilles', () => {
   egal([...fichier.slice(0, 4)], [0x50, 0x4b, 0x03, 0x04]);
   const texte = new TextDecoder().decode(fichier);
   vrai(texte.includes('xl/worksheets/sheet3.xml') && texte.includes('Cumul par équipe'), 'contenu du classeur');
+});
+
+test('Serveur : le dossier d’un élève ne contient que ce qui le concerne', () => {
+  const etat = etatSuivi();
+  etat.eleves[0].cle = 'empreinte-secrete';
+  etat.matchs = [Object.assign(match('Badminton', [[0, 'gag']], { id: 'm1' }), { contrats: { e1: 'ctr', e2: 'autre' } })];
+  etat.courses = [{ id: 'c1', finLe: 5, coureurs: [{ eleveId: 'e1', nom: 'Léa M.', passages: [1] }, { eleveId: 'e2', nom: 'Tom D.', passages: [2] }] }];
+  etat.testsVma = [{ id: 't1', eleveId: 'e1', vma: 12 }, { id: 't2', eleveId: 'e2', vma: 13 }];
+  etat.cirque.carnets = { e1: { ...carnetVide(), evaluation: '3' }, e2: { ...carnetVide(), evaluation: '4' } };
+  const d = dossierEleve(etat, 'e1');
+  egal(d.eleves, [{ id: 'e1', nom: 'Léa M.', classe: '5A' }]);
+  egal(d.matchs[0].contrats, { e1: 'ctr' });
+  egal(d.courses[0].coureurs.map((c) => c.eleveId), ['e1']);
+  egal(d.testsVma.map((t) => t.id), ['t1']);
+  egal(Object.keys(d.cirque.carnets), ['e1']);
+  vrai(!JSON.stringify(d).includes('empreinte-secrete') && !JSON.stringify(d).includes('Tom'), 'données d’un autre élève');
+  // Le dossier reçu s'ajoute à la tablette comme des résultats
+  const tablette = etatInitial();
+  fusionnerResultats(tablette, JSON.parse(JSON.stringify(d)));
+  egal(suiviEleve(tablette, 'e1').rencontres, 1);
 });
 
 test('QR codes : découpage, ordre quelconque et assemblage', () => {

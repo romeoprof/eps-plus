@@ -10,25 +10,47 @@ import { esc } from '../noyau/outils.js';
 import { vueEleve } from '../champ4/ecrans/progression.js';
 import { blocImportEleves } from '../champ4/ecrans/import-eleves.js';
 import { vueEnvoyer, vueRecevoir } from '../transfert/ecrans.js';
+import { carteServeur } from '../reseau/ecran.js';
+import { chargerListe, connecterEleve, deconnecterServeur, recupererDossier, serveur } from '../reseau/serveur.js';
+import { remplacerListe } from '../champ4/donnees/doublons.js';
 
 let classeChoisie = '';
 let eleveChoisi = '';
 
-function seConnecter() {
+/* Avec le serveur : il vérifie le code et renvoie le dossier de l'élève (toutes tablettes).
+   Sans réseau : le code est vérifié sur la tablette, si elle connaît son empreinte. */
+async function seConnecter() {
   const eleve = etat.eleves.find((e) => e.id === eleveChoisi);
   const champ = document.querySelector('#code-eleve');
   if (!eleve) return notifier('Choisis ton prénom dans la liste.');
-  if (!eleve.cle) return notifier("Ton code n'est pas encore sur cette tablette : demande à ton enseignant de mettre à jour la liste.");
-  if (!codeValide(eleve, champ.value.trim())) {
-    champ.value = '';
-    return notifier('Code incorrect.');
+  const code = champ.value.trim();
+  if (!/^\d{4}$/.test(code)) return notifier('Ton code a 4 chiffres.');
+  let parServeur = false;
+  if (serveur.disponible) {
+    try {
+      await connecterEleve(eleve.id, code);
+      parServeur = true;
+    } catch (erreur) {
+      if (erreur.statut === 401 || erreur.statut === 429) {
+        champ.value = '';
+        return notifier(erreur.message);
+      }
+      /* serveur injoignable, ou élève absent de sa liste : on essaie sur la tablette */
+    }
+  }
+  if (!parServeur) {
+    if (!eleve.cle) return notifier("Ton code n'est pas encore sur cette tablette : demande à ton enseignant de mettre à jour la liste.");
+    if (!codeValide(eleve, code)) {
+      champ.value = '';
+      return notifier('Code incorrect.');
+    }
   }
   etat.eleveConnecte = eleve.id;
   eleveChoisi = '';
   sauver();
   vue.ecran = 'accueil';
   rafraichir();
-  notifier(`Bonjour ${eleve.nom} !`);
+  notifier(parServeur ? `Bonjour ${eleve.nom} ! Tes résultats de toutes les tablettes sont à jour.` : `Bonjour ${eleve.nom} !`);
 }
 
 declarerActions({
@@ -48,6 +70,7 @@ declarerActions({
   },
   'cx-entrer': seConnecter,
   'cx-quitter': () => {
+    deconnecterServeur();
     etat.eleveConnecte = null;
     sauver();
     vue.ecran = 'accueil';
@@ -65,6 +88,25 @@ declarerActions({
   'liste-eleves': () => {
     vue.ecran = 'liste-eleves';
     rafraichir();
+  },
+  'liste-serveur': async () => {
+    try {
+      remplacerListe(etat, await chargerListe());
+      sauver();
+      rafraichir();
+      notifier(`${etat.eleves.length} élèves chargés depuis le serveur ✔`);
+    } catch {
+      notifier('Serveur injoignable.');
+    }
+  },
+  'dossier-maj': async () => {
+    try {
+      await recupererDossier();
+      rafraichir();
+      notifier('Ton dossier est à jour ✔');
+    } catch {
+      notifier('Reconnecte-toi pour mettre à jour ton dossier.');
+    }
   },
 });
 
@@ -112,15 +154,25 @@ export function vueMaProgression() {
   const eleve = eleveConnecte();
   if (!eleve) return vueConnexion();
   return `<div class="carte"><h2 class="carte-titre">📈 Ma progression <small>${esc(eleve.nom)} · ${esc(eleve.classe)}</small></h2>
-      <p class="aide">Tes résultats sur cette tablette. Pour voir aussi ceux des autres tablettes, ton enseignant les envoie ici : Échanger les données → « Recevoir les résultats de l’enseignant ».</p></div>
+      ${
+        serveur.role === 'eleve' && serveur.eleveId === eleve.id
+          ? `<p class="enregistre">🖥️ Toutes tablettes confondues (serveur de l'établissement).</p>
+             <button class="btn secondaire" data-action="dossier-maj">🔄 Mettre à jour mon dossier</button>`
+          : serveur.disponible
+            ? `<p class="aide">Pour voir tes résultats de toutes les tablettes : « Me déconnecter », puis « M'identifier » à nouveau.</p>`
+            : `<p class="aide">Tes résultats sur cette tablette. Avec le Wi-Fi de l'établissement, ceux des autres tablettes s'ajoutent quand tu t'identifies.</p>`
+      }</div>
     ${vueEleve(eleve)}`;
 }
 
-export const vueEnvoi = () => `<h2 class="titre-section">🔄 Échanger les données</h2>${vueEnvoyer()}${vueRecevoir()}`;
+export const vueEnvoi = () => `<h2 class="titre-section">🔄 Échanger les données</h2>${carteServeur()}
+  <details class="secours" ${serveur.disponible ? '' : 'open'}><summary>Sans serveur : QR codes et fichiers</summary>${vueEnvoyer()}${vueRecevoir()}</details>`;
 
 export const vueListeEleves = () => `
   <div class="carte"><h2 class="carte-titre">👥 Liste des élèves</h2>
-    <p class="aide">${etat.eleves.length} élève${etat.eleves.length > 1 ? 's' : ''} sur cette tablette. Pour récupérer la liste publiée par l'enseignant (avec les codes), saisis le mot de passe qu'il te donne.</p>
+    <p class="aide">${etat.eleves.length} élève${etat.eleves.length > 1 ? 's' : ''} sur cette tablette.</p>
+    ${serveur.disponible ? `<button class="btn" data-action="liste-serveur">⬇ Charger la liste depuis le serveur</button><p class="aide">Ou, sans serveur :</p>` : ''}
+    <p class="aide">Pour récupérer la liste publiée par l'enseignant (avec les codes), saisis le mot de passe qu'il te donne.</p>
     ${blocImportEleves()}
   </div>`;
 

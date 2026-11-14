@@ -10,6 +10,8 @@ import { vueReglagesCirque } from '../../cirque/reglages.js';
 import { blocImportEleves } from './import-eleves.js';
 import { vueProgression } from './progression.js';
 import { vueEnvoyer, vueRecevoir } from '../../transfert/ecrans.js';
+import { carteServeur } from '../../reseau/ecran.js';
+import { serveur } from '../../reseau/serveur.js';
 import { attribuerCodes, changerCode } from '../../noyau/espace.js';
 
 const EMPREINTE_PAR_DEFAUT = '74id85';
@@ -377,6 +379,7 @@ function carteEleves() {
 
 const carteEnvoiEleves = () => `
   <div class="carte"><h2 class="carte-titre">🔐 Envoyer la liste aux autres tablettes</h2>
+    ${serveur.disponible ? `<p class="enregistre">🖥️ Avec le serveur, c'est plus simple : <button class="btn-mini" data-action="srv-liste">👥 Envoyer la liste au serveur</button> Les tablettes la chargent seules.</p><p class="aide">Sans serveur (version en ligne) :</p>` : ''}
     <p class="aide">1. Choisis un mot de passe et crée le fichier protégé (il contient les élèves et une empreinte de leur code, jamais le code lisible). 2. Dépose-le sur le site, à côté de index.html. 3. Sur chaque tablette : espace élève, « Liste des élèves », mot de passe, puis « Importer les élèves ». Le mot de passe n'est enregistré nulle part : retiens-le bien.</p>
     <div class="rangee">
       <input id="mot-de-passe-publication" class="etire" type="password" autocomplete="new-password" placeholder="Mot de passe (10 caractères ou plus)" aria-label="Mot de passe de la liste">
@@ -389,7 +392,8 @@ const carteEnvoiEleves = () => `
 const carteSynchro = () => `
   <div class="carte"><h2 class="carte-titre">🔄 Synchronisation des réglages</h2>
     <p class="aide">Après tes modifications, exporte la configuration, puis dépose-la sur le site à côté de index.html. Les tablettes la récupèrent avec le bouton « Mise à jour ». Elle ne contient aucun élève.</p>
-    <button class="btn" data-action="ens-exporter">Exporter la configuration (config.json)</button>
+    ${serveur.disponible ? '<button class="btn" data-action="srv-config">⚙️ Publier sur le serveur de l’établissement</button> ' : ''}
+    <button class="btn ${serveur.disponible ? 'secondaire' : ''}" data-action="ens-exporter">Exporter la configuration (config.json)</button>
     <p class="aide marge-haut">Configuration appliquée sur cet appareil : ${etat.configVersion ? new Date(etat.configVersion).toLocaleString('fr-FR') : 'aucune'}</p>
   </div>`;
 
@@ -431,7 +435,7 @@ const PAGES = [
   { id: 'eleves', icone: '👥', titre: 'Gestion des élèves', texte: 'Listes, codes, liste protégée' },
   { id: 'observables', icone: '👁️', titre: 'Observables par APSA', texte: 'Critères, contrats, fiches, options' },
   { id: 'progression', icone: '📈', titre: 'Progression des élèves', texte: 'Dossier de chaque élève' },
-  { id: 'recevoir', icone: '🔄', titre: 'Échanger les données', texte: 'Recevoir des tablettes, renvoyer aux élèves' },
+  { id: 'recevoir', icone: '🔄', titre: 'Serveur et échanges', texte: 'Synchroniser, liste, configuration' },
   { id: 'code', icone: '🔑', titre: "Code d'accès", texte: "Code de l'espace enseignant" },
 ];
 export const titrePageEnseignant = () => PAGES.find((p) => p.id === pageEnseignant)?.titre || 'Espace enseignant';
@@ -473,7 +477,8 @@ export function vueEnseignant() {
     case 'progression':
       return vueProgression();
     case 'recevoir':
-      return `${titre('🔄 Échanger les données')}${vueRecevoir()}${vueEnvoyer()}`;
+      return `${titre('🔄 Serveur et échanges')}${carteServeur()}
+        <details class="secours" ${serveur.disponible ? '' : 'open'}><summary>Sans serveur : QR codes et fichiers</summary>${vueRecevoir()}${vueEnvoyer()}</details>`;
     case 'code':
       return `${titre("🔑 Code d'accès")}${carteCode()}`;
     default:

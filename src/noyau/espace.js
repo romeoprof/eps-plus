@@ -7,7 +7,7 @@
  */
 import { etat } from './etat.js';
 import { vue } from './interface.js';
-import { empreinte } from './outils.js';
+import { cleCode } from './cle-code.js';
 
 export const estEnseignant = () => vue.espace === 'enseignant';
 export const estEleve = () => vue.espace === 'eleve';
@@ -23,7 +23,7 @@ export function observateur() {
   return eleve ? { id: eleve.id, nom: eleve.nom } : null;
 }
 
-export const cleCode = (idEleve, code) => empreinte(`eleve:${idEleve}:${code}`);
+export { cleCode };
 export const codeValide = (eleve, code) => !!eleve?.cle && /^\d{4}$/.test(code) && cleCode(eleve.id, code) === eleve.cle;
 
 export function nouveauCode() {

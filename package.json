@@ -1,0 +1,12 @@
+{
+  "name": "eps-plus",
+  "private": true,
+  "description": "EPS + : application d'observation EPS pour tablettes, et son serveur local (dossier serveur).",
+  "type": "module",
+  "scripts": {
+    "serveur": "node serveur/serveur.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

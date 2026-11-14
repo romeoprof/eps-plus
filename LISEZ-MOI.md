@@ -26,6 +26,10 @@ Ouvrir http://localhost:8765/tests/ : tous les tests doivent être verts.
 
 Si un fichier est ajouté, l'inscrire dans la liste de `sw.js`. Après toute modification, changer `VERSION` dans ce même fichier.
 
+## Serveur de l'établissement
+
+Le dossier `serveur/` contient un petit serveur (Node.js, aucune autre installation) pour un PC Windows de l'établissement : voir `serveur/INSTALLATION.md`. Avec lui, les tablettes envoient seules leurs résultats, l'enseignant récupère tout, et chaque élève identifié reçoit son dossier (tout ce qui le concerne, toutes tablettes confondues, rien sur les autres). Le serveur réutilise les calculs de l'application (`src/champ4/donnees/fusion.js`, `dossier.js`). Côté application : `src/reseau/serveur.js` (envoi automatique, connexions) et `src/reseau/ecran.js` (carte « Serveur de l'établissement »). La version sur GitHub fonctionne toujours sans serveur (QR codes et fichiers).
+
 ## Espaces enseignant et élève
 
 À l'ouverture : logo, puis **Espace élève** (sans code) ou **Espace enseignant** (code enseignant). « ⇄ Changer d'espace » ramène à ce choix. Une tablette laissée dans l'espace élève y revient seule ; l'espace enseignant redemande toujours le code.

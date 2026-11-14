@@ -134,13 +134,13 @@ export async function lireElevesProteges(paquet, motDePasse) {
 }
 
 /* La configuration partagée ne contient jamais les listes d'élèves. */
-export function exporterConfiguration(etat) {
-  const version = Date.now();
-  etat.configVersion = version;
+export function configurationActuelle(etat, version = Date.now()) {
   const { conseil, ficheObservateurs, criteres, projets, fiche, codeEmpreinte, contratBonus, contratValeur, defauts, demifond, contrats, cirque } = etat.reglages;
-  telecharger(
-    'config.json',
-    JSON.stringify({ version, reglages: { conseil, ficheObservateurs, criteres, projets, fiche, codeEmpreinte, contratBonus, contratValeur, defauts, demifond, contrats, cirque } }),
-    'application/json',
-  );
+  return { version, reglages: { conseil, ficheObservateurs, criteres, projets, fiche, codeEmpreinte, contratBonus, contratValeur, defauts, demifond, contrats, cirque } };
+}
+
+export function exporterConfiguration(etat) {
+  const config = configurationActuelle(etat);
+  etat.configVersion = config.version;
+  telecharger('config.json', JSON.stringify(config), 'application/json');
 }
