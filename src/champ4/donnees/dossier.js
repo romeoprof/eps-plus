@@ -20,7 +20,7 @@ export function dossierEleve(etat, idEleve, maintenant = Date.now()) {
   const idsEquipes = new Set(matchs.flatMap((m) => [m.a, m.b]));
   const equipes = etat.equipes
     .filter((t) => idsEquipes.has(t.id))
-    .map((t) => ({ id: t.id, nom: t.nom, classe: t.classe, membres: sesEquipes.has(t.id) ? [idEleve] : [] }));
+    .map((t) => ({ id: t.id, nom: t.nom, classe: t.classe, apsa: t.apsa, membres: sesEquipes.has(t.id) ? [idEleve] : [] }));
   const courses = (etat.courses || [])
     .filter((c) => c.coureurs?.some((x) => x.eleveId === idEleve))
     .map((c) => ({ ...c, coureurs: c.coureurs.filter((x) => x.eleveId === idEleve) }));

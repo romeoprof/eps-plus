@@ -43,6 +43,11 @@ async function supprimerPoule({ id }) {
 declarerActions({
   'poule-creer': creerPoule,
   'poule-supprimer': supprimerPoule,
+  'poule-a-venir': () => {
+    etat.affichage.matchsAVenir = etat.affichage.matchsAVenir === false;
+    sauver();
+    rafraichir();
+  },
   'poule-jouer': ({ id }) => {
     etat.matchCourant = id;
     vue.onglet = 'match';
@@ -70,8 +75,13 @@ function choixEquipes() {
   );
 }
 
+/* Match à venir : pas encore commencé. Les matchs joués ou en cours restent toujours visibles. */
+const aVenir = (m) => !m.termine && !m.evenements.length;
+
 function cartePoule(poule) {
-  const matchs = etat.matchs.filter((m) => m.pouleId === poule.id);
+  const tous = etat.matchs.filter((m) => m.pouleId === poule.id);
+  const caches = etat.affichage.matchsAVenir === false ? tous.filter(aVenir).length : 0;
+  const matchs = caches ? tous.filter((m) => !aVenir(m)) : tous;
   return `<div class="carte">
     <h2 class="carte-titre">🏆 ${esc(poule.nom)} <small>victoires, puis différence de score</small></h2>
     <div class="defile"><table>
@@ -90,14 +100,23 @@ function cartePoule(poule) {
         </div>`,
       )
       .join('')}
+    ${caches ? `<p class="aide">${caches} match${caches > 1 ? 's' : ''} à venir caché${caches > 1 ? 's' : ''}.</p>` : ''}
     <button class="btn secondaire" data-action="poule-supprimer" data-id="${esc(poule.id)}">Supprimer la poule</button>
   </div>`;
 }
 
-export const vuePoules = () => `
-  <div class="carte"><h2 class="carte-titre">🏆 Créer une poule</h2>
+export function vuePoules() {
+  const poules = etat.poules.filter((p) => p.apsa === etat.apsa);
+  const montres = etat.affichage.matchsAVenir !== false;
+  const bascule = poules.length
+    ? `<div class="rangee centre-rangee marge-bas"><button class="btn secondaire" aria-pressed="${montres}" data-action="poule-a-venir">${montres ? '🙈 Cacher les matchs à venir' : '👀 Montrer les matchs à venir'}</button></div>`
+    : '';
+  return `
+  <div class="carte"><h2 class="carte-titre">🏆 Créer une poule <small>${esc(etat.apsa)}</small></h2>
     <input id="nom-poule" placeholder="Nom de la poule (ex. Poule A)">
     ${choixEquipes()}
     <button class="btn" data-action="poule-creer">Créer la poule</button>
   </div>
-  ${etat.poules.filter((p) => p.apsa === etat.apsa).map(cartePoule).join('')}`;
+  ${bascule}
+  ${poules.map(cartePoule).join('')}`;
+}

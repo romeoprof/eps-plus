@@ -3,7 +3,7 @@ import { declarerActions, demander, notifier, rafraichir } from '../../noyau/int
 import { empreinte, esc, uid } from '../../noyau/outils.js';
 import { APSA } from '../contenu/apsa.js';
 import { exporterConfiguration, exporterElevesProteges } from '../donnees/export.js';
-import { importerEleves } from '../donnees/operations.js';
+import { identifiantEleve, importerEleves, prenomInitiale } from '../donnees/operations.js';
 import { aUnDefautChoisi, contratsApsa, criteresApsa, listeEditable } from '../reglages.js';
 import { vueReglagesDemifond } from '../../demifond/ecrans/reglages.js';
 import { vueReglagesCirque } from '../../cirque/reglages.js';
@@ -23,6 +23,7 @@ let pageEnseignant = 'menu';
 let apsaEditee = null;
 let messageImport = '';
 let classeCodes = '';
+let classeAjout = '';
 
 export const pageEnseignantCourante = () => pageEnseignant;
 export function ouvrirPageEnseignant(page) {
@@ -85,6 +86,16 @@ async function lireTexte(fichier) {
 }
 
 declarerActions({
+  'ens-ajout-classe': (_, champ) => {
+    classeAjout = champ.value;
+    const prenom = document.querySelector('#ajout-prenom')?.value;
+    const nom = document.querySelector('#ajout-nom')?.value;
+    rafraichir();
+    /* Les champs déjà remplis ne sont pas perdus. */
+    if (prenom) document.querySelector('#ajout-prenom').value = prenom;
+    if (nom) document.querySelector('#ajout-nom').value = nom;
+  },
+  'ens-eleve-ajouter': ajouterEleve,
   'ens-code-classe': (_, champ) => {
     classeCodes = champ.value;
     rafraichir();
@@ -403,7 +414,48 @@ function carteEleves() {
       <label class="btn">Importer un CSV<input type="file" accept=".csv,.txt" hidden data-choix="ens-csv"></label>
       <button class="btn secondaire" data-action="ens-vider-eleves">Supprimer les élèves</button>
     </div>
+  </div>
+  ${carteAjoutEleve()}`;
+}
+
+/* Un élève qui arrive en cours d'année : ajouté à la main, avec son code. */
+function carteAjoutEleve() {
+  const classes = [...new Set(etat.eleves.map((e) => e.classe))].sort();
+  return `<div class="carte"><h2 class="carte-titre">➕ Ajouter un élève</h2>
+    <p class="aide">Pour un élève arrivé en cours d'année. Comme pour le CSV, seuls le prénom et l'initiale du nom sont gardés.</p>
+    <div class="grille-parametres">
+      <label>Prénom<input id="ajout-prenom" autocomplete="off" autocapitalize="words"></label>
+      <label>Nom de famille<input id="ajout-nom" autocomplete="off" autocapitalize="words"></label>
+      <label>Classe
+        <select id="ajout-classe" data-choix="ens-ajout-classe">
+          ${classes.map((c) => `<option ${c === classeAjout ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+          <option value="__nouvelle" ${classeAjout === '__nouvelle' || !classes.length ? 'selected' : ''}>Nouvelle classe…</option>
+        </select></label>
+      ${classeAjout === '__nouvelle' || !classes.length ? '<label>Nom de la nouvelle classe<input id="ajout-nouvelle-classe" autocomplete="off" placeholder="ex. 5C"></label>' : ''}
+    </div>
+    <button class="btn" data-action="ens-eleve-ajouter">➕ Ajouter l'élève</button>
   </div>`;
+}
+
+function ajouterEleve() {
+  const saisi = document.querySelector('#ajout-prenom').value.trim();
+  const prenom = saisi.charAt(0).toUpperCase() + saisi.slice(1);
+  const nomFamille = document.querySelector('#ajout-nom').value.trim();
+  const choix = document.querySelector('#ajout-classe').value;
+  const classe = choix === '__nouvelle' ? document.querySelector('#ajout-nouvelle-classe')?.value.trim() : choix;
+  if (!prenom) return notifier('Saisis le prénom.');
+  if (!classe) return notifier('Choisis ou saisis la classe.');
+  const base = prenomInitiale(nomFamille, prenom);
+  let nom = base;
+  for (let n = 2; etat.eleves.some((e) => e.nom === nom && e.classe === classe); n += 1) nom = `${base} (${n})`;
+  const eleve = { id: identifiantEleve(`${nom}|${classe}`), nom, classe };
+  etat.eleves.push(eleve);
+  attribuerCodes(etat);
+  classeAjout = classe;
+  classeCodes = classe;
+  sauver();
+  rafraichir();
+  notifier(`${nom} ajouté(e) en ${classe} · code ${etat.codesEleves[eleve.id]}. Pense à renvoyer la liste (serveur ou liste protégée).`);
 }
 
 const carteEnvoiEleves = () => `

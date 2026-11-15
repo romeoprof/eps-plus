@@ -18,7 +18,7 @@ function creerEquipe() {
   let nom = document.querySelector('#nom-equipe').value.trim();
   if (!nom) nom = eleves.length === 1 ? eleves[0].nom : eleves.length ? `Équipe ${etat.equipes.length + 1}` : '';
   if (!nom) return notifier('Saisis un nom ou choisis des élèves.');
-  etat.equipes.push({ id: uid(), nom, classe: eleves.length ? classeChoisie : '', membres: eleves.map((e) => e.id) });
+  etat.equipes.push({ id: uid(), nom, classe: eleves.length ? classeChoisie : '', apsa: etat.apsa, membres: eleves.map((e) => e.id) });
   sauver();
   rafraichir();
 }
@@ -28,7 +28,7 @@ function creerIndividuels() {
   if (!eleves.length) return notifier('Coche au moins un élève.');
   eleves.forEach((e) => {
     if (!equipesActives().some((t) => t.nom === e.nom && t.classe === classeChoisie)) {
-      etat.equipes.push({ id: uid(), nom: e.nom, classe: classeChoisie, membres: [e.id] });
+      etat.equipes.push({ id: uid(), nom: e.nom, classe: classeChoisie, apsa: etat.apsa, membres: [e.id] });
     }
   });
   sauver();
@@ -93,7 +93,8 @@ export function vueEquipes() {
 
   return `
     ${classes.length ? '' : carteImport}
-    <div class="carte"><h2 class="carte-titre">👥 Créer une équipe ou un joueur</h2>
+    <div class="carte"><h2 class="carte-titre">👥 Créer une équipe ou un joueur <small>${esc(etat.apsa)}</small></h2>
+      <p class="aide">Les équipes et les poules restent dans leur APSA : chaque APSA repart de zéro, et celles des autres APSA sont gardées.</p>
       ${choixEleves}
       <input id="nom-equipe" placeholder="Nom de l'équipe (facultatif si un seul élève)">
       <div class="rangee">

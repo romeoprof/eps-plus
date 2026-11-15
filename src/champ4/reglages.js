@@ -27,7 +27,8 @@ export const criteresDuMatch = (match) =>
   match.criteres || [...criteresApsa(match.apsa), ...criteresContrat(match.apsa)];
 
 export const nomEquipe = (id) => etat.equipes.find((e) => e.id === id)?.nom ?? '?';
-export const equipesActives = () => etat.equipes.filter((e) => !e.archivee);
+/* Équipes et joueurs de l'APSA ouverte : chaque APSA a les siens ; les autres restent gardés, sans s'afficher. */
+export const equipesActives = () => etat.equipes.filter((e) => !e.archivee && e.apsa === etat.apsa);
 export const matchCourant = () => etat.matchs.find((m) => m.id === etat.matchCourant);
 
 /* Nom de l'équipe A (côté 0) ou B (côté 1) d'un match. */

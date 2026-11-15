@@ -9,7 +9,7 @@ import { indicateurs } from '../src/champ4/calculs/stats.js';
 import { projetPrecedent } from '../src/champ4/calculs/suivi.js';
 import { lignesCsv, lireElevesProteges } from '../src/champ4/donnees/export.js';
 import { chiffrer } from '../src/noyau/chiffrement.js';
-import { lireSauvegarde, migrerV3 } from '../src/champ4/donnees/migration.js';
+import { lireSauvegarde, migrerV3, rangerEquipesParApsa } from '../src/champ4/donnees/migration.js';
 import { etatInitial, nouveauMatch } from '../src/champ4/donnees/modele.js';
 import { importerEleves, lireElevesCsv, reinitialiserBilans, supprimerEquipe } from '../src/champ4/donnees/operations.js';
 import { erreurParametre, paliersDuTest, resultatTest, situationTest } from '../src/testvma/calculs.js';
@@ -1033,6 +1033,22 @@ test('Lutte : les points d’un combat et la réussite', () => {
   const m = match('Lutte', [[0, 'amen'], [0, 'immo'], [1, 'ret'], [1, 'faute']]);
   egal([score(m, 0), score(m, 1)], [6, 2]); // 2 + 3 + la faute de B donne 1 point à A
   egal(valeur(m, 'Points'), ['Points', 6, 2]);
+});
+
+test('Équipes : chacune rangée dans son APSA, sans rien effacer', () => {
+  const etat = etatInitial();
+  etat.apsa = 'Lutte';
+  etat.equipes = [
+    { id: 'A', nom: 'A', membres: [] },
+    { id: 'B', nom: 'B', membres: [] },
+    { id: 'C', nom: 'C', membres: [] },
+    { id: 'D', nom: 'D', apsa: 'Football', membres: [] },
+  ];
+  etat.matchs = [nouveauMatch('Badminton', 'A', 'X')];
+  etat.poules = [{ id: 'p', nom: 'Poule', apsa: 'Handball', equipes: ['B'] }];
+  rangerEquipesParApsa(etat);
+  egal(etat.equipes.map((t) => t.apsa), ['Badminton', 'Handball', 'Lutte', 'Football']);
+  egal(etat.equipes.length, 4);
 });
 
 test('QR codes : découpage, ordre quelconque et assemblage', () => {

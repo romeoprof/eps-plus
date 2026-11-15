@@ -41,7 +41,7 @@ export const etatInitial = () => ({
     contrats: {}, // { apsa: [{ id, nom, points }] } : contrats créés par l'enseignant
   },
   configVersion: null,
-  affichage: { sombre: false, grandsBoutons: false },
+  affichage: { sombre: false, grandsBoutons: false, matchsAVenir: true },
 });
 
 export const nouveauMatch = (apsa, a, b, pouleId = null) => ({

@@ -349,9 +349,10 @@ td.ligne-barres { text-align: left; font-weight: 700; }
 .nom-equipe.cote-1 { background: var(--orange); }
 
 .critere {
-  display: flex;
+  /* Le nom de l'observable au centre du bouton, le compteur à droite. */
+  display: grid;
+  grid-template-columns: 2.2em minmax(0, 1fr) 2.2em;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
   width: 100%;
   min-height: 76px;
@@ -365,7 +366,7 @@ td.ligne-barres { text-align: left; font-weight: 700; }
   font: inherit;
   font-weight: 800;
   line-height: 1.2;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
@@ -373,7 +374,8 @@ td.ligne-barres { text-align: left; font-weight: 700; }
 .critere.vert { background: var(--vert); }
 .critere.rouge { background: var(--rouge); }
 .critere.orange { background: #d97706; }
-.critere b { font-size: 1.5rem; font-weight: 900; }
+.critere span { grid-column: 2; overflow-wrap: anywhere; }
+.critere b { grid-column: 3; font-size: 1.5rem; font-weight: 900; text-align: right; }
 .critere:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0, 0, 0, .22); }
 .critere:disabled { opacity: .3; cursor: default; transform: none; box-shadow: none; }
 body.grands .critere { min-height: 112px; font-size: 1.2rem; }

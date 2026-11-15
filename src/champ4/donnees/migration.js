@@ -50,7 +50,7 @@ export function migrerV3(ancien) {
     Object.entries(ancien.obs || {}).map(([apsa, liste]) => [apsa, liste.map(versCritere)]),
   );
   etat.apsa = APSA[ancien.ap] ? ancien.ap : null;
-  etat.equipes = (ancien.teams || []).map((t) => ({ id: t.id, nom: t.n, classe: t.c || '', membres: t.m || [] }));
+  etat.equipes = (ancien.teams || []).map((t) => ({ id: t.id, nom: t.n, classe: t.c || '', apsa: t.ap || null, membres: t.m || [] }));
   etat.poules = (ancien.poules || [])
     .filter((p) => APSA[p.ap])
     .map((p) => ({ id: p.id, nom: p.n, apsa: p.ap, equipes: p.ids }));
@@ -75,6 +75,18 @@ export function migrerV3(ancien) {
   etat.reglages.projets = Object.fromEntries(Object.entries(ancien.cfg?.int || {}).filter(([apsa]) => APSA[apsa]));
   etat.reglages.fiche = ancien.cfg?.fo || {};
   etat.affichage = { sombre: !!ancien.ui?.dk, grandsBoutons: !!ancien.ui?.bg };
+  return rangerEquipesParApsa(etat);
+}
+
+/* Les équipes d'avant n'avaient pas d'APSA : on la retrouve par leurs matchs ou leurs poules,
+   sinon c'est l'APSA ouverte en dernier. Rien n'est effacé. */
+export function rangerEquipesParApsa(etat) {
+  etat.equipes.forEach((t) => {
+    if (t.apsa) return;
+    const match = etat.matchs.find((m) => m.a === t.id || m.b === t.id);
+    const poule = etat.poules.find((p) => (p.equipes || []).includes(t.id));
+    t.apsa = match?.apsa || poule?.apsa || etat.apsa || null;
+  });
   return etat;
 }
 
@@ -90,6 +102,7 @@ export function lireSauvegarde(contenu) {
       affichage: { ...base.affichage, ...contenu.affichage },
     };
     reparerDoublons(etat); // élèves en double d'anciennes versions : regroupés à l'ouverture
+    rangerEquipesParApsa(etat);
     return etat;
   }
   if (Array.isArray(contenu.matches) || Array.isArray(contenu.teams)) return migrerV3(contenu);
