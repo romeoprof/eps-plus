@@ -17,6 +17,12 @@ export const elevesSuivis = (etat) => {
   return etat.eleves.filter((e) => membres.has(e.id));
 };
 
+/* Qui a observé un côté du match : l'observateur choisi pour ce côté, sinon l'élève identifié ou l'enseignant. */
+export const observateurDuCote = (match, cote) => match.observateurs?.[cote]?.nom || match.observePar?.nom || '';
+
+/* Les observateurs d'un match, pour les listes et l'export : « Léa M. / Tom B. ». */
+export const observateursDuMatch = (match) => [...new Set([observateurDuCote(match, 0), observateurDuCote(match, 1)].filter(Boolean))].join(' / ');
+
 /* Rencontres observées de l'élève, de la plus ancienne à la plus récente (en cours à la fin). */
 export function rencontresEleve(etat, idEleve) {
   const equipes = etat.equipes.filter((t) => (t.membres || []).includes(idEleve)).map((t) => t.id);
@@ -85,7 +91,7 @@ function suiviSport(etat, apsa, rencontres, idEleve) {
     parts: [],
     contrat: suiviContrat(etat, rencontres, idEleve),
     /* Noms de ceux qui ont observé ces rencontres (enseignant ou élève identifié). */
-    observateurs: [...new Set(rencontres.map(({ match }) => match.observePar?.nom).filter(Boolean))],
+    observateurs: [...new Set(rencontres.map(({ match, cote }) => observateurDuCote(match, cote)).filter(Boolean))],
   };
   const criteres = new Map();
   const projets = new Map();

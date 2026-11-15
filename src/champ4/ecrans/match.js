@@ -148,6 +148,14 @@ declarerActions({
     zoneChoisie = zoneChoisie === z ? null : z;
     rafraichir();
   },
+  'match-observateur': ({ cote }, champ) => {
+    const m = matchCourant();
+    if (!m) return;
+    const eleve = etat.eleves.find((e) => e.id === champ.value);
+    m.observateurs = m.observateurs || [null, null];
+    m.observateurs[Number(cote)] = eleve ? { id: eleve.id, nom: eleve.nom } : null;
+    sauver();
+  },
   'match-fiche': ({ cote, rang, niveau }) => {
     const m = matchCourant();
     m.fiche[cote][ficheApsa(m.apsa)[rang]] = Number(niveau);
@@ -266,8 +274,31 @@ function colonneEquipe(m, cote) {
         <span class="score-equipe" aria-label="Score">${score(m, cote)}</span>
         ${membres ? `<small>${esc(membres)}</small>` : ''}
       </header>
+      ${choixObservateur(m, cote)}
       <div class="boutons-equipe">${boutons}</div>
     </section>`;
+}
+
+/* Un observateur par équipe (ou par joueur), choisi dans la liste sans avoir à s'identifier.
+   On propose d'abord les élèves des classes du match. */
+function choixObservateur(m, cote) {
+  if (!etat.eleves.length) return '';
+  const actuel = m.observateurs?.[cote]?.id || '';
+  const joueurs = new Set([...membresDuCote(etat, m, 0), ...membresDuCote(etat, m, 1)]);
+  const classesDuMatch = new Set([idCote(m, 0), idCote(m, 1)].map((id) => etat.equipes.find((t) => t.id === id)?.classe).filter(Boolean));
+  const classes = [...new Set(etat.eleves.map((e) => e.classe))].sort((a, b) => (classesDuMatch.has(b) - classesDuMatch.has(a)) || a.localeCompare(b));
+  const groupes = classes
+    .map((classe) => {
+      const eleves = etat.eleves.filter((e) => e.classe === classe).sort((a, b) => a.nom.localeCompare(b.nom));
+      return `<optgroup label="${esc(classe)}">${eleves
+        .map((e) => `<option value="${esc(e.id)}" ${e.id === actuel ? 'selected' : ''}>${esc(e.nom)}${joueurs.has(e.id) ? ' (joue)' : ''}</option>`)
+        .join('')}</optgroup>`;
+    })
+    .join('');
+  return `<label class="observateur-equipe">👁 Observateur
+      <select data-choix="match-observateur" data-cote="${cote}" aria-label="Observateur de ${esc(nomCote(m, cote))}">
+        <option value="">— choisir —</option>${groupes}
+      </select></label>`;
 }
 
 function terrainZones(m) {

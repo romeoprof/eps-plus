@@ -3,7 +3,7 @@
 import { APSA } from '../src/champ4/contenu/apsa.js';
 import { classer } from '../src/champ4/calculs/classement.js';
 import { coupPossible, possesseur, score, tempsDePossession } from '../src/champ4/calculs/match.js';
-import { bonusContrat, contratDuMatch, elevesSuivis, suiviEleve } from '../src/champ4/calculs/progression.js';
+import { bonusContrat, contratDuMatch, elevesSuivis, observateurDuCote, observateursDuMatch, suiviEleve } from '../src/champ4/calculs/progression.js';
 import { creerFichierResultats, fusionnerResultats, lireFichierResultats, paquetResultats } from '../src/champ4/donnees/fusion.js';
 import { indicateurs } from '../src/champ4/calculs/stats.js';
 import { projetPrecedent } from '../src/champ4/calculs/suivi.js';
@@ -1068,6 +1068,21 @@ test('Suppression sur une tablette : la synchronisation ne la fait pas revenir',
   // Le serveur, lui, garde tout : ce que la tablette envoie ne retire rien
   fusionnerResultats(serveurEtat, JSON.parse(JSON.stringify(paquetResultats(tablette))));
   egal([serveurEtat.matchs.length, serveurEtat.courses.length], [2, 1]);
+});
+
+test('Observateurs : un par équipe, choisi sans s’identifier', () => {
+  const etat = etatSuivi();
+  const m = Object.assign(match('Badminton', [[0, 'gag']], { id: 'm1', a: 'A', b: 'B' }), {
+    termine: true,
+    termineLe: 1,
+    observateurs: [{ id: 'e2', nom: 'Tom D.' }, null],
+    observePar: { id: 'enseignant', nom: 'Enseignant' },
+  });
+  etat.matchs = [m];
+  egal(observateurDuCote(m, 0), 'Tom D.');
+  egal(observateurDuCote(m, 1), 'Enseignant'); // pas d'observateur choisi : celui qui tenait la tablette
+  egal(observateursDuMatch(m), 'Tom D. / Enseignant');
+  egal(suiviEleve(etat, 'e1').sports[0].observateurs, ['Tom D.']); // Léa (équipe A) a été observée par Tom
 });
 
 test('QR codes : découpage, ordre quelconque et assemblage', () => {

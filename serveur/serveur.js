@@ -21,6 +21,7 @@ import { fusionnerResultats, paquetResultats } from '../src/champ4/donnees/fusio
 import { lireSauvegarde } from '../src/champ4/donnees/migration.js';
 import { remplacerListe } from '../src/champ4/donnees/doublons.js';
 import { dossierEleve } from '../src/champ4/donnees/dossier.js';
+import { observateursDuMatch } from '../src/champ4/calculs/progression.js';
 import { empreinte } from '../src/noyau/outils.js';
 import { cleCode } from '../src/noyau/cle-code.js';
 
@@ -157,7 +158,7 @@ function resume() {
     eleves: etat.eleves.map(({ id, nom, classe }) => ({ id, nom, classe })),
     matchs: etat.matchs
       .filter((m) => m.evenements.length)
-      .map((m) => ({ id: m.id, apsa: m.apsa, date: m.termineLe, a: nomEquipe(m.a), b: nomEquipe(m.b), score: `${scoreDe(m, 0)} – ${scoreDe(m, 1)}`, termine: !!m.termine, observePar: m.observePar?.nom || '' })),
+      .map((m) => ({ id: m.id, apsa: m.apsa, date: m.termineLe, a: nomEquipe(m.a), b: nomEquipe(m.b), score: `${scoreDe(m, 0)} – ${scoreDe(m, 1)}`, termine: !!m.termine, observePar: observateursDuMatch(m) })),
     courses: (etat.courses || []).map((c) => ({ id: c.id, date: c.finLe || c.depart, type: c.type, distance: c.distance, duree: c.duree, coureurs: c.coureurs.map((x) => x.nom).join(', ') })),
     testsVma: (etat.testsVma || []).map((t) => ({ id: t.id, date: t.date, nom: t.nom || nomEleve(t.eleveId), classe: t.classe, vma: t.vma, distance: t.distance })),
     tempsPf: (etat.tempsPf || []).map((t) => ({ id: t.id, date: t.date, nom: t.nom || nomEleve(t.eleveId), libelle: t.libelle, t: t.t, rang: t.rang })),

@@ -3,6 +3,7 @@ import { telecharger } from '../../noyau/outils.js';
 import { NIVEAUX_PROJET } from '../contenu/apsa.js';
 import { cumulEquipe, indicateurs, rencontresObservees } from '../calculs/stats.js';
 import { score, tempsEcoule } from '../calculs/match.js';
+import { observateursDuMatch } from '../calculs/progression.js';
 import { creerClasseur, TYPE_XLSX } from '../../noyau/classeur.js';
 
 export const FICHIER_ELEVES = 'eleves-proteges.json';
@@ -67,7 +68,7 @@ export function feuillesStats(etat, apsa, maintenant = Date.now()) {
       nomEquipe(m.b),
       Math.round(tempsEcoule(m) / 6) / 10,
       m.termine ? 'Terminé' : 'En cours',
-      m.observePar?.nom || '',
+      observateursDuMatch(m),
     ]),
   ];
 

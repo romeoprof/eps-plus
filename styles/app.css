@@ -344,6 +344,8 @@ td.ligne-barres { text-align: left; font-weight: 700; }
 .entete-equipe small { grid-column: 1 / -1; font-size: .85rem; font-weight: 700; opacity: .92; overflow-wrap: anywhere; }
 .score-equipe { min-width: 52px; padding: 2px 12px; background: rgba(255, 255, 255, .22); border-radius: 12px; font-size: 1.8rem; font-weight: 900; text-align: center; font-variant-numeric: tabular-nums; }
 .boutons-equipe .critere:last-child { margin-bottom: 0; }
+.observateur-equipe { display: flex; align-items: center; gap: 8px; margin: -2px 0 10px; color: var(--titre); font-size: .9rem; font-weight: 800; }
+.observateur-equipe select { flex: 1; min-width: 0; margin: 0; padding: 6px 8px; font-size: .95rem; }
 .nom-equipe { margin: 0 0 8px; padding: 8px; border-radius: 12px; color: #fff; font-size: 1.05rem; font-weight: 900; text-align: center; overflow-wrap: anywhere; }
 .nom-equipe.cote-0 { background: var(--bleu); }
 .nom-equipe.cote-1 { background: var(--orange); }

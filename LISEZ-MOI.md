@@ -80,6 +80,10 @@ Demi-Cooper (`src/testvma/cooper.js`) : 6 minutes, le plus loin possible. Un él
 
 Paliers : se règlent vitesse initiale, incrémentation, durée d'un palier et distance entre repères (`src/testvma/calculs.js` pour les valeurs d'origine). Le test ne change qu'après « Valider ces valeurs ». Un bip retentit à chaque repère, plus aigu et plus long au premier repère de chaque palier. À l'arrêt : VMA = vitesse du palier + incrément × part du palier réalisée ; VO₂max estimée = VMA × 3,5. Les résultats ne sont pas rattachés à un élève et ne partent pas dans le regroupement des tablettes.
 
+## Observateurs des matchs
+
+Sur l'écran du match (toutes les APSA), chaque cadre d'équipe ou de joueur a un menu « 👁 Observateur » : un élève s'y choisit sans s'identifier, un observateur par équipe (donc deux par match au plus). Les élèves des classes du match sont proposés en premier ; « (joue) » signale un joueur du match. Le nom de l'observateur apparaît dans la Progression de l'élève observé (« Observé par »), dans l'export Excel et sur la page de gestion du serveur. Sans choix, c'est l'élève identifié ou l'enseignant qui tenait la tablette.
+
 ## Affrontements interindividuels
 
 Badminton, tennis de table (terrain à zones) et lutte. Lutte (`src/champ4/contenu/apsa.js`) : combat à deux, points comptés comme un duel : amenée au sol 2, retournement 2, immobilisation (3 s) 3, sortie de l'adversaire hors de l'aire 1 ; une faute ou un avertissement de passivité donne 1 point à l'adversaire ; « attaque tentée » et « dégagement réussi » s'observent sans point. Critères, fiche et projets se modifient dans Observables par APSA.
