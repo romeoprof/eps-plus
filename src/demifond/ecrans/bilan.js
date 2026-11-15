@@ -4,6 +4,7 @@ import { declarerActions, demander, rafraichir } from '../../noyau/interface.js'
 import { avecSigne, decimal, esc, formatChrono, telecharger } from '../../noyau/outils.js';
 import { bilanCoureur } from '../calculs.js';
 import { dateCourte } from '../etat.js';
+import { masquer } from '../../champ4/donnees/masques.js';
 
 let coureurVu = 0;
 
@@ -50,6 +51,7 @@ declarerActions({
       danger: true,
     });
     if (!ok) return;
+    masquer(etat, 'courses', [course.id]); // le serveur garde ce qu'il a déjà reçu
     etat.courses = etat.courses.filter((c) => c.id !== course.id);
     etat.courseBilan = null;
     coureurVu = 0;

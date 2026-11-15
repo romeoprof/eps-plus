@@ -4,6 +4,7 @@ import { esc, uid } from '../../noyau/outils.js';
 import { classer } from '../calculs/classement.js';
 import { score } from '../calculs/match.js';
 import { nouveauMatch } from '../donnees/modele.js';
+import { masquer } from '../donnees/masques.js';
 import { equipesActives, nomEquipe } from '../reglages.js';
 
 function creerPoule() {
@@ -33,6 +34,7 @@ async function supprimerPoule({ id }) {
     danger: true,
   });
   if (!ok) return;
+  masquer(etat, 'matchs', etat.matchs.filter((m) => m.pouleId === id).map((m) => m.id)); // gardés sur le serveur
   etat.poules = etat.poules.filter((p) => p.id !== id);
   etat.matchs = etat.matchs.filter((m) => m.pouleId !== id);
   etat.matchCourant = null;

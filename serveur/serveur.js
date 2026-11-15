@@ -138,6 +138,83 @@ function lireCorps(requete) {
   });
 }
 
+/* ---------- Gestion des données : uniquement depuis l'ordinateur serveur lui-même ----------
+   Les tablettes ne peuvent jamais rien effacer ici : elles ne font qu'ajouter. */
+const depuisCePc = (requete) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(requete.socket.remoteAddress);
+
+const nomEquipe = (id) => etat.equipes.find((t) => t.id === id)?.nom || '?';
+const nomEleve = (id) => etat.eleves.find((e) => e.id === id)?.nom || '?';
+const scoreDe = (m, cote) =>
+  m.evenements.reduce((total, e) => {
+    const points = (m.criteres || []).find((c) => c.cle === e.critere)?.points || 0;
+    if (points > 0 && e.equipe === cote) return total + points;
+    if (points < 0 && e.equipe !== cote) return total - points;
+    return total;
+  }, 0);
+
+function resume() {
+  return {
+    eleves: etat.eleves.map(({ id, nom, classe }) => ({ id, nom, classe })),
+    matchs: etat.matchs
+      .filter((m) => m.evenements.length)
+      .map((m) => ({ id: m.id, apsa: m.apsa, date: m.termineLe, a: nomEquipe(m.a), b: nomEquipe(m.b), score: `${scoreDe(m, 0)} – ${scoreDe(m, 1)}`, termine: !!m.termine, observePar: m.observePar?.nom || '' })),
+    courses: (etat.courses || []).map((c) => ({ id: c.id, date: c.finLe || c.depart, type: c.type, distance: c.distance, duree: c.duree, coureurs: c.coureurs.map((x) => x.nom).join(', ') })),
+    testsVma: (etat.testsVma || []).map((t) => ({ id: t.id, date: t.date, nom: t.nom || nomEleve(t.eleveId), classe: t.classe, vma: t.vma, distance: t.distance })),
+    tempsPf: (etat.tempsPf || []).map((t) => ({ id: t.id, date: t.date, nom: t.nom || nomEleve(t.eleveId), libelle: t.libelle, t: t.t, rang: t.rang })),
+    troupes: (etat.cirque?.troupes || []).map((t) => ({ id: t.id, classe: t.classe, nom: t.nom, titre: t.titre, artistes: t.membres.length })),
+    carnets: Object.keys(etat.cirque?.carnets || {}).map((id) => ({ id, nom: nomEleve(id) })),
+  };
+}
+
+function supprimerDonnee(type, id) {
+  if (type === 'matchs') etat.matchs = etat.matchs.filter((m) => m.id !== id);
+  else if (type === 'courses') etat.courses = (etat.courses || []).filter((c) => c.id !== id);
+  else if (type === 'testsVma') etat.testsVma = (etat.testsVma || []).filter((t) => t.id !== id);
+  else if (type === 'tempsPf') etat.tempsPf = (etat.tempsPf || []).filter((t) => t.id !== id);
+  else if (type === 'troupes') etat.cirque.troupes = etat.cirque.troupes.filter((t) => t.id !== id);
+  else if (type === 'carnets') delete etat.cirque.carnets[id];
+  else if (type === 'eleves') etat.eleves = etat.eleves.filter((e) => e.id !== id);
+  else return false;
+  return true;
+}
+
+async function admin(requete, reponse, chemin) {
+  if (!depuisCePc(requete)) return json(reponse, 403, { erreur: 'Gestion possible seulement depuis l’ordinateur serveur.' });
+  const methode = requete.method;
+  if (chemin === '/api/admin/resume' && methode === 'GET') return json(reponse, 200, resume());
+  if (chemin === '/api/admin/supprimer' && methode === 'POST') {
+    const { type, ids } = await lireCorps(requete);
+    const n = (ids || []).filter((id) => supprimerDonnee(type, id)).length;
+    sauvegardeAvantModification();
+    enregistrer();
+    return json(reponse, 200, { supprimes: n });
+  }
+  if (chemin === '/api/admin/sauvegarde' && methode === 'GET') {
+    reponse.writeHead(200, {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Content-Disposition': `attachment; filename="sauvegarde-serveur-eps-${new Date().toISOString().slice(0, 10)}.json"`,
+      'Cache-Control': 'no-store',
+    });
+    return reponse.end(JSON.stringify(etat));
+  }
+  if (chemin === '/api/admin/restaurer' && methode === 'POST') {
+    const contenu = await lireCorps(requete);
+    const nouveau = lireSauvegarde(contenu);
+    sauvegardeAvantModification();
+    etat = nouveau;
+    enregistrer();
+    return json(reponse, 200, { eleves: etat.eleves.length, matchs: etat.matchs.length });
+  }
+  return json(reponse, 404, { erreur: 'Inconnu.' });
+}
+
+/* Avant toute suppression ou restauration, une copie horodatée est gardée. */
+function sauvegardeAvantModification() {
+  if (!existsSync(FICHIER_ETAT)) return;
+  const horodatage = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 23);
+  copyFileSync(FICHIER_ETAT, join(DONNEES, 'sauvegardes', `avant-modification-${horodatage}.json`));
+}
+
 /* ---------- API ---------- */
 const listePublique = () => etat.eleves.map(({ id, nom, classe }) => ({ id, nom, classe }));
 
@@ -264,6 +341,15 @@ function fichier(requete, reponse, chemin) {
 async function traiter(requete, reponse) {
   const chemin = new URL(requete.url, 'https://local').pathname;
   try {
+    if (chemin.startsWith('/api/admin/')) return await admin(requete, reponse, chemin);
+    if (chemin === '/admin' || chemin === '/admin/') {
+      if (!depuisCePc(requete)) {
+        reponse.writeHead(404, ENTETES_SECURITE);
+        return reponse.end('Introuvable');
+      }
+      reponse.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', ...ENTETES_SECURITE });
+      return createReadStream(join(ICI, 'admin.html')).pipe(reponse);
+    }
     if (chemin.startsWith('/api/')) return await api(requete, reponse, chemin);
     if (chemin === '/config.json') return json(reponse, 200, config);
     return fichier(requete, reponse, chemin);
@@ -285,8 +371,11 @@ if (existsSync(pfx)) {
     console.log(`EPS + : serveur prêt (https).`);
     [hostname(), ...adresses].forEach((a) => console.log(`  → https://${a}:${PORT_HTTPS}/`));
   });
-  /* En http, on renvoie vers https (la caméra n'est autorisée qu'en https). */
+  /* En http, on renvoie vers https (la caméra n'est autorisée qu'en https),
+     sauf la page de gestion ouverte sur le PC serveur lui-même : http://localhost:8080/admin. */
   creerHttp((requete, reponse) => {
+    const chemin = new URL(requete.url, 'http://local').pathname;
+    if (depuisCePc(requete) && (chemin.startsWith('/admin') || chemin.startsWith('/api/admin/'))) return traiter(requete, reponse);
     const hote = (requete.headers.host || hostname()).replace(/:\d+$/, '');
     reponse.writeHead(301, { Location: `https://${hote}:${PORT_HTTPS}${requete.url}` });
     reponse.end();
@@ -299,4 +388,5 @@ if (existsSync(pfx)) {
   });
 }
 console.log(`Données : ${DONNEES}`);
+console.log(`Gestion des données (sur ce PC seulement) : http://localhost:${PORT_HTTP}/admin`);
 console.log('Laisser cette fenêtre ouverte pendant les cours. Ctrl+C pour arrêter.');

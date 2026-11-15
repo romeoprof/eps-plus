@@ -48,6 +48,7 @@ import { cumulEquipe, rencontresObservees } from '../src/champ4/calculs/stats.js
 import { feuillesStats } from '../src/champ4/donnees/export.js';
 import { crc32, creerClasseur } from '../src/noyau/classeur.js';
 import { dossierEleve } from '../src/champ4/donnees/dossier.js';
+import { masquer } from '../src/champ4/donnees/masques.js';
 import { aRetirer, bornerEcart, rangAAfficher, remplissage } from '../src/utilitaires/differe.js';
 import { angleDegres, brasPropose, deplacer, poigneeTouchee, traceTouche } from '../src/utilitaires/dessin.js';
 import {
@@ -1049,6 +1050,24 @@ test('Équipes : chacune rangée dans son APSA, sans rien effacer', () => {
   rangerEquipesParApsa(etat);
   egal(etat.equipes.map((t) => t.apsa), ['Badminton', 'Handball', 'Lutte', 'Football']);
   egal(etat.equipes.length, 4);
+});
+
+test('Suppression sur une tablette : la synchronisation ne la fait pas revenir', () => {
+  const serveurEtat = etatSuivi();
+  serveurEtat.matchs = [match('Badminton', [[0, 'gag']], { id: 'm1' }), match('Badminton', [[1, 'gag']], { id: 'm2' })];
+  serveurEtat.courses = [{ id: 'c1', finLe: 5, coureurs: [{ eleveId: 'e1', passages: [1] }] }];
+  const tablette = etatSuivi();
+  fusionnerResultats(tablette, JSON.parse(JSON.stringify(paquetResultats(serveurEtat))));
+  egal(tablette.matchs.length, 2);
+  reinitialiserBilans(tablette, 'Badminton'); // l'enseignant efface les bilans de badminton sur sa tablette
+  masquer(tablette, 'courses', ['c1']);
+  tablette.courses = [];
+  fusionnerResultats(tablette, JSON.parse(JSON.stringify(paquetResultats(serveurEtat))));
+  egal(tablette.matchs.length, 0);
+  egal(tablette.courses.length, 0);
+  // Le serveur, lui, garde tout : ce que la tablette envoie ne retire rien
+  fusionnerResultats(serveurEtat, JSON.parse(JSON.stringify(paquetResultats(tablette))));
+  egal([serveurEtat.matchs.length, serveurEtat.courses.length], [2, 1]);
 });
 
 test('QR codes : découpage, ordre quelconque et assemblage', () => {

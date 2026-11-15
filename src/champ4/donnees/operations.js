@@ -1,4 +1,5 @@
 /* Opérations sur les données (sans affichage, donc testables). */
+import { masquer } from './masques.js';
 
 const estJoue = (m) => m.evenements.length > 0 || m.termine;
 
@@ -25,6 +26,7 @@ export const nombreDeMatchsJoues = (etat, id) =>
 
 /* Efface tous les résultats d'une APSA ; équipes, élèves et poules sont conservés. */
 export function reinitialiserBilans(etat, apsa) {
+  masquer(etat, 'matchs', etat.matchs.filter((m) => m.apsa === apsa && m.evenements.length).map((m) => m.id));
   etat.matchs = etat.matchs.filter((m) => m.pouleId || m.apsa !== apsa);
   etat.matchs
     .filter((m) => m.apsa === apsa)

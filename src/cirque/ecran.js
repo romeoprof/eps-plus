@@ -9,6 +9,7 @@ import { etat, sauver } from '../noyau/etat.js';
 import { eleveConnecte, estEnseignant, observateur } from '../noyau/espace.js';
 import { declarerActions, demander, notifier, rafraichir, vue } from '../noyau/interface.js';
 import { esc } from '../noyau/outils.js';
+import { masquer } from '../champ4/donnees/masques.js';
 import { COULEURS_ARTISTES, ETAPES, EVALUATIONS, FAMILLES_CIRQUE, MAX_ARTISTES, MAX_TABLEAUX } from './contenu.js';
 import {
   ajouterMembre,
@@ -187,6 +188,7 @@ declarerActions({
       danger: true,
     });
     if (!ok) return;
+    masquer(etat, 'troupes', [t.id]); // le serveur garde ce qu'il a déjà reçu
     cirque().troupes = cirque().troupes.filter((x) => x.id !== t.id);
     cirque().troupeCourante = cirque().troupes[0]?.id || null;
     sauver();

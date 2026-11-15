@@ -8,6 +8,7 @@ import { avancementCourse, courseAvecDonnees } from '../../demifond/calculs.js';
 import { reporterVmaDemifond } from '../../testvma/cooper.js';
 import { lireSauvegarde } from './migration.js';
 import { alignerPaquet, reparerDoublons } from './doublons.js';
+import { sansMasques } from './masques.js';
 import { elevesCirque, fusionnerCirque, paquetCirque } from '../../cirque/calculs.js';
 
 const TYPE_RESULTATS = 'eps-resultats';
@@ -120,7 +121,8 @@ function arreterChrono(match, exporteLe) {
 export function fusionnerResultats(etat, paquetRecu) {
   const bilan = { ajoutes: 0, misAJour: 0, dejaPresents: 0 };
   /* Un élève déjà connu ici sous un autre identifiant n'est pas ajouté une seconde fois. */
-  const paquet = alignerPaquet(etat, paquetRecu);
+  /* Ce que cette tablette a supprimé ne lui revient pas (le serveur, lui, le garde). */
+  const paquet = sansMasques(etat, alignerPaquet(etat, paquetRecu));
   const matchs = (paquet.matchs || []).filter((m) => m.evenements?.length);
 
   (paquet.eleves || []).forEach((eleve) => {

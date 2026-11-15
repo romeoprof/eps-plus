@@ -36,6 +36,17 @@ Le serveur est un PC Windows de l'établissement, allumé pendant les cours. Il 
 - Allumer le PC, double-clic sur `demarrer-serveur.cmd`.
 - Pour qu'il démarre seul : Planificateur de tâches Windows → Créer une tâche de base → « À l'ouverture de session » → Démarrer un programme → `C:\EPS-plus\serveur\demarrer-serveur.cmd`.
 
+## Gérer les données du serveur (sur le PC serveur uniquement)
+
+Les tablettes ne font qu'**ajouter** des données au serveur. Quand on supprime sur une tablette (une course, les bilans d'une APSA, une poule, une troupe), cela disparaît de la tablette (et ne lui revient pas à la synchronisation), mais **reste sur le serveur**.
+
+Pour effacer sur le serveur : sur le PC serveur, ouvrir **http://localhost:8080/admin** (l'adresse s'affiche dans la fenêtre du serveur). Cette page ne s'ouvre que sur ce PC : depuis une tablette, elle est introuvable.
+
+- Une liste par type : matchs (filtre par APSA), courses de demi-fond, tests VMA, temps PhotoFinish, troupes et carnets de cirque, élèves (filtre par classe).
+- Cocher, puis « 🗑 Supprimer la sélection ». Pour effacer les bilans d'une APSA : filtrer les matchs sur cette APSA, « Tout cocher », supprimer.
+- « Télécharger une sauvegarde complète » et « Restaurer une sauvegarde ».
+- Avant chaque suppression ou restauration, une copie est gardée dans `serveur\donnees\sauvegardes` (fichiers `avant-modification-…`).
+
 ## Sauvegardes et sécurité
 
 - Toutes les données sont dans `serveur\donnees` (`etat.json`, `config.json`). Une copie par jour est gardée dans `serveur\donnees\sauvegardes`. Copier régulièrement ce dossier sur une clé ou un disque.

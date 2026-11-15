@@ -19,6 +19,7 @@ import {
   vitesseMoyenne,
 } from '../calculs.js';
 import { courseEnCours, reglagesDemifond } from '../etat.js';
+import { masquer } from '../../champ4/donnees/masques.js';
 
 /* Place du grand trait sur la barre (en %) : l'espace après lui montre le retard. */
 const POSITION_PLOT = 80;
@@ -259,6 +260,7 @@ declarerActions({
       danger: true,
     });
     if (!ok) return;
+    masquer(etat, 'courses', [course.id]); // le serveur garde ce qu'il a déjà reçu
     etat.courses = etat.courses.filter((c) => c.id !== course.id);
     etat.courseEnCours = null;
     vue.ongletDF = 'projet';

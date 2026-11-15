@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EPS + · Données du serveur</title>
+<style>
+  :root { --bleu: #2563eb; --titre: #1e3a8a; --rouge: #dc2626; --fond: #e8f4fd; --carte: #fff; --gris: #e2e8f0; --doux: #475569; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px; background: var(--fond); color: #0f172a; font: 15px/1.45 system-ui, sans-serif; }
+  h1 { margin: 0 0 4px; color: var(--titre); font-size: 1.6rem; }
+  .intro { margin: 0 0 16px; color: var(--doux); }
+  .carte { margin-bottom: 16px; padding: 14px 16px; background: var(--carte); border: 2px solid var(--gris); border-radius: 16px; }
+  .carte h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; color: var(--titre); font-size: 1.15rem; }
+  .carte h2 small { color: var(--doux); font-weight: 600; }
+  .barre { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+  button, .bouton { padding: 8px 14px; border: 0; border-radius: 10px; background: var(--bleu); color: #fff; font: inherit; font-weight: 700; cursor: pointer; text-decoration: none; }
+  button.danger { background: var(--rouge); }
+  button.second, .bouton.second { background: #fff; border: 2px solid var(--gris); color: var(--titre); }
+  button:disabled { opacity: .4; cursor: default; }
+  select, input[type=search] { padding: 7px 10px; border: 2px solid var(--gris); border-radius: 10px; font: inherit; }
+  .defile { max-height: 360px; overflow: auto; border: 1px solid var(--gris); border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 6px 10px; border-bottom: 1px solid var(--gris); text-align: left; white-space: nowrap; }
+  th { position: sticky; top: 0; background: #f1f5f9; }
+  tr:hover td { background: #f8fafc; }
+  .vide { color: var(--doux); font-style: italic; }
+  #message { position: fixed; right: 20px; bottom: 20px; padding: 10px 16px; background: #0f172a; border-radius: 12px; color: #fff; font-weight: 700; opacity: 0; transition: opacity .2s; }
+  #message.visible { opacity: 1; }
+</style>
+</head>
+<body>
+  <h1>🖥️ EPS + · Données du serveur</h1>
+  <p class="intro">Cette page ne s'ouvre que sur cet ordinateur. Les tablettes ne peuvent qu'ajouter des données au serveur : ce qu'elles suppriment chez elles reste ici. C'est ici seulement qu'on efface. Avant chaque suppression, une copie est gardée dans <code>serveur\donnees\sauvegardes</code>.</p>
+
+  <div class="carte">
+    <h2>💾 Sauvegarde</h2>
+    <div class="barre">
+      <a class="bouton" href="/api/admin/sauvegarde">⬇ Télécharger une sauvegarde complète</a>
+      <label class="bouton second">⬆ Restaurer une sauvegarde<input id="restaurer" type="file" accept=".json" hidden></label>
+      <button class="second" id="actualiser">⟳ Actualiser</button>
+    </div>
+  </div>
+
+  <div id="sections"></div>
+  <div id="message" role="status"></div>
+
+<script>
+const SECTIONS = [
+  { type: 'matchs', titre: '🏟️ Matchs observés', colonnes: [['date', 'Date'], ['apsa', 'APSA'], ['a', 'Équipe A'], ['score', 'Score'], ['b', 'Équipe B'], ['termine', 'Terminé'], ['observePar', 'Observé par']], filtre: 'apsa' },
+  { type: 'courses', titre: '🏃 Courses de demi-fond', colonnes: [['date', 'Date'], ['type', 'Type'], ['distance', 'Distance (m)'], ['coureurs', 'Coureurs']] },
+  { type: 'testsVma', titre: '📈 Tests VMA', colonnes: [['date', 'Date'], ['nom', 'Élève'], ['classe', 'Classe'], ['distance', 'Distance (m)'], ['vma', 'VMA']], filtre: 'classe' },
+  { type: 'tempsPf', titre: '📸 Temps PhotoFinish', colonnes: [['date', 'Date'], ['nom', 'Élève'], ['libelle', 'Course'], ['t', 'Temps (s)'], ['rang', 'Rang']] },
+  { type: 'troupes', titre: '🎪 Troupes de cirque', colonnes: [['classe', 'Classe'], ['nom', 'Troupe'], ['titre', 'Spectacle'], ['artistes', 'Artistes']] },
+  { type: 'carnets', titre: "🤸 Carnets d'artiste", colonnes: [['nom', 'Élève']] },
+  { type: 'eleves', titre: '👥 Élèves', colonnes: [['nom', 'Élève'], ['classe', 'Classe']], filtre: 'classe' },
+];
+let donnees = {};
+const filtres = {};
+
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const valeur = (cle, v) => {
+  if (cle === 'date') return v ? new Date(v).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '';
+  if (cle === 'termine') return v ? 'oui' : 'en cours';
+  if (cle === 't') return v == null ? '' : (v / 1000).toFixed(2).replace('.', ',');
+  return v ?? '';
+};
+
+function message(texte) {
+  const el = document.querySelector('#message');
+  el.textContent = texte;
+  el.classList.add('visible');
+  clearTimeout(message.minuteur);
+  message.minuteur = setTimeout(() => el.classList.remove('visible'), 3000);
+}
+
+const lignesFiltrees = (s) => (donnees[s.type] || []).filter((x) => !s.filtre || !filtres[s.type] || x[s.filtre] === filtres[s.type]);
+
+function dessiner() {
+  document.querySelector('#sections').innerHTML = SECTIONS.map((s) => {
+    const lignes = lignesFiltrees(s);
+    const options = s.filtre ? [...new Set((donnees[s.type] || []).map((x) => x[s.filtre]).filter(Boolean))].sort() : [];
+    return `<div class="carte" data-section="${s.type}">
+      <h2>${s.titre} <small>${(donnees[s.type] || []).length} au total</small></h2>
+      <div class="barre">
+        ${s.filtre ? `<select data-filtre="${s.type}"><option value="">Tout (${s.filtre === 'apsa' ? 'toutes les APSA' : 'toutes les classes'})</option>${options.map((o) => `<option ${o === filtres[s.type] ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>` : ''}
+        <button class="second" data-tout="${s.type}">Tout cocher</button>
+        <button class="danger" data-supprimer="${s.type}" disabled>🗑 Supprimer la sélection</button>
+      </div>
+      ${lignes.length ? `<div class="defile"><table>
+        <tr><th></th>${s.colonnes.map(([, t]) => `<th>${t}</th>`).join('')}</tr>
+        ${lignes.map((x) => `<tr><td><input type="checkbox" data-coche="${s.type}" value="${esc(x.id)}"></td>${s.colonnes.map(([c]) => `<td>${esc(valeur(c, x[c]))}</td>`).join('')}</tr>`).join('')}
+      </table></div>` : '<p class="vide">Rien pour l’instant.</p>'}
+    </div>`;
+  }).join('');
+}
+
+async function charger() {
+  const r = await fetch('/api/admin/resume', { cache: 'no-store' });
+  if (!r.ok) return message('Page réservée à l’ordinateur serveur.');
+  donnees = await r.json();
+  dessiner();
+}
+
+document.addEventListener('change', async (e) => {
+  if (e.target.dataset.filtre) {
+    filtres[e.target.dataset.filtre] = e.target.value;
+    dessiner();
+  } else if (e.target.dataset.coche) {
+    const type = e.target.dataset.coche;
+    document.querySelector(`[data-supprimer="${type}"]`).disabled = !document.querySelector(`[data-coche="${type}"]:checked`);
+  } else if (e.target.id === 'restaurer') {
+    const fichier = e.target.files[0];
+    e.target.value = '';
+    if (!fichier || !confirm('Remplacer toutes les données du serveur par celles de ce fichier ? (Une copie de l’état actuel est gardée.)')) return;
+    const r = await fetch('/api/admin/restaurer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: await fichier.text() });
+    const res = await r.json();
+    message(r.ok ? `Sauvegarde restaurée ✔ (${res.eleves} élèves, ${res.matchs} matchs)` : res.erreur || 'Fichier non reconnu.');
+    charger();
+  }
+});
+
+document.addEventListener('click', async (e) => {
+  const t = e.target;
+  if (t.id === 'actualiser') return charger();
+  if (t.dataset.tout) {
+    const cases = [...document.querySelectorAll(`[data-coche="${t.dataset.tout}"]`)];
+    const toutes = cases.every((c) => c.checked);
+    cases.forEach((c) => { c.checked = !toutes; });
+    document.querySelector(`[data-supprimer="${t.dataset.tout}"]`).disabled = toutes || !cases.length;
+    return;
+  }
+  if (t.dataset.supprimer) {
+    const type = t.dataset.supprimer;
+    const ids = [...document.querySelectorAll(`[data-coche="${type}"]:checked`)].map((c) => c.value);
+    if (!ids.length || !confirm(`Supprimer définitivement ${ids.length} élément(s) du serveur ?\nUne copie de l’état actuel est gardée dans serveur\\donnees\\sauvegardes.`)) return;
+    const r = await fetch('/api/admin/supprimer', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type, ids }) });
+    const res = await r.json();
+    message(r.ok ? `${res.supprimes} élément(s) supprimé(s) ✔` : res.erreur);
+    charger();
+  }
+});
+
+charger();
+</script>
+</body>
+</html>
