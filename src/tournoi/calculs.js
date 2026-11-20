@@ -149,7 +149,11 @@ function propager(t, m) {
  */
 export function creerTournoi(options, maintenant = Date.now(), alea = Math.random) {
   const p = profil(options.apsa);
-  const participants = options.participants.map((x) => ({ id: uid(), nom: x.nom, membres: x.membres || [], absent: false }));
+  /* joueurs : [{ id, nom }] (id null pour un nom ajouté à la main) ; membres : les élèves de la liste. */
+  const participants = options.participants.map((x) => {
+    const joueurs = x.joueurs || (x.membres || []).map((id) => ({ id, nom: x.membres.length === 1 ? x.nom : '' }));
+    return { id: uid(), nom: x.nom, joueurs, membres: joueurs.map((j) => j.id).filter(Boolean), absent: false };
+  });
   const t = {
     id: uid(),
     nom: options.nom || `Tournoi de ${options.apsa}`,
@@ -160,7 +164,7 @@ export function creerTournoi(options, maintenant = Date.now(), alea = Math.rando
     termine: false,
     termineLe: null,
     progression: options.progression !== false,
-    auto: options.auto !== false, // appel automatique des rencontres, ou au choix
+    auto: options.auto === true, // appel au choix par défaut ; automatique si demandé
     organisePar: options.organisePar || null,
     lieux: Math.max(1, options.lieux || p.defautLieux),
     tables: [],
@@ -190,16 +194,102 @@ export function creerTournoi(options, maintenant = Date.now(), alea = Math.rando
       const k = i % nb;
       t.poules[tour % 2 ? nb - 1 - k : k].push(id);
     });
-    const listes = t.poules.map((poule, numero) => toutesLesRencontres(poule).map(([a, b]) => nouvelleRencontre({ a, b, phase: 'poule', poule: numero })));
-    /* Les poules jouent en même temps : on alterne leurs rencontres. */
-    const longueur = Math.max(...listes.map((l) => l.length));
-    for (let i = 0; i < longueur; i += 1) listes.forEach((l) => l[i] && t.matchs.push(l[i]));
-    t.reglages.qualifies = Math.max(1, Math.min(t.reglages.qualifies, Math.min(...t.poules.map((x) => x.length))));
+    regenererPoules(t);
   } else {
+    t.tirage = ids;
     genererTableau(t, ids);
   }
-  remplir(t, maintenant, true); // au départ, chaque lieu reçoit une rencontre
+  /* Aucune rencontre ne commence au lancement : on choisit qui joue sur chaque lieu. */
+  ajusterLieux(t);
+  if (t.auto) remplir(t, maintenant);
   return t;
+}
+
+/* Rencontres de poule refaites à partir de la composition des poules. */
+function regenererPoules(t) {
+  t.matchs = t.matchs.filter((m) => m.phase !== 'poule');
+  const listes = t.poules.map((poule, numero) => toutesLesRencontres(poule).map(([a, b]) => nouvelleRencontre({ a, b, phase: 'poule', poule: numero })));
+  /* Les poules jouent en même temps : on alterne leurs rencontres. */
+  const longueur = Math.max(0, ...listes.map((l) => l.length));
+  for (let i = 0; i < longueur; i += 1) listes.forEach((l) => l[i] && t.matchs.push(l[i]));
+  const pleines = t.poules.filter((x) => x.length);
+  t.reglages.qualifies = Math.max(1, Math.min(t.reglages.qualifies, ...pleines.map((x) => x.length)));
+}
+
+/* ---------- Composition (onglet Joueurs), possible tant qu'aucune rencontre n'a commencé ---------- */
+const rienCommence = (t, phase) => t.matchs.filter((m) => m.phase === phase && !m.exempt).every((m) => m.etat === 'attente');
+export const poulesModifiables = (t) => t.formule === 'poules' && !tableauLance(t) && rienCommence(t, 'poule');
+export const tirageModifiable = (t) => t.formule === 'elimination' && !!t.tirage && rienCommence(t, 'tableau');
+
+export function changerPoule(t, idParticipant, numero) {
+  if (!poulesModifiables(t) || numero < 0) return false;
+  t.poules = t.poules.map((p) => p.filter((x) => x !== idParticipant));
+  while (t.poules.length <= numero) t.poules.push([]);
+  t.poules[numero].push(idParticipant);
+  regenererPoules(t);
+  return true;
+}
+
+export function ajouterPoule(t) {
+  if (!poulesModifiables(t)) return false;
+  t.poules.push([]);
+  return true;
+}
+
+export function retirerPoule(t, numero) {
+  if (!poulesModifiables(t) || t.poules[numero]?.length) return false;
+  t.poules.splice(numero, 1);
+  regenererPoules(t);
+  return true;
+}
+
+/* Tableau à élimination : la place « place » (0 = haut du tableau) reçoit ce participant,
+   qui échange avec celui qui l'occupait. Les places d'exempt ne se choisissent pas. */
+export function placerDansTableau(t, place, idParticipant) {
+  if (!tirageModifiable(t)) return false;
+  const tetes = [...t.tirage];
+  const taille = 2 ** Math.ceil(Math.log2(Math.max(2, tetes.length)));
+  const ici = ordreTableau(taille)[place] - 1;
+  const ancien = tetes.indexOf(idParticipant);
+  if (ici >= tetes.length || ancien < 0) return false;
+  [tetes[ici], tetes[ancien]] = [tetes[ancien], tetes[ici]];
+  t.matchs = t.matchs.filter((m) => m.phase !== 'tableau');
+  t.tirage = tetes;
+  genererTableau(t, tetes);
+  return true;
+}
+
+/* Équipes et doubles : un joueur change d'équipe, s'ajoute ou se retire. */
+function majEquipe(t, p) {
+  p.membres = p.joueurs.map((j) => j.id).filter(Boolean);
+  if (t.mode === 'double' && p.joueurs.length) p.nom = p.joueurs.map((j) => j.nom).join(' & ');
+}
+
+export function deplacerJoueur(t, deId, rang, versId) {
+  const de = participant(t, deId);
+  const vers = participant(t, versId);
+  if (!de?.joueurs || !vers?.joueurs || de === vers || !de.joueurs[rang]) return false;
+  vers.joueurs.push(...de.joueurs.splice(rang, 1));
+  majEquipe(t, de);
+  majEquipe(t, vers);
+  return true;
+}
+
+export function ajouterJoueur(t, idParticipant, joueur) {
+  const p = participant(t, idParticipant);
+  if (!p?.joueurs || !joueur?.nom) return false;
+  if (joueur.id && t.participants.some((x) => x.membres.includes(joueur.id))) return false;
+  p.joueurs.push({ id: joueur.id || null, nom: joueur.nom });
+  majEquipe(t, p);
+  return true;
+}
+
+export function retirerJoueur(t, idParticipant, rang) {
+  const p = participant(t, idParticipant);
+  if (!p?.joueurs?.[rang]) return false;
+  p.joueurs.splice(rang, 1);
+  majEquipe(t, p);
+  return true;
 }
 
 /* ---------- Lieux ---------- */
@@ -451,7 +541,7 @@ export function basculerAbsent(t, id, maintenant = Date.now()) {
 /* Participant arrivé en retard (qui perd reste et championnat seulement). */
 export function ajouterParticipant(t, { nom, membres = [] }, maintenant = Date.now()) {
   if (!['qpr', 'championnat'].includes(t.formule)) return null;
-  const p = { id: uid(), nom, membres, absent: false };
+  const p = { id: uid(), nom, joueurs: membres.length ? membres.map((id) => ({ id, nom })) : [{ id: null, nom }], membres, absent: false };
   if (t.formule === 'qpr') t.file.push(p.id);
   else t.participants.forEach((x) => t.matchs.push(nouvelleRencontre({ a: x.id, b: p.id, phase: 'championnat' })));
   t.participants.push(p);
@@ -618,8 +708,8 @@ export const resTournoisEleve = (etat, idEleve) =>
   (etat.resTournois || []).filter((r) => r.eleveId === idEleve).sort((a, b) => a.date - b.date);
 
 /* Équipes ou doubles formés au hasard, de tailles aussi proches que possible. */
-export function formerEquipes(eleves, taille, alea = Math.random) {
-  const nombre = Math.max(1, Math.floor(eleves.length / Math.max(1, taille)));
+export function formerEquipes(eleves, taille, alea = Math.random, nombreVoulu = 0) {
+  const nombre = Math.max(1, nombreVoulu || Math.floor(eleves.length / Math.max(1, taille)));
   const groupes = Array.from({ length: nombre }, () => []);
   melanger(eleves, alea).forEach((e, i) => groupes[i % nombre].push(e));
   return groupes;

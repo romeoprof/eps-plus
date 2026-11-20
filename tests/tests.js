@@ -65,6 +65,11 @@ import {
   choisirJoueurs,
   choisirRencontre,
   proposition as tnProposition,
+  remplir as tnRemplir,
+  changerPoule,
+  placerDansTableau,
+  deplacerJoueur,
+  formerEquipes,
 } from '../src/tournoi/calculs.js';
 import { aRetirer, bornerEcart, rangAAfficher, remplissage } from '../src/utilitaires/differe.js';
 import { angleDegres, brasPropose, deplacer, poigneeTouchee, traceTouche } from '../src/utilitaires/dessin.js';
@@ -1105,8 +1110,12 @@ test('Observateurs : un par équipe, choisi sans s’identifier', () => {
 /* Tournois : hasard fixe pour des tests reproductibles. */
 const sansHasard = () => 0.5;
 const joueursTn = (n) => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, membres: [`e${i + 1}`] }));
-const tournoi = (formule, n, lieux, autres = {}) =>
-  creerTournoi({ apsa: 'Tennis de table', formule, mode: 'simple', lieux, participants: joueursTn(n), ...autres }, 1000, sansHasard);
+/* Pour les tests : appel automatique et lieux remplis au départ (dans l'app, rien ne démarre seul). */
+const tournoi = (formule, n, lieux, autres = {}) => {
+  const t = creerTournoi({ apsa: 'Tennis de table', formule, mode: 'simple', lieux, participants: joueursTn(n), auto: true, ...autres }, 1000, sansHasard);
+  tnRemplir(t, 1000, true);
+  return t;
+};
 const nomsSur = (t, table) => [table.a, table.b].map((id) => t.participants.find((p) => p.id === id)?.nom || null);
 
 test('Tournoi qui perd reste : le perdant reste, le gagnant va au bout de la file', () => {
@@ -1227,6 +1236,7 @@ test('Tournoi : résultats dans la Progression, au choix, et dans le dossier de 
   const etat = etatInitial();
   etat.eleves = [{ id: 'e1', nom: 'Léa M.', classe: '5A' }, { id: 'e2', nom: 'Tom D.', classe: '5A' }];
   const t = creerTournoi({ apsa: 'Badminton', formule: 'qpr', mode: 'simple', lieux: 1, participants: [{ nom: 'Léa M.', membres: ['e1'] }, { nom: 'Tom D.', membres: ['e2'] }, { nom: 'Invité', membres: [] }] }, 1000, sansHasard);
+  tnRemplir(t, 1000, true);
   tnResultat(t, 0, { gagnant: 'a', sa: 15, sb: 9 }, 2000);
   tnProgression(etat, t);
   egal(etat.resTournois.length, 2); // l'invité hors liste n'a pas de Progression
@@ -1287,6 +1297,46 @@ test('Tournoi qui perd reste : le perdant reste affiché, on peut choisir son ad
   egal([t.tables[0].a, t.tables[0].b], [a, b]);
   egal(t.file, [autre]);
   egal(choisirJoueurs(t, 0, a, a), false);
+});
+
+test('Tournoi : rien ne commence au lancement, appel au choix par défaut', () => {
+  const t = creerTournoi({ apsa: 'Tennis de table', formule: 'championnat', mode: 'simple', lieux: 3, participants: joueursTn(6) }, 1000, sansHasard);
+  egal(t.auto, false);
+  egal(t.tables.map((x) => etatLieu(t, x)), ['libre', 'libre', 'libre']);
+  egal(t.matchs.filter((m) => m.etat !== 'attente').length, 0);
+  egal(tnAppeler(t, 1, 1100).length, 1); // « Lancer » sur la table 2 seulement
+  egal(t.tables.map((x) => etatLieu(t, x)), ['libre', 'enjeu', 'libre']);
+});
+
+test('Tournoi : composer les poules et le premier tour avant de jouer', () => {
+  const t = creerTournoi({ apsa: 'Badminton', formule: 'poules', mode: 'simple', lieux: 2, nbPoules: 2, participants: joueursTn(8) }, 1000, sansHasard);
+  const id = t.poules[0][0];
+  vrai(changerPoule(t, id, 1), 'changement refusé');
+  egal(t.poules.map((p) => p.length), [3, 5]);
+  egal(t.matchs.filter((m) => m.phase === 'poule').length, 3 + 10);
+  tnAppeler(t, 0, 1100);
+  egal(changerPoule(t, id, 0), false); // une rencontre a commencé
+  const e = creerTournoi({ apsa: 'Badminton', formule: 'elimination', mode: 'simple', lieux: 2, participants: joueursTn(4) }, 1000, sansHasard);
+  const premier = e.matchs.find((m) => m.tour === 0 && m.rang === 0);
+  const autre = e.matchs.find((m) => m.tour === 0 && m.rang === 1).a;
+  vrai(placerDansTableau(e, 1, autre), 'placement refusé'); // place 1 = côté B de la première rencontre
+  egal(e.matchs.find((m) => m.tour === 0 && m.rang === 0).b, autre);
+  egal(e.matchs.filter((m) => m.phase === 'tableau').length, 3);
+  vrai(premier, 'premier tour');
+});
+
+test('Tournoi sports co : nombre d’équipes choisi et joueurs déplacés d’une équipe à l’autre', () => {
+  const eleves = Array.from({ length: 14 }, (_, i) => ({ id: `e${i}`, nom: `E${i}` }));
+  const groupes = formerEquipes(eleves, 4, sansHasard, 3);
+  egal(groupes.length, 3);
+  egal(groupes.map((g) => g.length).sort(), [4, 5, 5]);
+  const t = creerTournoi({ apsa: 'Handball', formule: 'championnat', mode: 'equipes', lieux: 1, participants: groupes.map((g, i) => ({ nom: `Équipe ${i + 1}`, joueurs: g })) }, 1000, sansHasard);
+  const [a, b] = t.participants;
+  const [avantA, avantB] = [a.membres.length, b.membres.length];
+  const deplace = a.joueurs[0].id;
+  vrai(deplacerJoueur(t, a.id, 0, b.id), 'déplacement refusé');
+  egal([a.membres.length, b.membres.length], [avantA - 1, avantB + 1]);
+  vrai(b.membres.includes(deplace) && !a.membres.includes(deplace), 'joueur non arrivé');
 });
 
 test('QR codes : découpage, ordre quelconque et assemblage', () => {

@@ -1123,4 +1123,39 @@ body.sombre .titre-famille.ardoise, body.sombre .tuile-apsa.ardoise { --couleur:
 .tn-choix-liste { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
 .tn-choix-liste .btn { text-align: left; }
 .tn-choix-liste small { color: var(--violet); font-weight: 800; }
-.tn-r-arbitre { display: block; color: var(--texte-doux); font-weight: 700; }
+.tn-r-arbitre { display: block; color: var(--texte-doux); font-weight: 700; }/* Tournoi v41 : une couleur par lieu, statut en pastille, poules, premier tour et tableau relié. */
+.tn-lieu, .tn-lieu.enjeu, .tn-lieu.manque, .tn-lieu.libre { border-color: var(--lieu, var(--bordure)); background: var(--carte); }
+.tn-lieu.libre { border-style: dashed; }
+.tn-lieu-nom { padding: 2px 12px; background: var(--lieu, var(--ardoise)); border-radius: 999px; color: #fff; }
+.tn-lieu .tn-statut { padding: 2px 8px; border-radius: 999px; background: var(--gris); }
+.tn-lieu.enjeu .tn-statut { background: var(--bleu-pale); }
+.tn-lieu.manque .tn-statut { background: var(--teinte-orange); color: var(--orange); }
+.tn-lieu.libre .tn-statut { background: var(--teinte-turquoise); color: var(--vert); }
+.tn-poules { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; margin-bottom: 10px; }
+.tn-poule { padding: 10px; border: 3px solid var(--lieu, var(--bordure)); border-radius: 14px; }
+.tn-poule h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 6px; font-size: 1rem; color: var(--lieu, var(--titre)); }
+.tn-poule h3 small { color: var(--texte-doux); }
+.tn-poule h3 .btn-mini { margin-left: auto; }
+.tn-poule ul { margin: 0 0 6px; padding: 0; list-style: none; }
+.tn-poule li { display: flex; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px solid var(--gris); }
+.tn-poule li b { flex: 1; }
+.tn-poule select { width: auto; max-width: 150px; margin: 0; padding: 4px 6px; font-size: .85rem; }
+.tn-tirage { margin: 0; padding-left: 26px; }
+.tn-tirage li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+.tn-tirage select { width: auto; min-width: 140px; margin: 0; }
+.tn-exempt { color: var(--texte-doux); font-style: italic; }
+.tn-arbre { overflow-x: auto; padding-bottom: 6px; }
+.tn-arbre-dessin { position: relative; }
+.tn-arbre-titres { position: relative; height: 30px; }
+.tn-arbre-titres h4 { position: absolute; top: 0; margin: 0; text-align: center; color: var(--violet); }
+.tn-arbre-corps { position: relative; }
+.tn-arbre-traits { position: absolute; inset: 0; overflow: visible; }
+.tn-arbre-traits path { fill: none; stroke: var(--bordure); stroke-width: 1.5; }
+.tn-arbre-traits path.joue { stroke: var(--violet); stroke-width: 2; }
+.tn-arbre-traits path.exempt { stroke-dasharray: 3 4; }
+.tn-case-arbre { position: absolute; display: flex; flex-direction: column; justify-content: center; min-width: 0; background: var(--carte); border: 2px solid var(--bordure); border-radius: 10px; overflow: hidden; }
+.tn-case-arbre.enjeu { border-color: var(--lieu, var(--bleu)); border-width: 3px; }
+.tn-case-arbre.fini { border-color: var(--violet); }
+.tn-case-arbre.exempt { opacity: .55; border-style: dashed; }
+.tn-case-arbre > div { display: flex; justify-content: space-between; gap: 8px; padding: 3px 8px; font-size: .88rem; white-space: nowrap; }
+.tn-case-arbre > div span { overflow: hidden; text-overflow: ellipsis; }
