@@ -66,7 +66,9 @@ const present = (t, id) => !!id && !participant(t, id)?.absent;
 export const gagnantDe = (m) => (m.gagnant === 'a' ? m.a : m.gagnant === 'b' ? m.b : null);
 export const perdantDe = (m) => (m.gagnant === 'a' ? m.b : m.gagnant === 'b' ? m.a : null);
 
-const lieuVide = () => ({ a: null, b: null, matchId: null, debut: 0, depuis: 0, dernier: null });
+/* reste : le perdant resté sur place (qui perd reste) ; arbitre : { id, nom }, gardé d'une rencontre à l'autre. */
+const lieuVide = () => ({ a: null, b: null, matchId: null, debut: 0, depuis: 0, dernier: null, reste: null, arbitre: null });
+const vider = (table, champs = {}) => Object.assign(table, lieuVide(), { arbitre: table.arbitre || null }, champs);
 
 /* Tous contre tous, par tours (méthode du cercle) : chacun se repose à son tour. */
 export function toutesLesRencontres(ids) {
@@ -158,6 +160,7 @@ export function creerTournoi(options, maintenant = Date.now(), alea = Math.rando
     termine: false,
     termineLe: null,
     progression: options.progression !== false,
+    auto: options.auto !== false, // appel automatique des rencontres, ou au choix
     organisePar: options.organisePar || null,
     lieux: Math.max(1, options.lieux || p.defautLieux),
     tables: [],
@@ -195,7 +198,7 @@ export function creerTournoi(options, maintenant = Date.now(), alea = Math.rando
   } else {
     genererTableau(t, ids);
   }
-  remplir(t, maintenant);
+  remplir(t, maintenant, true); // au départ, chaque lieu reçoit une rencontre
   return t;
 }
 
@@ -220,6 +223,14 @@ export const etatLieu = (t, table) => {
   return 'libre';
 };
 
+/* Arbitre d'un lieu : { id, nom } ou null. Il reste d'une rencontre à l'autre. */
+export function choisirArbitre(t, numero, arbitre) {
+  const table = t.tables[numero];
+  if (!table) return false;
+  table.arbitre = arbitre?.nom ? { id: arbitre.id || null, nom: arbitre.nom } : null;
+  return true;
+}
+
 export function changerNombreLieux(t, nombre, maintenant = Date.now()) {
   const voulu = Math.max(1, Math.min(40, nombre));
   t.lieux = voulu;
@@ -243,18 +254,70 @@ function occupes(t) {
   return liste;
 }
 
-/* Appelle les rencontres sur les lieux libres. Renvoie les appels : [{ table, a, b }]. */
-export function remplir(t, maintenant = Date.now()) {
+/* Appelle les rencontres sur les lieux libres. Renvoie les appels : [{ table, a, b }].
+   En appel « au choix » (t.auto faux), rien n'est appelé sans qu'on le demande (force),
+   et « seul » limite l'appel à un lieu. */
+export function remplir(t, maintenant = Date.now(), force = false, seul = null) {
   ajusterLieux(t);
-  if (t.termine) return [];
-  return t.formule === 'qpr' ? remplirQpr(t, maintenant) : remplirProgramme(t, maintenant);
+  if (t.termine || (t.auto === false && !force)) return [];
+  return t.formule === 'qpr' ? remplirQpr(t, maintenant, seul) : remplirProgramme(t, maintenant, seul);
 }
 
-function remplirProgramme(t, maintenant) {
+/* Appelle la rencontre proposée sur un lieu (bouton « Lancer »). */
+export const appeler = (t, numero, maintenant = Date.now()) => remplir(t, maintenant, true, numero);
+
+/* Ce qui serait appelé sur ce lieu, sans rien changer : { a, b } ou null. */
+export function proposition(t, numero) {
+  const copie = JSON.parse(JSON.stringify(t));
+  const [appel] = remplir(copie, 0, true, numero);
+  return appel ? { a: appel.a, b: appel.b } : null;
+}
+
+/* Rencontres qu'on peut choisir pour un lieu : en attente, joueurs présents et libres
+   (ceux du lieu lui-même comptent comme libres, puisqu'on les remplace). */
+export function rencontresPossibles(t, numero) {
+  const table = t.tables[numero];
+  const pris = occupes(t);
+  const ici = table?.matchId && t.matchs.find((x) => x.id === table.matchId);
+  if (ici) {
+    pris.delete(ici.a);
+    pris.delete(ici.b);
+  }
+  return t.matchs.filter((m) => m.etat === 'attente' && m.a && m.b && !pris.has(m.a) && !pris.has(m.b) && present(t, m.a) && present(t, m.b));
+}
+
+/* Choix d'une rencontre pour un lieu ; celle qui y était repart en attente. */
+export function choisirRencontre(t, numero, idMatch, maintenant = Date.now()) {
+  const table = t.tables[numero];
+  const m = rencontresPossibles(t, numero).find((x) => x.id === idMatch);
+  if (!table || !m) return false;
+  const ancien = table.matchId && t.matchs.find((x) => x.id === table.matchId);
+  if (ancien) Object.assign(ancien, { etat: 'attente', table: null, debut: 0 });
+  Object.assign(m, { etat: 'enjeu', table: numero, debut: maintenant });
+  vider(table, { matchId: m.id, debut: maintenant });
+  return true;
+}
+
+/* Qui perd reste : choix des deux joueurs d'un lieu parmi ceux du lieu et ceux de la file.
+   Ceux du lieu qui ne sont pas choisis repassent en tête de file. */
+export function choisirJoueurs(t, numero, a, b, maintenant = Date.now()) {
+  const table = t.tables[numero];
+  if (!table || !a || !b || a === b) return false;
+  const ici = [table.a, table.b].filter(Boolean);
+  const possibles = new Set([...ici, ...t.file]);
+  if (!possibles.has(a) || !possibles.has(b)) return false;
+  t.file = [...ici.filter((id) => id !== a && id !== b), ...t.file.filter((id) => id !== a && id !== b)];
+  const reste = [a, b].includes(table.reste) ? table.reste : null;
+  const [x, y] = b === reste ? [b, a] : [a, b]; // celui qui est resté garde sa place
+  vider(table, { a: x, b: y, debut: maintenant, reste });
+  return true;
+}
+
+function remplirProgramme(t, maintenant, seul) {
   const appels = [];
   const pris = occupes(t);
   t.tables.forEach((table, i) => {
-    if (table.matchId) return;
+    if (table.matchId || (seul != null && i !== seul)) return;
     const m = t.matchs.find((x) => x.etat === 'attente' && x.a && x.b && !pris.has(x.a) && !pris.has(x.b) && present(t, x.a) && present(t, x.b));
     if (!m) return;
     Object.assign(m, { etat: 'enjeu', table: i, debut: maintenant });
@@ -266,11 +329,12 @@ function remplirProgramme(t, maintenant) {
   return appels;
 }
 
-function remplirQpr(t, maintenant) {
+function remplirQpr(t, maintenant, seul) {
   const appels = [];
   t.file = t.file.filter((id) => present(t, id));
   const passe = (revanche) =>
     t.tables.forEach((table, i) => {
+      if (seul != null && i !== seul) return;
       const sur = [table.a, table.b].filter(Boolean);
       while (sur.length < 2 && t.file.length) {
         /* On évite de remettre face à face les deux joueurs qui viennent de jouer ensemble. */
@@ -295,19 +359,7 @@ function remplirQpr(t, maintenant) {
   passe(false);
   /* Personne d'autre ne joue : plutôt une revanche que d'attendre sans fin. */
   if (t.file.length && !t.tables.some((x) => x.a && x.b)) passe(true);
-  /* File vide : deux lieux où il manque un joueur sont regroupés. */
-  const seuls = t.tables.map((x, i) => i).filter((i) => !!t.tables[i].a !== !!t.tables[i].b);
-  while (seuls.length >= 2) {
-    const vers = t.tables[seuls.shift()];
-    const depuis = t.tables[seuls.pop()];
-    const joueur = depuis.a || depuis.b;
-    Object.assign(depuis, lieuVide(), { depuis: maintenant });
-    if (vers.a) vers.b = joueur;
-    else vers.a = joueur;
-    vers.debut = maintenant;
-    vers.depuis = 0;
-    appels.push({ table: t.tables.indexOf(vers), a: vers.a, b: vers.b, regroupe: true });
-  }
+  /* Le perdant reste toujours sur son lieu : il n'est jamais déplacé vers un autre. */
   return appels;
 }
 
@@ -331,10 +383,10 @@ export function enregistrerResultat(t, numero, resultat, maintenant = Date.now()
     if (!table.a || !table.b) return null;
     const r = lireResultat(t, resultat, 'qpr');
     if (!r) return null;
-    const m = nouvelleRencontre({ a: table.a, b: table.b, phase: 'qpr', etat: 'fini', table: numero, debut: table.debut, fin: maintenant, ...r });
+    const m = nouvelleRencontre({ a: table.a, b: table.b, phase: 'qpr', etat: 'fini', table: numero, debut: table.debut, fin: maintenant, arbitre: table.arbitre?.nom || null, ...r });
     t.matchs.push(m);
-    /* Le perdant reste, le gagnant sort et va au bout de la file. */
-    Object.assign(table, lieuVide(), { a: perdantDe(m), dernier: gagnantDe(m), depuis: maintenant });
+    /* Le perdant reste (et reste affiché sur son lieu), le gagnant sort et va au bout de la file. */
+    vider(table, { a: perdantDe(m), reste: perdantDe(m), dernier: gagnantDe(m), depuis: maintenant });
     t.file.push(gagnantDe(m));
     return remplir(t, maintenant);
   }
@@ -342,8 +394,8 @@ export function enregistrerResultat(t, numero, resultat, maintenant = Date.now()
   if (!m) return null;
   const r = lireResultat(t, resultat, m.phase);
   if (!r) return null;
-  Object.assign(m, r, { etat: 'fini', fin: maintenant });
-  Object.assign(table, lieuVide(), { depuis: maintenant });
+  Object.assign(m, r, { etat: 'fini', fin: maintenant, arbitre: table.arbitre?.nom || null });
+  vider(table, { depuis: maintenant });
   propager(t, m);
   return remplir(t, maintenant);
 }
@@ -369,7 +421,7 @@ export function reporter(t, numero, maintenant = Date.now()) {
   const m = table && t.matchs.find((x) => x.id === table.matchId);
   if (!m) return [];
   Object.assign(m, { etat: 'attente', table: null, debut: 0 });
-  Object.assign(table, lieuVide(), { depuis: maintenant });
+  vider(table, { depuis: maintenant });
   /* Elle passe après les autres, pour ne pas revenir aussitôt. */
   t.matchs.splice(t.matchs.indexOf(m), 1);
   t.matchs.push(m);
@@ -387,7 +439,7 @@ export function basculerAbsent(t, id, maintenant = Date.now()) {
       t.tables.forEach((table) => {
         if (table.a !== id && table.b !== id) return;
         const reste = table.a === id ? table.b : table.a;
-        Object.assign(table, lieuVide(), { a: reste, depuis: maintenant });
+        vider(table, { a: reste, reste: table.reste === reste ? reste : null, depuis: maintenant });
       });
     } else if (!t.file.includes(id) && !t.tables.some((x) => x.a === id || x.b === id)) {
       t.file.push(id);

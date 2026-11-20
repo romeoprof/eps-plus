@@ -3,8 +3,8 @@
  * Ouvert aux élèves et à l'enseignant. La logique est dans tournoi/calculs.js.
  */
 import { etat, sauver } from '../noyau/etat.js';
-import { declarerActions, demander, notifier, rafraichir, vue } from '../noyau/interface.js';
-import { esc, formatChrono } from '../noyau/outils.js';
+import { declarerActions, demander, notifier, rafraichir } from '../noyau/interface.js';
+import { esc } from '../noyau/outils.js';
 import { eleveConnecte, estEnseignant } from '../noyau/espace.js';
 import { FAMILLES } from '../contenu/familles.js';
 import { APSA } from '../champ4/contenu/apsa.js';
@@ -13,9 +13,10 @@ import {
   FORMULES, MODES, PROFILS, ajouterParticipant, basculerAbsent, changerNombreLieux, classementGeneral, classementPoule,
   corrigerResultat, creerTournoi, enregistrerDansProgression, enregistrerResultat, etatLieu, formerEquipes,
   lancerTableauFinal, nomParticipant, nomTour, participant, poulesFinies, profil, remplir, reporter, tableauLance,
+  appeler, choisirArbitre, choisirJoueurs, choisirRencontre, proposition, rencontresPossibles,
 } from './calculs.js';
 
-const local = { onglet: 'lieux', saisie: null, correction: null, classe: '' };
+const local = { onglet: 'lieux', saisie: null, correction: null, choix: null, classe: '' };
 
 /* APSA proposées : celles des familles « Sports collectifs » et « Affrontements interindividuels ». */
 const APSA_TOURNOI = FAMILLES.flatMap((f) => f.activites).map((a) => a.nom).filter((nom) => PROFILS[nom]);
@@ -76,7 +77,7 @@ function lancer() {
     lieux: p.lieux,
     participants,
     progression: p.progression,
-    duree: Math.max(0, Number(p.duree) || 0) * 60,
+    duree: 0, // pas de chronométrage des rencontres
     points: Math.max(0, Number(p.points) || 0),
     pts: p.pts,
     nbPoules: p.nbPoules || 0,
@@ -230,6 +231,7 @@ declarerActions({
   /* Tournoi en cours */
   'tn-onglet': ({ onglet }) => {
     local.onglet = onglet;
+    local.choix = null;
     local.saisie = null;
     local.correction = null;
     rafraichir();
@@ -242,6 +244,7 @@ declarerActions({
     apresChangement(t, []);
   },
   'tn-score': ({ lieu }) => {
+    local.choix = null;
     local.saisie = Number(lieu);
     rafraichir();
     document.querySelector('.tn-saisie .tn-sa')?.focus();
@@ -251,6 +254,7 @@ declarerActions({
     rafraichir();
   },
   'tn-annuler': () => {
+    local.choix = null;
     local.saisie = null;
     local.correction = null;
     rafraichir();
@@ -310,7 +314,8 @@ declarerActions({
     });
     if (!ok) return;
     t.matchs.filter((m) => m.etat === 'enjeu').forEach((m) => Object.assign(m, { etat: 'attente', table: null, debut: 0 }));
-    t.tables = [];
+    /* Les lieux se vident, les arbitres restent. */
+    t.tables.forEach((x) => Object.assign(x, { a: null, b: null, matchId: null, debut: 0, reste: null, dernier: null }));
     t.termine = true;
     t.termineLe = Date.now();
     local.onglet = 'classement';
@@ -327,38 +332,56 @@ declarerActions({
       t.participants.forEach((p) => !dansFile.has(p.id) && !p.absent && t.file.push(p.id));
     }
     local.onglet = 'lieux';
+    apresChangement(t, remplir(t, Date.now(), true));
+  },
+
+  /* Arbitre d'un lieu : un élève de la liste, ou un participant hors liste (« p:id »). */
+  'tn-arbitre': ({ lieu }, champ) => {
+    const t = tournoiCourant();
+    if (!t) return;
+    const valeur = champ.value;
+    let arbitre = null;
+    if (valeur.startsWith('p:')) arbitre = { id: null, nom: participant(t, valeur.slice(2))?.nom };
+    else if (valeur) arbitre = etat.eleves.find((e) => e.id === valeur);
+    choisirArbitre(t, Number(lieu), arbitre && { id: arbitre.id, nom: arbitre.nom });
+    sauver();
+  },
+
+  /* Appel des rencontres : automatique, ou au choix sur chaque lieu libre. */
+  'tn-auto': () => {
+    const t = tournoiCourant();
+    if (!t) return;
+    t.auto = t.auto === false;
+    notifier(t.auto ? 'Appel automatique : chaque lieu libre reçoit la rencontre suivante.' : 'Appel au choix : touche « Lancer » ou « Choisir » sur chaque lieu libre.');
     apresChangement(t, remplir(t));
   },
+  'tn-appeler': ({ lieu }) => {
+    const t = tournoiCourant();
+    if (t) apresChangement(t, appeler(t, Number(lieu)));
+  },
+  'tn-choisir': ({ lieu }) => {
+    local.choix = Number(lieu);
+    local.saisie = null;
+    rafraichir();
+  },
+  'tn-prendre': ({ lieu, id }) => {
+    const t = tournoiCourant();
+    if (!t) return;
+    if (!choisirRencontre(t, Number(lieu), id)) return notifier('Cette rencontre ne peut pas être jouée ici.');
+    local.choix = null;
+    const m = t.matchs.find((x) => x.id === id);
+    apresChangement(t, [{ table: Number(lieu), a: m.a, b: m.b }]);
+  },
+  'tn-prendre-joueurs': ({ lieu }) => {
+    const t = tournoiCourant();
+    if (!t) return;
+    const a = document.querySelector('#tn-choix-a')?.value;
+    const b = document.querySelector('#tn-choix-b')?.value;
+    if (!choisirJoueurs(t, Number(lieu), a, b)) return notifier('Choisis deux joueurs différents.');
+    local.choix = null;
+    apresChangement(t, [{ table: Number(lieu), a, b }]);
+  },
 });
-
-/* ---------- Chronos des lieux, mis à jour chaque seconde sans redessiner l'écran ---------- */
-function texteChrono(el, maintenant) {
-  if (el.dataset.tnDebut) {
-    const ecoule = (maintenant - Number(el.dataset.tnDebut)) / 1000;
-    const duree = Number(el.dataset.tnDuree) || 0;
-    if (!duree) return { texte: `⏱ ${formatChrono(ecoule)}`, depasse: false };
-    const reste = duree - ecoule;
-    return reste > 0 ? { texte: `⏱ reste ${formatChrono(reste)}`, depasse: false } : { texte: '⏰ Temps écoulé', depasse: true };
-  }
-  const depuis = Number(el.dataset.tnDepuis) || 0;
-  return { texte: depuis ? `depuis ${formatChrono((maintenant - depuis) / 1000)}` : '', depasse: false };
-}
-
-function majChronos() {
-  if (vue.ecran !== 'tournoi') return;
-  const maintenant = Date.now();
-  document.querySelectorAll('[data-tn-debut], [data-tn-depuis]').forEach((el) => {
-    const { texte, depasse } = texteChrono(el, maintenant);
-    el.textContent = texte;
-    el.closest('.tn-lieu')?.classList.toggle('depasse', depasse);
-  });
-}
-setInterval(majChronos, 1000);
-
-const chrono = (attributs) => {
-  const faux = { dataset: attributs };
-  return `<span class="tn-chrono" ${Object.entries(attributs).map(([k, v]) => `data-${k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}="${v}"`).join(' ')}>${texteChrono(faux, Date.now()).texte}</span>`;
-};
 
 /* ---------- Affichage : écran de départ ---------- */
 const puce = (actif, action, attributs, texte) =>
@@ -410,9 +433,7 @@ function vueCreation() {
   const pr = profil(p.apsa);
   const n = nombrePrevu(p);
   const regles = [
-    pr.duree || p.mode === 'equipes' || p.apsa === 'Lutte'
-      ? `<label class="tn-champ">Durée d'une rencontre (min, 0 = libre) <input type="number" min="0" max="90" value="${p.duree}" data-choix="tn-prep-valeur" data-cle="duree"></label>`
-      : '',
+
     pr.points || p.points
       ? `<label class="tn-champ">Rencontre en … points <input type="number" min="0" max="99" value="${p.points}" data-choix="tn-prep-valeur" data-cle="points"></label>`
       : '',
@@ -504,44 +525,111 @@ function panneauScore(t, a, b, phase, cible) {
 
 const STATUTS = { libre: '🟢 Libre', manque: '🟠 Manque un joueur', enjeu: '🔵 En jeu' };
 
+/* Arbitre du lieu : joueurs du tournoi d'abord, puis les autres élèves de leurs classes. */
+function choixArbitre(t, table, i) {
+  const enJeu = new Set();
+  t.tables.forEach((x) => {
+    const m = x.matchId && t.matchs.find((y) => y.id === x.matchId);
+    [x.a, x.b, m?.a, m?.b].filter(Boolean).forEach((id) => (participant(t, id)?.membres || []).forEach((e) => enJeu.add(e)));
+  });
+  const joueurs = t.participants.flatMap((p) => p.membres).map((id) => etat.eleves.find((e) => e.id === id)).filter(Boolean);
+  const horsListe = t.participants.filter((p) => !p.membres.length);
+  const idsJoueurs = new Set(joueurs.map((e) => e.id));
+  const classes = new Set(joueurs.map((e) => e.classe));
+  const autres = etat.eleves.filter((e) => !idsJoueurs.has(e.id) && (!classes.size || classes.has(e.classe)));
+  const actuel = table.arbitre;
+  const valeurActuelle = actuel ? actuel.id || `p:${horsListe.find((p) => p.nom === actuel.nom)?.id || ''}` : '';
+  const option = (valeur, nom, note = '') => `<option value="${esc(valeur)}" ${valeur === valeurActuelle ? 'selected' : ''}>${esc(nom)}${note}</option>`;
+  const parNom = (x, y) => x.nom.localeCompare(y.nom);
+  const groupesAutres = [...new Set(autres.map((e) => e.classe))].sort().map((classe) =>
+    `<optgroup label="${esc(classe)}">${autres.filter((e) => e.classe === classe).sort(parNom).map((e) => option(e.id, e.nom)).join('')}</optgroup>`);
+  return `<label class="tn-arbitre">🧑‍⚖️ Arbitre
+    <select data-choix="tn-arbitre" data-lieu="${i}" aria-label="Arbitre de ${esc(profil(t.apsa).lieu)} ${i + 1}">
+      <option value="">— aucun —</option>
+      <optgroup label="Joueurs du tournoi">${[...joueurs].sort(parNom).map((e) => option(e.id, e.nom, enJeu.has(e.id) ? ' (joue)' : '')).join('')}${horsListe.map((p) => option(`p:${p.id}`, p.nom)).join('')}</optgroup>
+      ${groupesAutres.join('')}
+    </select></label>`;
+}
+
+/* Choisir qui joue sur ce lieu. */
+function panneauChoix(t, table, i) {
+  const pr = profil(t.apsa);
+  const lieu = `${pr.lieu.toLowerCase()} ${i + 1}`;
+  if (t.formule === 'qpr') {
+    const ici = [table.a, table.b].filter(Boolean);
+    const options = [...ici, ...t.file];
+    if (options.length < 2) {
+      return `<div class="tn-choix"><p class="aide">Pas assez de joueurs disponibles : il faut des joueurs dans la file d'attente.</p><button class="btn-mini" data-action="tn-annuler">Fermer</button></div>`;
+    }
+    const prop = proposition(t, i);
+    const defA = table.a || prop?.a || options[0];
+    const defB = table.a && table.b ? table.b : [prop?.b, ...options].find((x) => x && x !== defA);
+    const note = (id) => (id === table.reste ? ' (a perdu, reste ici)' : ici.includes(id) ? ' (sur ce lieu)' : ` (file n° ${t.file.indexOf(id) + 1})`);
+    const liste = (id, defaut) =>
+      `<select id="${id}" aria-label="Joueur">${options.map((o) => `<option value="${esc(o)}" ${o === defaut ? 'selected' : ''}>${esc(nomParticipant(t, o))}${note(o)}</option>`).join('')}</select>`;
+    return `<div class="tn-choix"><p class="aide">Qui joue sur ${lieu} ?</p>
+      <div class="tn-score">${liste('tn-choix-a', defA)}<b>–</b>${liste('tn-choix-b', defB)}</div>
+      <div class="rangee"><button class="btn" data-action="tn-prendre-joueurs" data-lieu="${i}">▶ Faire jouer</button><button class="btn-mini" data-action="tn-annuler">Annuler</button></div></div>`;
+  }
+  const possibles = rencontresPossibles(t, i);
+  const phase = (m) => (m.phase === 'tableau' ? nomTour(t, m.tour) : m.phase === 'poule' ? `Poule ${String.fromCharCode(65 + m.poule)}` : '');
+  return `<div class="tn-choix"><p class="aide">Quelle rencontre sur ${lieu} ?</p>
+    ${possibles.length
+      ? `<div class="tn-choix-liste">${possibles.map((m) => `<button class="btn secondaire" data-action="tn-prendre" data-lieu="${i}" data-id="${esc(m.id)}"><b>${esc(nomParticipant(t, m.a))}</b> – <b>${esc(nomParticipant(t, m.b))}</b> <small>${phase(m)}</small></button>`).join('')}</div>`
+      : '<p class="tn-vide">Aucune rencontre possible : les joueurs restants sont occupés ou absents.</p>'}
+    <button class="btn-mini" data-action="tn-annuler">Annuler</button></div>`;
+}
+
+/* Proposition et boutons d'un lieu qui attend des joueurs. */
+function boutonsAppel(t, i, texteChoisir) {
+  const prop = proposition(t, i);
+  const quoi = prop ? (t.formule === 'qpr' && (t.tables[i].a || t.tables[i].b) ? `Faire venir ${esc(nomParticipant(t, [prop.a, prop.b].find((x) => x !== t.tables[i].a && x !== t.tables[i].b)))}` : `Lancer ${esc(nomParticipant(t, prop.a))} – ${esc(nomParticipant(t, prop.b))}`) : '';
+  return `<div class="rangee">${prop ? `<button class="btn" data-action="tn-appeler" data-lieu="${i}">▶ ${quoi}</button>` : ''}
+    <button class="btn secondaire" data-action="tn-choisir" data-lieu="${i}">✋ ${texteChoisir}</button></div>`;
+}
+
 function carteLieu(t, table, i) {
   const pr = profil(t.apsa);
   const statut = etatLieu(t, table);
   const m = table.matchId ? t.matchs.find((x) => x.id === table.matchId) : null;
   const a = m ? m.a : table.a;
   const b = m ? m.b : table.b;
-  let corps = '';
-  let temps = '';
-  if (statut === 'libre') {
-    temps = chrono({ tnDepuis: table.depuis || 0 });
-    corps = `<p class="tn-vide">${t.formule === 'qpr' ? 'Personne dans la file d’attente' : 'Aucune rencontre ne peut être appelée ici pour l’instant'}</p>`;
+  /* Qui perd reste : le perdant reste affiché sur son lieu, avec un repère. */
+  const nom = (id) => `<span class="tn-nom-bloc">${noms(t, id)}${id && id === table.reste ? '<small class="tn-reste">🔁 a perdu, reste ici</small>' : ''}</span>`;
+  let corps;
+  if (local.choix === i) {
+    corps = panneauChoix(t, table, i);
+  } else if (statut === 'libre') {
+    const prop = proposition(t, i);
+    corps = `${prop ? '' : `<p class="tn-vide">${t.formule === 'qpr' ? 'Personne dans la file d’attente' : 'Aucune rencontre ne peut être appelée ici pour l’instant'}</p>`}
+      ${boutonsAppel(t, i, 'Choisir qui joue')}`;
   } else if (statut === 'manque') {
     if (m) {
       const absents = [a, b].filter((id) => participant(t, id)?.absent);
-      corps = `<div class="tn-face">${noms(t, a)}<span class="tn-contre">contre</span>${noms(t, b)}</div>
+      corps = `<div class="tn-face">${nom(a)}<span class="tn-contre">contre</span>${nom(b)}</div>
         <p class="tn-alerte">⛔ ${absents.map((id) => esc(nomParticipant(t, id))).join(' et ')} absent${absents.length > 1 ? 's' : ''}</p>
-        <button class="btn secondaire" data-action="tn-reporter" data-lieu="${i}">↩ Reporter cette rencontre</button>`;
+        <div class="rangee"><button class="btn secondaire" data-action="tn-reporter" data-lieu="${i}">↩ Reporter</button>
+        <button class="btn secondaire" data-action="tn-choisir" data-lieu="${i}">✋ Autre rencontre</button></div>`;
     } else {
-      temps = chrono({ tnDepuis: table.depuis || 0 });
-      corps = `<div class="tn-face">${noms(t, a || b)}<span class="tn-contre">attend</span><span class="tn-place-vide">?</span></div>
-        <p class="aide">Le prochain de la file viendra ici${t.file.length ? '' : ' (file vide pour l’instant)'}.</p>`;
+      corps = `<div class="tn-face">${nom(a || b)}<span class="tn-contre">attend</span><span class="tn-place-vide">?</span></div>
+        ${boutonsAppel(t, i, 'Choisir l’adversaire')}`;
     }
   } else {
-    temps = chrono({ tnDebut: m ? m.debut : table.debut, tnDuree: t.reglages.duree || 0 });
     const phase = m?.phase === 'tableau' ? `<small class="tn-phase">${nomTour(t, m.tour)}</small>` : m?.phase === 'poule' ? `<small class="tn-phase">Poule ${String.fromCharCode(65 + m.poule)}</small>` : '';
     corps =
       local.saisie === i
         ? panneauScore(t, a, b, m?.phase || 'qpr', { lieu: i })
-        : `${phase}<div class="tn-face">${noms(t, a)}<span class="tn-contre">contre</span>${noms(t, b)}</div>
+        : `${phase}<div class="tn-face">${nom(a)}<span class="tn-contre">contre</span>${nom(b)}</div>
           <div class="rangee"><button class="btn" data-action="tn-score" data-lieu="${i}">✅ Résultat</button>
+          <button class="btn-mini" data-action="tn-choisir" data-lieu="${i}">🔄 Changer</button>
           ${m ? `<button class="btn-mini" data-action="tn-reporter" data-lieu="${i}">↩ Reporter</button>` : ''}</div>`;
   }
   return `<div class="tn-lieu ${statut}">
-    <div class="tn-lieu-tete"><b>${pr.lieu} ${i + 1}</b><span class="tn-statut">${STATUTS[statut]}</span>${temps}</div>
+    <div class="tn-lieu-tete"><b>${pr.lieu} ${i + 1}</b><span class="tn-statut">${STATUTS[statut]}</span></div>
     ${corps}
+    ${choixArbitre(t, table, i)}
   </div>`;
 }
-
 /* Ce qui attend : file (qui perd reste) ou prochaines rencontres (autres formules). */
 function blocAttente(t) {
   if (t.formule === 'qpr') {
@@ -600,6 +688,7 @@ function ongletLieux(t) {
       <span class="tn-badge manque">🟠 ${compte('manque')} manque un joueur</span>
       <span class="tn-badge libre">🟢 ${compte('libre')} libre${compte('libre') > 1 ? 's' : ''}</span>
       <span class="tn-badge">⏳ ${attente} en attente</span>
+      <button class="btn-mini" data-action="tn-auto" aria-pressed="${t.auto !== false}">${t.auto !== false ? '🤖 Appel automatique' : '✋ Appel au choix'}</button>
       <span class="tn-compteur petit">${pr.lieux} : <button class="btn-rond" aria-label="Un de moins" data-action="tn-lieux" data-pas="-1" ${t.lieux <= 1 ? 'disabled' : ''}>−</button><b>${t.lieux}</b><button class="btn-rond" aria-label="Un de plus" data-action="tn-lieux" data-pas="1">+</button></span>
     </div>
     ${tableauAPreparer ? `<div class="carte tn-annonce"><b>🧩 Toutes les rencontres de poule sont jouées.</b> Les ${t.reglages.qualifies} premiers de chaque poule passent dans le tableau final.<button class="btn" data-action="tn-tableau">🏆 Lancer le tableau final</button></div>` : ''}
@@ -618,7 +707,7 @@ function ligneRencontre(t, m) {
   const score = m.etat === 'fini' && (m.sa != null || m.sb != null) ? `${m.sa ?? '–'} – ${m.sb ?? '–'}` : m.gagnant === 'nul' ? 'nul' : '–';
   const etatTexte = m.etat === 'enjeu' ? `🔵 ${pr.lieu} ${m.table + 1}` : m.etat === 'fini' ? '' : '⏳';
   return `<li class="tn-rencontre ${m.etat}">
-    <span class="tn-r-phase">${phase}</span>
+    <span class="tn-r-phase">${phase}${m.arbitre ? `<small class="tn-r-arbitre">🧑‍⚖️ ${esc(m.arbitre)}</small>` : ''}</span>
     <span class="tn-r-a">${gras('a', nomCote('a'))}</span><span class="tn-r-score">${m.etat === 'fini' ? score : etatTexte}</span><span class="tn-r-b">${gras('b', nomCote('b'))}</span>
     ${m.etat === 'fini' && !t.termine ? `<button class="btn-mini" data-action="tn-corriger" data-id="${esc(m.id)}" aria-label="Corriger">✏️</button>` : '<span></span>'}
   </li>`;
@@ -716,7 +805,7 @@ function ongletJoueurs(t) {
 function vueTournoi(t) {
   const pr = profil(t.apsa);
   const r = t.reglages;
-  const regles = [r.points ? `rencontre en ${r.points} ${pr.unite}` : '', r.duree ? `${Math.round(r.duree / 60)} min par rencontre` : '', t.progression ? '📈 Progression' : ''].filter(Boolean).join(' · ');
+  const regles = [r.points ? `rencontre en ${r.points} ${pr.unite}` : '', t.progression ? '📈 Progression' : ''].filter(Boolean).join(' · ');
   const onglets = [
     ['lieux', `${iconeApsa(t.apsa)} ${pr.lieux}`],
     ['rencontres', '📋 Rencontres'],

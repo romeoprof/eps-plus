@@ -1114,4 +1114,13 @@ body.sombre .titre-famille.ardoise, body.sombre .tuile-apsa.ardoise { --couleur:
 @media (max-width: 600px) {
   .tn-rencontre { grid-template-columns: 1fr auto 1fr auto; }
   .tn-r-phase { grid-column: 1 / -1; }
-}
+}.tn-nom-bloc { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.tn-reste { padding: 2px 8px; background: var(--teinte-orange); border: 2px solid var(--orange); border-radius: 999px; color: var(--orange); font-size: .75rem; font-weight: 900; }
+.tn-arbitre { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 8px; border-top: 1px dashed var(--bordure); font-weight: 800; font-size: .88rem; }
+.tn-arbitre select { flex: 1; min-width: 0; margin: 0; }
+.tn-choix { display: flex; flex-direction: column; gap: 8px; }
+.tn-choix select { margin: 0; min-width: 0; }
+.tn-choix-liste { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
+.tn-choix-liste .btn { text-align: left; }
+.tn-choix-liste small { color: var(--violet); font-weight: 800; }
+.tn-r-arbitre { display: block; color: var(--texte-doux); font-weight: 700; }

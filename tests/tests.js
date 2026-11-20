@@ -60,6 +60,11 @@ import {
   ordreTableau,
   reporter as tnReporter,
   toutesLesRencontres,
+  appeler as tnAppeler,
+  choisirArbitre,
+  choisirJoueurs,
+  choisirRencontre,
+  proposition as tnProposition,
 } from '../src/tournoi/calculs.js';
 import { aRetirer, bornerEcart, rangAAfficher, remplissage } from '../src/utilitaires/differe.js';
 import { angleDegres, brasPropose, deplacer, poigneeTouchee, traceTouche } from '../src/utilitaires/dessin.js';
@@ -1237,6 +1242,51 @@ test('Tournoi : résultats dans la Progression, au choix, et dans le dossier de 
   t.progression = false;
   tnProgression(etat, t);
   egal(etat.resTournois.length, 0);
+});
+
+test('Tournoi : arbitre par lieu, gardé d’une rencontre à l’autre et noté sur la rencontre', () => {
+  const t = tournoi('championnat', 4, 2);
+  choisirArbitre(t, 0, { id: 'e9', nom: 'Zoé V.' });
+  tnResultat(t, 0, { gagnant: 'a' }, 2000);
+  egal(t.matchs.find((m) => m.etat === 'fini').arbitre, 'Zoé V.');
+  egal(t.tables[0].arbitre.nom, 'Zoé V.');
+  choisirArbitre(t, 0, null);
+  egal(t.tables[0].arbitre, null);
+});
+
+test('Tournoi : appel au choix, proposition et choix de la rencontre d’un lieu libre', () => {
+  const t = tournoi('championnat', 6, 3, { auto: false });
+  egal(t.matchs.filter((m) => m.etat === 'enjeu').length, 3); // au départ, chaque lieu est rempli
+  tnResultat(t, 0, { gagnant: 'a' }, 2000);
+  egal(etatLieu(t, t.tables[0]), 'libre'); // rien n'est appelé sans le demander
+  egal(tnProposition(t, 0), null); // les deux joueurs libres viennent de jouer ensemble
+  tnResultat(t, 1, { gagnant: 'a' }, 2100);
+  const prop = tnProposition(t, 0);
+  vrai(prop && prop.a && prop.b, 'pas de proposition');
+  egal(etatLieu(t, t.tables[0]), 'libre'); // une proposition ne change rien
+  const libres = t.matchs.filter((m) => m.etat === 'attente' && ![t.tables[2].matchId].includes(m.id));
+  const choisie = libres.find((m) => (m.a !== prop.a || m.b !== prop.b) && t.matchs.filter((x) => x.etat === 'enjeu').every((x) => ![x.a, x.b].includes(m.a) && ![x.a, x.b].includes(m.b)));
+  vrai(choisie, 'aucune autre rencontre possible');
+  vrai(choisirRencontre(t, 0, choisie.id, 2200), 'choix refusé');
+  egal(t.tables[0].matchId, choisie.id);
+  /* « Lancer » sur un lieu : la rencontre proposée y est appelée. */
+  const prop1 = tnProposition(t, 1);
+  egal(tnAppeler(t, 1, 2300).length, prop1 ? 1 : 0);
+});
+
+test('Tournoi qui perd reste : le perdant reste affiché, on peut choisir son adversaire', () => {
+  const t = tournoi('qpr', 5, 2, { auto: false });
+  const [a, b] = [t.tables[0].a, t.tables[0].b];
+  tnResultat(t, 0, { gagnant: 'b' }, 2000);
+  egal(t.tables[0].a, a); // le perdant est toujours sur son lieu
+  egal(t.tables[0].reste, a);
+  egal(t.tables[0].b, null); // appel au choix : on attend
+  egal(t.file, [t.file[0], b]);
+  const autre = t.file[0];
+  vrai(choisirJoueurs(t, 0, a, b, 2100), 'choix refusé'); // revanche choisie à la main
+  egal([t.tables[0].a, t.tables[0].b], [a, b]);
+  egal(t.file, [autre]);
+  egal(choisirJoueurs(t, 0, a, a), false);
 });
 
 test('QR codes : découpage, ordre quelconque et assemblage', () => {
