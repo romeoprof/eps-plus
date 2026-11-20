@@ -1,7 +1,7 @@
 /*
  * Dossier d'un élève : uniquement ce qui le concerne, pour le lui envoyer depuis le serveur.
  * Ses rencontres (avec les noms des équipes), ses courses (sans les temps des autres coureurs),
- * ses tests VMA, ses temps PhotoFinish, son carnet de cirque et les troupes dont il fait partie.
+ * ses tests VMA, ses temps PhotoFinish, ses résultats de tournoi, son carnet de cirque et les troupes dont il fait partie.
  * Rien d'autre : pas les autres élèves, pas leurs codes, pas leurs carnets.
  */
 import { paquetCirque } from '../../cirque/calculs.js';
@@ -37,6 +37,7 @@ export function dossierEleve(etat, idEleve, maintenant = Date.now()) {
     courses,
     testsVma: (etat.testsVma || []).filter((t) => t.eleveId === idEleve),
     tempsPf: (etat.tempsPf || []).filter((t) => t.eleveId === idEleve),
+    resTournois: (etat.resTournois || []).filter((r) => r.eleveId === idEleve),
     cirque: { troupes, carnets: cirque.carnets[idEleve] ? { [idEleve]: cirque.carnets[idEleve] } : {} },
   };
 }

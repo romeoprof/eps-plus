@@ -26,6 +26,10 @@ export const etatInitial = () => ({
   codesEleves: {}, // codes à 4 chiffres lisibles : seulement sur la tablette enseignant
   masques: {}, // identifiants supprimés sur cette tablette (gardés sur le serveur) : voir masques.js
   cirque: { troupes: [], carnets: {}, troupeCourante: null }, // arts du cirque : voir src/cirque/calculs.js
+  tournois: [], // générateur de tournoi : voir src/tournoi/calculs.js
+  tournoiCourant: null,
+  tournoiPrep: null, // tournoi en préparation (choix de l'APSA, des participants…)
+  resTournois: [], // résultats de tournoi par élève : { id, tournoiId, eleveId, nom, classe, date, apsa, rang, v, n, d, rencontres }
   tempsPf: [], // temps PhotoFinish attribués : { id, courseId, eleveId, nom, classe, date, libelle, t, rang, partants }
   /* null = valeur réglée dans l'espace enseignant */
   prepCourse: { selection: [], pct: {}, type: null, distance: null, duree: null, plots: null, tolerance: null },

@@ -30,6 +30,8 @@ export function paquetResultats(etat, maintenant = Date.now()) {
   testsVma.forEach((t) => idsEleves.add(t.eleveId));
   const tempsPf = etat.tempsPf || [];
   tempsPf.forEach((t) => idsEleves.add(t.eleveId));
+  const resTournois = etat.resTournois || [];
+  resTournois.forEach((r) => idsEleves.add(r.eleveId));
   const cirque = paquetCirque(etat);
   elevesCirque(etat).forEach((id) => idsEleves.add(id));
   return {
@@ -39,6 +41,7 @@ export function paquetResultats(etat, maintenant = Date.now()) {
     courses,
     testsVma,
     tempsPf,
+    resTournois,
     cirque,
     equipes,
     poules: etat.poules.filter((p) => idsPoules.has(p.id)),
@@ -52,6 +55,7 @@ export const aDesResultats = (etat) =>
   (etat.courses || []).some(courseAvecDonnees) ||
   (etat.testsVma || []).length > 0 ||
   (etat.tempsPf || []).length > 0 ||
+  (etat.resTournois || []).length > 0 ||
   (etat.cirque?.troupes || []).length > 0 ||
   Object.keys(paquetCirque(etat).carnets).length > 0;
 
@@ -66,6 +70,22 @@ function fusionnerTempsPf(etat, paquet, bilan) {
   recus.forEach((t) => {
     if (avant.has(t.id)) bilan.dejaPresents += 1;
     else bilan.ajoutes += 1;
+  });
+}
+
+/* Résultats de tournoi : la version reçue d'un tournoi remplace celle de cette tablette
+   (le tournoi a pu continuer après un premier envoi). */
+function fusionnerResTournois(etat, paquet, bilan) {
+  const recus = paquet.resTournois || [];
+  if (!recus.length) return;
+  const tournois = new Set(recus.map((r) => r.tournoiId));
+  const avant = new Map((etat.resTournois || []).map((r) => [r.id, r]));
+  etat.resTournois = [...(etat.resTournois || []).filter((r) => !tournois.has(r.tournoiId)), ...recus];
+  recus.forEach((r) => {
+    const ancien = avant.get(r.id);
+    if (!ancien) bilan.ajoutes += 1;
+    else if (JSON.stringify(ancien) === JSON.stringify(r)) bilan.dejaPresents += 1;
+    else bilan.misAJour += 1;
   });
 }
 
@@ -157,6 +177,7 @@ export function fusionnerResultats(etat, paquetRecu) {
   fusionnerCourses(etat, paquet, bilan);
   fusionnerTestsVma(etat, paquet, bilan);
   fusionnerTempsPf(etat, paquet, bilan);
+  fusionnerResTournois(etat, paquet, bilan);
   fusionnerCirque(etat, paquet.cirque, bilan);
   reparerDoublons(etat);
   return bilan;

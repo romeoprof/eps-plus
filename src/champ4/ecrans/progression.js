@@ -10,6 +10,7 @@ import { ETAPES, EVALUATIONS, FAMILLES_CIRQUE } from '../../cirque/contenu.js';
 import { meilleurNiveau, suiviCirque } from '../../cirque/calculs.js';
 import { resumeCarnet } from '../../cirque/ecran.js';
 import { dateCourte } from '../../demifond/etat.js';
+import { FORMULES, resTournoisEleve } from '../../tournoi/calculs.js';
 import { APSA, NIVEAUX_PROJET } from '../contenu/apsa.js';
 import { bonusContrat, elevesSuivis, suiviEleve } from '../calculs/progression.js';
 import { nomCote } from '../reglages.js';
@@ -166,6 +167,26 @@ function cartePhotofinish(temps) {
   </div>`;
 }
 
+/* Bloc Tournois : rang, bilan et rencontres de l'élève dans chaque tournoi. */
+function carteTournois(resultats) {
+  const blocs = resultats
+    .map((r) => {
+      const lignes = r.rencontres
+        .map((x) => `<tr><td>${x.resultat === 'V' ? '✅ V' : x.resultat === 'D' ? '❌ D' : '🤝 N'}</td><td>${esc(x.adversaire)}</td><td>${x.pour ?? '–'} – ${x.contre ?? '–'}</td><td>${esc(x.phase || '')}</td></tr>`)
+        .join('');
+      const rang = r.rang ? `${r.rang === 1 ? '🥇 ' : r.rang === 2 ? '🥈 ' : r.rang === 3 ? '🥉 ' : ''}${r.rang}${r.rang === 1 ? 'er' : 'e'} / ${r.participants}` : 'en cours';
+      return `<h4>${APSA[r.apsa]?.icone && !APSA[r.apsa].icone.startsWith('<') ? APSA[r.apsa].icone : '🏆'} ${esc(r.libelle)} <small>· ${dateCourte(r.date)} · ${FORMULES[r.formule]?.nom || ''}${r.equipe ? ` · avec ${esc(r.equipe)}` : ''}</small></h4>
+        <div class="tuiles-stats"><div class="tuile-stat"><b>${rang}</b><span>${r.termine ? 'classement final' : 'classement provisoire'}</span></div>
+          <div class="tuile-stat"><b>${r.v} / ${r.n} / ${r.d}</b><span>V / N / D</span></div></div>
+        ${lignes ? `<div class="defile"><table><tr><th>Résultat</th><th>Adversaire</th><th>Score</th><th></th></tr>${lignes}</table></div>` : ''}`;
+    })
+    .join('');
+  return `<div class="carte">
+    <h2 class="carte-titre"><span class="icone-titre">🏆</span> Tournois <small>${resultats.length} tournoi${resultats.length > 1 ? 's' : ''}</small></h2>
+    ${blocs}
+  </div>`;
+}
+
 /* Bloc Arts du cirque : carnet d'artiste (meilleur niveau par famille) et étapes chorégraphiées. */
 function carteCirque(cq) {
   const c = cq.carnet;
@@ -198,6 +219,7 @@ function activitesEleve(eleve) {
   if (testsVmaEleve(etat, eleve.id).length) liste.push({ id: 'testvma', libelle: '📈 Tests VMA' });
   if (tempsPfEleve(etat, eleve.id).length) liste.push({ id: 'photofinish', libelle: '📸 PhotoFinish' });
   if (suiviCirque(etat, eleve.id)) liste.push({ id: 'cirque', libelle: '🎪 Arts du cirque' });
+  if (resTournoisEleve(etat, eleve.id).length) liste.push({ id: 'tournois', libelle: '🏆 Tournois' });
   return liste;
 }
 
@@ -208,16 +230,18 @@ export function vueEleve(eleve, apsa = '') {
   const tests = testsVmaEleve(etat, eleve.id);
   const temps = tempsPfEleve(etat, eleve.id);
   const cq = suiviCirque(etat, eleve.id);
-  if (!suivi.rencontres && !df.courses && !tests.length && !temps.length && !cq) {
+  const tournois = resTournoisEleve(etat, eleve.id);
+  if (!suivi.rencontres && !df.courses && !tests.length && !temps.length && !cq && !tournois.length) {
     return `<div class="carte centre"><p class="aide">Aucun résultat pour ${esc(eleve.nom)} sur cette tablette.</p></div>`;
   }
   if (apsa === 'cirque') return cq ? carteCirque(cq) : '';
+  if (apsa === 'tournois') return tournois.length ? carteTournois(tournois) : '';
   if (apsa === 'demifond') return df.courses ? carteDemifond(df) : '';
   if (apsa === 'testvma') return tests.length ? carteTestsVma(tests) : '';
   if (apsa === 'photofinish') return temps.length ? cartePhotofinish(temps) : '';
   if (apsa) return suivi.sports.filter((s) => s.apsa === apsa).map(carteSport).join('');
   const tuile = (valeur, libelle) => `<div class="tuile-stat"><b>${valeur}</b><span>${libelle}</span></div>`;
-  const nbSports = suivi.sports.length + (df.courses ? 1 : 0) + (tests.length ? 1 : 0) + (temps.length ? 1 : 0) + (cq ? 1 : 0);
+  const nbSports = suivi.sports.length + (df.courses ? 1 : 0) + (tests.length ? 1 : 0) + (temps.length ? 1 : 0) + (cq ? 1 : 0) + (tournois.length ? 1 : 0);
   return `
     <div class="tuiles-stats">
       ${tuile(nbSports, nbSports > 1 ? 'sports' : 'sport')}
@@ -231,6 +255,7 @@ export function vueEleve(eleve, apsa = '') {
     ${tests.length ? carteTestsVma(tests) : ''}
     ${temps.length ? cartePhotofinish(temps) : ''}
     ${cq ? carteCirque(cq) : ''}
+    ${tournois.length ? carteTournois(tournois) : ''}
     ${suivi.sports.map(carteSport).join('')}
     ${df.courses ? carteDemifond(df) : ''}`;
 }

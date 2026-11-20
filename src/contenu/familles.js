@@ -39,6 +39,9 @@ export const FAMILLES = [
   {
     titre: 'Utilitaires',
     couleur: 'ardoise',
-    activites: [{ nom: 'Vidéo laps', icone: '🎥', module: 'videolaps' }],
+    activites: [
+      { nom: 'Vidéo laps', icone: '🎥', module: 'videolaps' },
+      { nom: 'Tournoi', icone: '🏆', module: 'tournoi' },
+    ],
   },
 ];

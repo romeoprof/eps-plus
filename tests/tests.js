@@ -49,6 +49,18 @@ import { feuillesStats } from '../src/champ4/donnees/export.js';
 import { crc32, creerClasseur } from '../src/noyau/classeur.js';
 import { dossierEleve } from '../src/champ4/donnees/dossier.js';
 import { masquer } from '../src/champ4/donnees/masques.js';
+import {
+  basculerAbsent as tnAbsent,
+  classementGeneral as tnClassement,
+  creerTournoi,
+  enregistrerDansProgression as tnProgression,
+  enregistrerResultat as tnResultat,
+  etatLieu,
+  lancerTableauFinal,
+  ordreTableau,
+  reporter as tnReporter,
+  toutesLesRencontres,
+} from '../src/tournoi/calculs.js';
 import { aRetirer, bornerEcart, rangAAfficher, remplissage } from '../src/utilitaires/differe.js';
 import { angleDegres, brasPropose, deplacer, poigneeTouchee, traceTouche } from '../src/utilitaires/dessin.js';
 import {
@@ -1083,6 +1095,148 @@ test('Observateurs : un par équipe, choisi sans s’identifier', () => {
   egal(observateurDuCote(m, 1), 'Enseignant'); // pas d'observateur choisi : celui qui tenait la tablette
   egal(observateursDuMatch(m), 'Tom D. / Enseignant');
   egal(suiviEleve(etat, 'e1').sports[0].observateurs, ['Tom D.']); // Léa (équipe A) a été observée par Tom
+});
+
+/* Tournois : hasard fixe pour des tests reproductibles. */
+const sansHasard = () => 0.5;
+const joueursTn = (n) => Array.from({ length: n }, (_, i) => ({ nom: `J${i + 1}`, membres: [`e${i + 1}`] }));
+const tournoi = (formule, n, lieux, autres = {}) =>
+  creerTournoi({ apsa: 'Tennis de table', formule, mode: 'simple', lieux, participants: joueursTn(n), ...autres }, 1000, sansHasard);
+const nomsSur = (t, table) => [table.a, table.b].map((id) => t.participants.find((p) => p.id === id)?.nom || null);
+
+test('Tournoi qui perd reste : le perdant reste, le gagnant va au bout de la file', () => {
+  const t = tournoi('qpr', 5, 2);
+  egal(t.tables.map((x) => etatLieu(t, x)), ['enjeu', 'enjeu']);
+  egal(t.file.length, 1);
+  const [a, b] = [t.tables[0].a, t.tables[0].b];
+  const attend = t.file[0];
+  const appels = tnResultat(t, 0, { sa: 11, sb: 7 }, 2000);
+  egal(appels.length, 1);
+  egal(t.tables[0].a, b); // le perdant est resté
+  egal(t.tables[0].b, attend); // le premier de la file l'a rejoint
+  egal(t.file, [a]); // le gagnant attend son tour
+  egal(tnClassement(t)[0].id, a);
+});
+
+test('Tournoi qui perd reste : il manque un joueur, puis les tables seules sont regroupées', () => {
+  const t = tournoi('qpr', 4, 2);
+  const gagnant = t.tables[0].a;
+  tnResultat(t, 0, { gagnant: 'a' }, 2000);
+  /* File : seulement le gagnant ; il ne rejoue pas tout de suite son adversaire pendant que la table 2 joue. */
+  egal(etatLieu(t, t.tables[0]), 'manque');
+  egal(t.file, [gagnant]);
+  tnResultat(t, 1, { gagnant: 'b' }, 3000);
+  /* Le gagnant de la table 2 sort : chacun retrouve un nouvel adversaire. */
+  egal(t.tables.map((x) => etatLieu(t, x)), ['enjeu', 'enjeu']);
+  egal(t.file, []);
+  vrai(t.matchs.length === 2 && t.matchs.every((m) => m.etat === 'fini'), 'rencontres enregistrées');
+  /* 3 joueurs, 2 tables : le gagnant va sur la table où un joueur attend, pas en revanche. */
+  const u = tournoi('qpr', 3, 2);
+  egal(u.tables.map((x) => etatLieu(u, x)), ['enjeu', 'manque']);
+  const seul = u.tables[1].a;
+  const g = u.tables[0].a;
+  tnResultat(u, 0, { gagnant: 'a' }, 2000);
+  egal(nomsSur(u, u.tables[1]), [seul, g].map((id) => u.participants.find((p) => p.id === id).nom));
+  egal(etatLieu(u, u.tables[0]), 'manque');
+  /* Un joueur seul quand son adversaire part : la table attend un joueur. */
+  const v = tournoi('qpr', 2, 3);
+  egal(v.tables.map((x) => etatLieu(v, x)), ['enjeu', 'libre', 'libre']);
+  tnAbsent(v, v.tables[0].a, 2000);
+  egal(etatLieu(v, v.tables[0]), 'manque');
+});
+
+test('Tournoi qui perd reste : un absent quitte sa table et revient au bout de la file', () => {
+  const t = tournoi('qpr', 5, 2);
+  const absent = t.tables[1].b;
+  tnAbsent(t, absent, 1500);
+  vrai(!t.tables.some((x) => x.a === absent || x.b === absent), 'absent encore sur une table');
+  egal(etatLieu(t, t.tables[1]), 'enjeu'); // le joueur en attente l'a remplacé
+  tnAbsent(t, absent, 1600);
+  egal(t.file[t.file.length - 1], absent);
+});
+
+test('Tournoi championnat : tous contre tous, une rencontre par table libre, jamais deux à la fois', () => {
+  egal(toutesLesRencontres(['a', 'b', 'c', 'd']).length, 6);
+  egal(toutesLesRencontres(['a', 'b', 'c']).length, 3);
+  const t = tournoi('championnat', 6, 4);
+  egal(t.matchs.length, 15);
+  const enJeu = t.matchs.filter((m) => m.etat === 'enjeu');
+  egal(enJeu.length, 3); // 6 joueurs : 3 rencontres au plus, une table reste libre
+  egal(new Set(enJeu.flatMap((m) => [m.a, m.b])).size, 6);
+  egal(etatLieu(t, t.tables[3]), 'libre');
+  /* Nul refusé au tennis de table. */
+  egal(tnResultat(t, 0, { sa: 5, sb: 5 }, 2000), null);
+  tnResultat(t, 0, { sa: 11, sb: 5 }, 2000);
+  /* Les deux joueurs libérés viennent de jouer ensemble et les autres sont occupés : la table reste libre. */
+  egal(t.matchs.filter((m) => m.etat === 'enjeu').length, 2);
+  egal(t.matchs.filter((m) => m.etat === 'fini').length, 1);
+});
+
+test('Tournoi : un joueur absent bloque sa table, la rencontre peut être reportée', () => {
+  const t = tournoi('championnat', 4, 2);
+  const m = t.matchs.find((x) => x.table === 0);
+  tnAbsent(t, m.a, 1500);
+  egal(etatLieu(t, t.tables[0]), 'manque');
+  tnReporter(t, 0, 1600);
+  egal(m.etat, 'attente');
+  vrai(t.matchs.filter((x) => x.etat === 'enjeu').every((x) => x.a !== m.a && x.b !== m.a), 'absent appelé');
+});
+
+test('Tournoi à élimination : têtes de série, exempts et classement final', () => {
+  egal(ordreTableau(8), [1, 8, 4, 5, 2, 7, 3, 6]);
+  const t = tournoi('elimination', 5, 4);
+  const tour1 = t.matchs.filter((m) => m.phase === 'tableau' && m.tour === 0);
+  egal(tour1.filter((m) => m.exempt).length, 3); // 5 joueurs dans un tableau de 8 : 3 exempts
+  let garde = 0;
+  while (t.matchs.some((m) => m.etat === 'enjeu') && garde < 10) {
+    const i = t.tables.findIndex((x) => x.matchId);
+    tnResultat(t, i, { gagnant: 'a', sa: 11, sb: 3 }, 2000 + garde);
+    garde += 1;
+  }
+  egal(garde, 4); // 5 joueurs : 4 rencontres jouées
+  const c = tnClassement(t);
+  egal(c[0].rang, 1);
+  egal(c[1].rang, 2);
+  egal(c.filter((x) => x.rang === 3).length, 2);
+});
+
+test('Tournoi poules puis tableau : les premiers de poule passent au tableau final', () => {
+  const t = tournoi('poules', 8, 4, { nbPoules: 2, qualifies: 2 });
+  egal(t.poules.map((p) => p.length), [4, 4]);
+  egal(lancerTableauFinal(t, 3000), false); // poules pas finies
+  let garde = 0;
+  while (t.matchs.some((m) => m.etat !== 'fini') && garde < 40) {
+    const i = t.tables.findIndex((x) => x.matchId);
+    if (i < 0) break;
+    tnResultat(t, i, { gagnant: 'a' }, 2000 + garde);
+    garde += 1;
+  }
+  egal(garde, 12);
+  vrai(lancerTableauFinal(t, 5000), 'tableau non lancé');
+  egal(t.matchs.filter((m) => m.phase === 'tableau').length, 3); // demies + finale
+  const demies = t.matchs.filter((m) => m.phase === 'tableau' && m.tour === 0);
+  demies.forEach((m) => vrai(t.poules.findIndex((p) => p.includes(m.a)) !== t.poules.findIndex((p) => p.includes(m.b)), 'deux joueurs de la même poule en demie'));
+});
+
+test('Tournoi : résultats dans la Progression, au choix, et dans le dossier de l’élève seulement', () => {
+  const etat = etatInitial();
+  etat.eleves = [{ id: 'e1', nom: 'Léa M.', classe: '5A' }, { id: 'e2', nom: 'Tom D.', classe: '5A' }];
+  const t = creerTournoi({ apsa: 'Badminton', formule: 'qpr', mode: 'simple', lieux: 1, participants: [{ nom: 'Léa M.', membres: ['e1'] }, { nom: 'Tom D.', membres: ['e2'] }, { nom: 'Invité', membres: [] }] }, 1000, sansHasard);
+  tnResultat(t, 0, { gagnant: 'a', sa: 15, sb: 9 }, 2000);
+  tnProgression(etat, t);
+  egal(etat.resTournois.length, 2); // l'invité hors liste n'a pas de Progression
+  vrai(elevesSuivis(etat).some((e) => e.id === 'e1'), 'élève non suivi');
+  const d = dossierEleve(etat, 'e1');
+  egal(d.resTournois.map((r) => r.eleveId), ['e1']);
+  /* Sur une autre tablette : la fusion ajoute, sans doublon. */
+  const autre = etatInitial();
+  fusionnerResultats(autre, paquetResultats(etat));
+  fusionnerResultats(autre, paquetResultats(etat));
+  egal(autre.resTournois.length, 2);
+  /* Option décochée : rien dans la Progression. */
+  t.progression = false;
+  tnProgression(etat, t);
+  egal(etat.resTournois.length, 0);
 });
 
 test('QR codes : découpage, ordre quelconque et assemblage', () => {

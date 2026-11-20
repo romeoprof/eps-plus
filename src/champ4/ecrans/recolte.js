@@ -55,7 +55,9 @@ export function resumeResultats() {
   const courses = etat.courses.filter(courseAvecDonnees).length;
   const tests = (etat.testsVma || []).length;
   const temps = (etat.tempsPf || []).length;
-  return `${observes} match${observes > 1 ? 's' : ''} observé${observes > 1 ? 's' : ''}, ${courses} course${courses > 1 ? 's' : ''}, ${tests} test${tests > 1 ? 's' : ''} VMA et ${temps} temps PhotoFinish`;
+  const tournois = new Set((etat.resTournois || []).map((r) => r.tournoiId)).size;
+  const fin = tournois ? `, ${temps} temps PhotoFinish et ${tournois} tournoi${tournois > 1 ? 's' : ''}` : ` et ${temps} temps PhotoFinish`;
+  return `${observes} match${observes > 1 ? 's' : ''} observé${observes > 1 ? 's' : ''}, ${courses} course${courses > 1 ? 's' : ''}, ${tests} test${tests > 1 ? 's' : ''} VMA${fin}`;
 }
 
 /* Secours si le QR code ne passe pas : fichier chiffré envoyé par Drive, Quick Share ou e-mail. */

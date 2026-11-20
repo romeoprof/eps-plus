@@ -21,6 +21,7 @@ export function sansMasques(etat, paquet) {
     courses: (paquet.courses || []).filter(garder('courses')),
     testsVma: (paquet.testsVma || []).filter(garder('testsVma')),
     tempsPf: (paquet.tempsPf || []).filter((t) => !estMasque(etat, 'tempsPf', t.courseId)),
+    resTournois: (paquet.resTournois || []).filter((r) => !estMasque(etat, 'tournois', r.tournoiId)),
     cirque: paquet.cirque && { ...paquet.cirque, troupes: (paquet.cirque.troupes || []).filter(garder('troupes')) },
   };
 }

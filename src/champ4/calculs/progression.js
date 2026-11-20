@@ -13,6 +13,7 @@ export const elevesSuivis = (etat) => {
   );
   (etat.testsVma || []).forEach((t) => membres.add(t.eleveId));
   (etat.tempsPf || []).forEach((t) => membres.add(t.eleveId));
+  (etat.resTournois || []).forEach((r) => membres.add(r.eleveId));
   elevesCirque(etat).forEach((id) => membres.add(id));
   return etat.eleves.filter((e) => membres.has(e.id));
 };

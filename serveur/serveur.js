@@ -162,6 +162,7 @@ function resume() {
     courses: (etat.courses || []).map((c) => ({ id: c.id, date: c.finLe || c.depart, type: c.type, distance: c.distance, duree: c.duree, coureurs: c.coureurs.map((x) => x.nom).join(', ') })),
     testsVma: (etat.testsVma || []).map((t) => ({ id: t.id, date: t.date, nom: t.nom || nomEleve(t.eleveId), classe: t.classe, vma: t.vma, distance: t.distance })),
     tempsPf: (etat.tempsPf || []).map((t) => ({ id: t.id, date: t.date, nom: t.nom || nomEleve(t.eleveId), libelle: t.libelle, t: t.t, rang: t.rang })),
+    resTournois: (etat.resTournois || []).map((r) => ({ id: r.id, date: r.date, nom: r.nom || nomEleve(r.eleveId), classe: r.classe, apsa: r.apsa, libelle: r.libelle, rang: r.rang ? `${r.rang} / ${r.participants}` : 'en cours', bilan: `${r.v} V · ${r.n} N · ${r.d} D` })),
     troupes: (etat.cirque?.troupes || []).map((t) => ({ id: t.id, classe: t.classe, nom: t.nom, titre: t.titre, artistes: t.membres.length })),
     carnets: Object.keys(etat.cirque?.carnets || {}).map((id) => ({ id, nom: nomEleve(id) })),
   };
@@ -172,6 +173,7 @@ function supprimerDonnee(type, id) {
   else if (type === 'courses') etat.courses = (etat.courses || []).filter((c) => c.id !== id);
   else if (type === 'testsVma') etat.testsVma = (etat.testsVma || []).filter((t) => t.id !== id);
   else if (type === 'tempsPf') etat.tempsPf = (etat.tempsPf || []).filter((t) => t.id !== id);
+  else if (type === 'resTournois') etat.resTournois = (etat.resTournois || []).filter((r) => r.id !== id);
   else if (type === 'troupes') etat.cirque.troupes = etat.cirque.troupes.filter((t) => t.id !== id);
   else if (type === 'carnets') delete etat.cirque.carnets[id];
   else if (type === 'eleves') etat.eleves = etat.eleves.filter((e) => e.id !== id);
