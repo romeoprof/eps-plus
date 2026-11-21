@@ -1,7 +1,7 @@
 /* Fonctionnement hors connexion : réseau d'abord, copie locale si pas de réseau.
    Ajouter ici tout nouveau fichier de l'application, et changer VERSION. */
 const PREFIXE = 'eps-plus-';
-const VERSION = `${PREFIXE}41`;
+const VERSION = `${PREFIXE}42`;
 const FICHIERS = [
   './',
   'index.html',
@@ -9,6 +9,8 @@ const FICHIERS = [
   'icon-192.png',
   'icon-512.png',
   'styles/app.css',
+  'styles/apple.css',
+  'src/noyau/apple.js',
   'src/main.js',
   'src/contenu/familles.js',
   'src/contenu/logo.js',

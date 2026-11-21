@@ -23,6 +23,7 @@ import { vueVideolaps } from './utilitaires/videolaps.js';
 import { vueTournois } from './tournoi/ecran.js';
 import { chargerListe, connecterEnseignant, deconnecterServeur, demarrerSynchro, pastilleServeur, recupererTout, serveur } from './reseau/serveur.js';
 import { remplacerListe } from './champ4/donnees/doublons.js';
+import './noyau/apple.js'; // essai de design « Apple » (Handball seulement)
 
 const photofinishActif = () => coursePfEnCours() || photofinishEnAttente();
 const testVmaEnCours = () => !!etat.testVma.depart && !etat.testVma.arret;
@@ -274,8 +275,11 @@ definirDessin(() => {
   document.body.classList.toggle('sombre', etat.affichage.sombre);
   document.body.classList.toggle('grands', etat.affichage.grandsBoutons);
   document.body.classList.toggle('ecran-choix', vue.ecran === 'choix');
+  /* Essai de design « Apple » : seulement dans l'APSA Handball (voir styles/apple.css). */
+  document.body.classList.toggle('theme-apple', vue.ecran === 'champ4' && etat.apsa === 'Handball');
   /* La zone autour de l'application (barre d'état de l'iPad) suit le fond, clair ou sombre. */
-  const couleurFond = etat.affichage.sombre ? '#0f172a' : '#e8f4fd';
+  const apple = document.body.classList.contains('theme-apple');
+  const couleurFond = etat.affichage.sombre ? (apple ? '#000000' : '#0f172a') : apple ? '#f2f2f7' : '#e8f4fd';
   document.documentElement.style.background = couleurFond;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', couleurFond);
   /* Pendant une course, on masque l'en-tête pour laisser la place aux coureurs. */
