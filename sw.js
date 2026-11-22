@@ -1,7 +1,7 @@
-/* Fonctionnement hors connexion : rÃ©seau d'abord, copie locale si pas de rÃ©seau.
+/* Fonctionnement hors connexion : réseau d'abord, copie locale si pas de réseau.
    Ajouter ici tout nouveau fichier de l'application, et changer VERSION. */
 const PREFIXE = 'eps-plus-';
-const VERSION = `${PREFIXE}46`;
+const VERSION = `${PREFIXE}47`;
 const FICHIERS = [
   './',
   'index.html',
@@ -85,7 +85,7 @@ const FICHIERS = [
 ];
 
 self.addEventListener('install', (e) => {
-  /* Â« reload Â» : la copie hors connexion est prise sur le site, jamais dans le cache du navigateur. */
+  /* « reload » : la copie hors connexion est prise sur le site, jamais dans le cache du navigateur. */
   const requetes = FICHIERS.map((f) => new Request(f, { cache: 'reload' }));
   e.waitUntil(caches.open(VERSION).then((c) => c.addAll(requetes)).then(() => self.skipWaiting()));
 });
@@ -106,10 +106,10 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const adresse = new URL(e.request.url);
   if (e.request.method !== 'GET' || adresse.origin !== self.location.origin) return;
-  /* Les rÃ©ponses du serveur local (dossiers d'Ã©lÃ¨ves, rÃ©sultats) ne sont jamais gardÃ©es en copie. */
+  /* Les réponses du serveur local (dossiers d'élèves, résultats) ne sont jamais gardées en copie. */
   if (adresse.pathname.includes('/api/')) return;
-  /* Â« no-cache Â» : chaque fichier est revÃ©rifiÃ© sur le site. Sans cela, le navigateur garde
-     jusqu'Ã  10 minutes d'anciens fichiers, qui peuvent bloquer une nouvelle version. */
+  /* « no-cache » : chaque fichier est revérifié sur le site. Sans cela, le navigateur garde
+     jusqu'à 10 minutes d'anciens fichiers, qui peuvent bloquer une nouvelle version. */
   e.respondWith(
     fetch(e.request.url, { cache: 'no-cache', credentials: 'same-origin' })
       .then((reponse) => {

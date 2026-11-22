@@ -868,6 +868,14 @@ test('PhotoFinish : les temps attribués vont dans le dossier des élèves et pa
   fusionnerResultats(enseignant, JSON.parse(JSON.stringify(paquetResultats(etat))));
   egal(enseignant.tempsPf.map((t) => [t.eleveId, t.t]), [['e2', 8200]]);
   vrai(enseignant.eleves.some((e) => e.id === 'e2'), 'élève transmis');
+  // Serveur : un envoi ne contenant qu'un temps de la course n'efface pas les autres
+  const serveur = etatInitial();
+  serveur.tempsPf = [{ id: 'autre', courseId: course.id, eleveId: 'e1', t: 1 }, ...JSON.parse(JSON.stringify(etat.tempsPf))];
+  const pirate = { type: 'eps-resultats', tempsPf: [{ ...etat.tempsPf[0], t: 1 }], resTournois: [{ id: 'x', tournoiId: 'T' }] };
+  serveur.resTournois = [{ id: 'T-e1', tournoiId: 'T', eleveId: 'e1' }];
+  fusionnerResultats(serveur, pirate, { garderTout: true });
+  egal(serveur.tempsPf.map((t) => [t.id, t.t]).sort(), [[etat.tempsPf[0].id, 1], ['autre', 1]].sort());
+  egal(serveur.resTournois.map((r) => r.id).sort(), ['T-e1', 'x']);
 });
 
 test('Codes élèves : un code à 4 chiffres par élève, seule son empreinte voyage', () => {
@@ -1427,6 +1435,19 @@ async function testsAsynchrones() {
     refus = true;
   }
   resultats.push([refus, 'Fichier de résultats : un mauvais mot de passe est refusé']);
+  /* Une tablette pleine (≈ 40 matchs, plus de 300 Ko) : le fichier se crée et se relit. */
+  try {
+    const plein = etatSuivi();
+    plein.matchs = Array.from({ length: 40 }, (_, i) =>
+      match('Handball', Array.from({ length: 200 }, (__, k) => [k % 2, 'but', k]), { id: `gros${i}` }),
+    );
+    const gros = await creerFichierResultats(plein, 'un-long-mot-de-passe');
+    vrai(gros.length > 300000, `fichier trop petit pour le test (${gros.length})`);
+    egal((await lireFichierResultats(gros, 'un-long-mot-de-passe')).matchs.length, 40);
+    resultats.push([true, 'Fichier de résultats : une tablette pleine (plus de 300 Ko) est envoyée et relue']);
+  } catch (erreur) {
+    resultats.push([false, `Fichier de résultats volumineux : ${erreur.message}`]);
+  }
   const v3 = await lireFichierResultats(JSON.stringify(SAUVEGARDE_V3), '');
   resultats.push([v3.matchs.length === 2, 'Fichier de résultats : une sauvegarde V3 est acceptée']);
 

@@ -6,15 +6,11 @@
  * Plus tard, un serveur de l'établissement pourra remplacer ce transport.
  */
 
+import { depuisBase64, versBase64 } from '../noyau/chiffrement.js';
+
 export const ENTETE = 'EPS+';
 export const TAILLE_MORCEAU = 600; // caractères par QR code : lisible facilement à l'écran
 
-const versBase64 = (octets) => {
-  let texte = '';
-  for (let i = 0; i < octets.length; i += 0x8000) texte += String.fromCharCode(...octets.subarray(i, i + 0x8000));
-  return btoa(texte);
-};
-const depuisBase64 = (texte) => Uint8Array.from(atob(texte), (c) => c.charCodeAt(0));
 
 async function transformer(octets, Flux) {
   const flux = new Blob([octets]).stream().pipeThrough(new Flux('gzip'));

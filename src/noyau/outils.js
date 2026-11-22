@@ -1,4 +1,5 @@
-export const uid = () => Math.random().toString(36).slice(2, 8);
+/* 12 caractères tirés au hasard : deux tablettes ne donnent pratiquement jamais le même identifiant. */
+export const uid = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), (o) => (o % 36).toString(36)).join('');
 
 const ENTITES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export const esc = (valeur) => String(valeur ?? '').replace(/[&<>"']/g, (c) => ENTITES[c]);

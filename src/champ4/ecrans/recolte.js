@@ -17,7 +17,12 @@ async function envoyer() {
   const champ = document.querySelector('#mot-de-passe-envoi');
   if (!aDesResultats(etat)) return notifier('Aucun résultat sur cette tablette.');
   if (champ.value.length < 10) return notifier('Choisis un mot de passe de 10 caractères ou plus.');
-  const contenu = await creerFichierResultats(etat, champ.value);
+  let contenu;
+  try {
+    contenu = await creerFichierResultats(etat, champ.value);
+  } catch {
+    return notifier('Le fichier de résultats n’a pas pu être créé. Réessaie, ou passe par les QR codes.');
+  }
   champ.value = '';
   const resultat = await partagerFichier(nomDuFichier(), contenu);
   if (resultat === 'telecharge') notifier('Fichier enregistré : envoie-le sur la tablette enseignant.');

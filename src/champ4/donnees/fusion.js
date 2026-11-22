@@ -59,14 +59,27 @@ export const aDesResultats = (etat) =>
   (etat.cirque?.troupes || []).length > 0 ||
   Object.keys(paquetCirque(etat).carnets).length > 0;
 
+/* Ce qu'on retire avant d'ajouter les enregistrements reçus :
+   - sur une tablette, toute la course ou tout le tournoi reçu (une attribution a pu être corrigée) ;
+   - sur le serveur (garderTout), seulement les mêmes enregistrements : un envoi ne peut rien effacer,
+     les vraies suppressions se font sur la page de gestion du serveur. */
+const aRemplacer = (recus, groupe, garderTout) => {
+  if (garderTout) {
+    const ids = new Set(recus.map((r) => r.id));
+    return (r) => ids.has(r.id);
+  }
+  const groupes = new Set(recus.map((r) => r[groupe]));
+  return (r) => groupes.has(r[groupe]);
+};
+
 /* Temps PhotoFinish : la version reçue d'une course remplace celle de cette tablette
    (l'attribution a pu être corrigée après un premier envoi). */
-function fusionnerTempsPf(etat, paquet, bilan) {
+function fusionnerTempsPf(etat, paquet, bilan, garderTout) {
   const recus = paquet.tempsPf || [];
   if (!recus.length) return;
-  const courses = new Set(recus.map((t) => t.courseId));
+  const retirer = aRemplacer(recus, 'courseId', garderTout);
   const avant = new Set((etat.tempsPf || []).map((t) => t.id));
-  etat.tempsPf = [...(etat.tempsPf || []).filter((t) => !courses.has(t.courseId)), ...recus];
+  etat.tempsPf = [...(etat.tempsPf || []).filter((t) => !retirer(t)), ...recus];
   recus.forEach((t) => {
     if (avant.has(t.id)) bilan.dejaPresents += 1;
     else bilan.ajoutes += 1;
@@ -75,12 +88,12 @@ function fusionnerTempsPf(etat, paquet, bilan) {
 
 /* Résultats de tournoi : la version reçue d'un tournoi remplace celle de cette tablette
    (le tournoi a pu continuer après un premier envoi). */
-function fusionnerResTournois(etat, paquet, bilan) {
+function fusionnerResTournois(etat, paquet, bilan, garderTout) {
   const recus = paquet.resTournois || [];
   if (!recus.length) return;
-  const tournois = new Set(recus.map((r) => r.tournoiId));
+  const retirer = aRemplacer(recus, 'tournoiId', garderTout);
   const avant = new Map((etat.resTournois || []).map((r) => [r.id, r]));
-  etat.resTournois = [...(etat.resTournois || []).filter((r) => !tournois.has(r.tournoiId)), ...recus];
+  etat.resTournois = [...(etat.resTournois || []).filter((r) => !retirer(r)), ...recus];
   recus.forEach((r) => {
     const ancien = avant.get(r.id);
     if (!ancien) bilan.ajoutes += 1;
@@ -138,7 +151,8 @@ function arreterChrono(match, exporteLe) {
   return { ...match, duree: match.duree + Math.max(0, (fin - match.departChrono) / 1000), departChrono: 0 };
 }
 
-export function fusionnerResultats(etat, paquetRecu) {
+/* garderTout : réservé au serveur, qui reçoit des envois non identifiés et ne doit rien perdre. */
+export function fusionnerResultats(etat, paquetRecu, { garderTout = false } = {}) {
   const bilan = { ajoutes: 0, misAJour: 0, dejaPresents: 0 };
   /* Un élève déjà connu ici sous un autre identifiant n'est pas ajouté une seconde fois. */
   /* Ce que cette tablette a supprimé ne lui revient pas (le serveur, lui, le garde). */
@@ -176,8 +190,8 @@ export function fusionnerResultats(etat, paquetRecu) {
   });
   fusionnerCourses(etat, paquet, bilan);
   fusionnerTestsVma(etat, paquet, bilan);
-  fusionnerTempsPf(etat, paquet, bilan);
-  fusionnerResTournois(etat, paquet, bilan);
+  fusionnerTempsPf(etat, paquet, bilan, garderTout);
+  fusionnerResTournois(etat, paquet, bilan, garderTout);
   fusionnerCirque(etat, paquet.cirque, bilan);
   reparerDoublons(etat);
   return bilan;

@@ -5,8 +5,13 @@
  */
 const ITERATIONS = 250000;
 
-const versBase64 = (octets) => btoa(String.fromCharCode(...octets));
-const depuisBase64 = (texte) => Uint8Array.from(atob(texte), (c) => c.charCodeAt(0));
+/* Par morceaux : au-delà d'environ 150 Ko d'un seul coup, String.fromCharCode(...) échoue. */
+export function versBase64(octets) {
+  let texte = '';
+  for (let i = 0; i < octets.length; i += 0x8000) texte += String.fromCharCode(...octets.subarray(i, i + 0x8000));
+  return btoa(texte);
+}
+export const depuisBase64 = (texte) => Uint8Array.from(atob(texte), (c) => c.charCodeAt(0));
 
 async function deriverCle(motDePasse, sel, iterations) {
   const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(motDePasse), 'PBKDF2', false, ['deriveKey']);

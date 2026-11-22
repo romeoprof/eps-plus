@@ -20,6 +20,7 @@ export const serveur = {
   dernierEnvoi: null, // heure du dernier envoi réussi
   derniereReception: null,
   erreur: '',
+  enAttente: false, // recalculé toutes les 20 s et après chaque échange, pas à chaque appui
 };
 
 /* Empreinte simple des résultats : on ne renvoie que ce qui a changé. */
@@ -63,6 +64,9 @@ export async function detecter() {
 
 /* ---------- Envoi automatique des résultats de la tablette ---------- */
 export const resultatsEnAttente = () => aDesResultats(etat) && signature(paquetResultats(etat, 0)) !== etat.synchro?.signature;
+const majAttente = () => {
+  serveur.enAttente = resultatsEnAttente();
+};
 
 export async function envoyerResultats({ silencieux = true } = {}) {
   if (serveur.envoiEnCours || !aDesResultats(etat)) return false;
@@ -86,6 +90,7 @@ export async function envoyerResultats({ silencieux = true } = {}) {
     return false;
   } finally {
     serveur.envoiEnCours = false;
+    majAttente();
     majPastille();
   }
 }
@@ -97,7 +102,8 @@ export async function connecterEnseignant(code) {
     const r = await appel('connexion', { methode: 'POST', corps: { role: 'enseignant', code }, jeton: null });
     Object.assign(serveur, { jeton: r.jeton, role: 'enseignant', eleveId: null });
     return true;
-  } catch {
+  } catch (erreur) {
+    if (erreur.statut === 503 || erreur.statut === 401) notifier(`Serveur : ${erreur.message}`);
     return false;
   }
 }
@@ -117,6 +123,7 @@ export async function recupererTout({ silencieux = false } = {}) {
     if (!silencieux) notifier(erreur.statut === 401 ? 'Reconnecte-toi à l’espace enseignant.' : 'Serveur injoignable.');
     return null;
   } finally {
+    majAttente();
     majPastille();
   }
 }
@@ -164,10 +171,10 @@ const heure = (t) => new Date(t).toLocaleTimeString('fr-FR', { hour: '2-digit', 
 export function pastilleServeur() {
   if (!serveur.verifie || (!serveur.disponible && !etat.synchro?.envoyeLe && !serveur.erreur)) return '';
   if (serveur.disponible) {
-    const attente = resultatsEnAttente();
+    const attente = serveur.enAttente;
     return `<span class="pastille-etat ${attente ? 'attente' : 'ok'}" title="Serveur de l'établissement">🖥️ ${attente ? 'Envoi en attente' : `Serveur ✔${etat.synchro?.envoyeLe ? ` ${heure(etat.synchro.envoyeLe)}` : ''}`}</span>`;
   }
-  return `<span class="pastille-etat attente" title="Le serveur sera rejoint au retour du Wi-Fi">🖥️ Hors ligne${resultatsEnAttente() ? ' · envoi en attente' : ''}</span>`;
+  return `<span class="pastille-etat attente" title="Le serveur sera rejoint au retour du Wi-Fi">🖥️ Hors ligne${serveur.enAttente ? ' · envoi en attente' : ''}</span>`;
 }
 function majPastille() {
   const el = document.querySelector('#etat-serveur');
@@ -177,11 +184,13 @@ function majPastille() {
 /* Toutes les 20 secondes, et au retour du réseau : on envoie ce qui a changé. */
 export function demarrerSynchro() {
   detecter().then(() => {
+    majAttente();
     majPastille();
     if (serveur.disponible) envoyerResultats();
   });
   setInterval(() => {
-    if (resultatsEnAttente()) envoyerResultats();
+    majAttente();
+    if (serveur.enAttente) envoyerResultats();
     else majPastille();
   }, 20000);
   window.addEventListener('online', () => detecter().then(() => envoyerResultats()));
