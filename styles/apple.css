@@ -1,5 +1,5 @@
 /*
- * ESSAI DE DESIGN « APPLE » : seulement dans l'APSA Handball (classe body.theme-apple, posée par main.js).
+ * DESIGN « APPLE » sur toute l'application (classe body.theme-apple, posée par main.js).
  * Pour revenir comme avant : retirer la ligne <link … apple.css> de index.html (et l'import de noyau/apple.js).
  * Principes : matériaux translucides, contrôle segmenté, réponse dès l'appui, mouvements amortis
  * sans rebond, typographie système resserrée, mouvement réduit respecté.
@@ -15,6 +15,9 @@ body.theme-apple {
   --a-vert: #34c759;
   --a-rouge: #ff3b30;
   --a-orange: #ff9500;
+  --a-turquoise: #30b0c7;
+  --a-violet: #af52de;
+  --a-gris: #8e8e93;
   --a-equipe-a: #007aff;
   --a-equipe-b: #ff9500;
   --a-ombre: 0 1px 2px rgba(0, 0, 0, .04), 0 6px 20px rgba(0, 0, 0, .06);
@@ -31,6 +34,17 @@ body.theme-apple {
   --vert: var(--a-vert);
   --rouge: var(--a-rouge);
   --titre: var(--a-texte);
+  --bleu-fonce: #0062cc;
+  --bleu-nuit: var(--a-texte);
+  --bleu-pale: color-mix(in srgb, var(--a-bleu) 14%, var(--a-carte));
+  --turquoise: var(--a-turquoise);
+  --violet: var(--a-violet);
+  --ardoise: var(--a-gris);
+  --teinte-bleu: color-mix(in srgb, var(--a-bleu) 8%, var(--a-carte));
+  --teinte-turquoise: color-mix(in srgb, var(--a-turquoise) 9%, var(--a-carte));
+  --teinte-orange: color-mix(in srgb, var(--a-orange) 9%, var(--a-carte));
+  --teinte-violet: color-mix(in srgb, var(--a-violet) 8%, var(--a-carte));
+  --teinte-ardoise: color-mix(in srgb, var(--a-gris) 8%, var(--a-carte));
   background: var(--a-fond);
   color: var(--a-texte);
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
@@ -48,6 +62,9 @@ body.theme-apple.sombre {
   --a-vert: #30d158;
   --a-rouge: #ff453a;
   --a-orange: #ff9f0a;
+  --a-turquoise: #40c8e0;
+  --a-violet: #bf5af2;
+  --a-gris: #98989d;
   --a-equipe-a: #0a84ff;
   --a-equipe-b: #ff9f0a;
   --a-ombre: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
@@ -164,14 +181,109 @@ body.theme-apple .bulle {
   box-shadow: var(--a-ombre);
 }
 
+/* ======================================================================
+ * RESTE DE L'APPLICATION : mêmes principes (surfaces sans bordure épaisse,
+ * couleur portée par un fin liseré ou une icône, enfoncement dès l'appui).
+ * ====================================================================== */
+
+/* Accueil, menus, tuiles d'APSA */
+body.theme-apple .logo-accueil h2 { color: var(--a-texte); font-style: normal; font-weight: 800; letter-spacing: -.03em; }
+body.theme-apple .logo-eps { filter: drop-shadow(0 8px 18px rgba(0, 0, 0, .14)); }
+body.theme-apple .accueil-titre h2 { color: var(--a-texte); font-weight: 800; letter-spacing: -.025em; }
+body.theme-apple .titre-famille { font-size: .82rem; font-weight: 700; letter-spacing: .06em; }
+body.theme-apple :is(.grande-carte, .tuile-apsa, .tuile-menu, .carte-espace) {
+  border: 0;
+  background: var(--a-carte);
+  box-shadow: var(--a-ombre), inset 0 0 0 1.5px color-mix(in srgb, var(--couleur, var(--a-separateur)) 28%, transparent);
+  color: var(--a-texte);
+  transition: transform .12s ease-out, filter .12s ease-out;
+}
+body.theme-apple .tuile-menu { --couleur: var(--a-bleu); border-radius: 20px; }
+body.theme-apple .carte-espace { border-radius: 24px; }
+body.theme-apple .carte-espace.eleve { --couleur: var(--a-turquoise); }
+body.theme-apple .carte-espace.enseignant { --couleur: var(--a-bleu); }
+body.theme-apple :is(.grande-titre, .tuile-menu b, .carte-espace b) { font-weight: 700; letter-spacing: -.015em; }
+body.theme-apple .tuile-apsa { font-weight: 600; }
+body.theme-apple .tuile-icone { color: var(--couleur, var(--a-bleu)); }
+body.theme-apple .pastille-action { font-weight: 600; }
+body.theme-apple button.grande-carte:hover { transform: none; box-shadow: var(--a-ombre), inset 0 0 0 1.5px color-mix(in srgb, var(--couleur) 45%, transparent); }
+body.theme-apple :is(.grande-carte, .tuile-apsa, .tuile-menu, .carte-espace, .choix-sport, .tn-apsa-choix, .tn-formule, .cq-puce, .tuile-course, .bouton-depart, .bouton-repere, .pf-rang, .btn-rond):active:not(:disabled) {
+  transform: scale(.97);
+  filter: brightness(.95);
+  transition-duration: 0s;
+}
+
+/* Choix (sports, APSA du tournoi, formules) : pastilles remplies au lieu de contours épais */
+body.theme-apple .choix-sport { border: 0; background: var(--a-remplissage); font-weight: 600; }
+body.theme-apple .choix-sport.actif { background: var(--a-bleu); color: #fff; box-shadow: 0 2px 6px color-mix(in srgb, var(--a-bleu) 35%, transparent); }
+body.theme-apple :is(.tn-apsa-choix, .tn-formule) { border: 0; background: var(--a-carte); box-shadow: var(--a-ombre); font-weight: 600; }
+body.theme-apple .tn-apsa-choix.actif { background: var(--teinte-violet); box-shadow: var(--a-ombre), inset 0 0 0 2px var(--a-violet); }
+body.theme-apple .tn-formule.actif { background: var(--teinte-bleu); box-shadow: var(--a-ombre), inset 0 0 0 2px var(--a-bleu); }
+body.theme-apple .cq-puce { border: 0; background: var(--a-remplissage); font-weight: 600; }
+body.theme-apple .cq-puce.actif { background: var(--a-turquoise); }
+body.theme-apple .cq-puce.actif.choreo { background: var(--a-orange); }
+body.theme-apple .btn-rond { border: 0; background: var(--a-remplissage); color: var(--a-bleu); }
+body.theme-apple .btn-rond.supprimer { color: var(--a-rouge); }
+
+/* Listes et blocs internes : fonds groupés façon « Réglages » */
+body.theme-apple :is(.tuile-critere, .ligne-coureur, .pf-arrivee, .pf-resultat, .cq-element, .groupe-stats, .tn-poule) { border-width: 0; background: var(--a-remplissage); border-radius: 14px; }
+body.theme-apple .tuile-critere { border-left: 5px solid var(--signe); }
+body.theme-apple .ligne-coureur.choisi { background: var(--bleu-pale); box-shadow: inset 0 0 0 2px var(--a-bleu); }
+body.theme-apple .pf-resultat.choisi { box-shadow: inset 0 0 0 2px var(--a-orange); }
+body.theme-apple .tn-poule { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--lieu, var(--a-separateur)) 70%, transparent); }
+body.theme-apple .tuile-stat { border: 0; background: var(--a-remplissage); }
+body.theme-apple .tuile-stat b { font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+body.theme-apple .verdict-course { border-width: 0; box-shadow: inset 0 0 0 2px var(--a-separateur); }
+body.theme-apple .verdict-course.reussi { box-shadow: inset 0 0 0 2px var(--a-vert); }
+body.theme-apple .verdict-course.manque { box-shadow: inset 0 0 0 2px var(--a-orange); }
+body.theme-apple .bloc-contrat { border: 0; box-shadow: inset 0 0 0 2px color-mix(in srgb, #eab308 60%, transparent); }
+body.theme-apple .numero-ordre { background: var(--a-bleu); }
+body.theme-apple .badge-zone, body.theme-apple .pastille-signe { font-weight: 600; }
+
+/* Course et tests : tuiles pleines sans relief, gros bouton départ */
+body.theme-apple .tuile-course { border-radius: 18px; box-shadow: 0 2px 8px rgba(0, 0, 0, .14); background: #636366; }
+body.theme-apple .tuile-course.etat-super { background: #248a3d; }
+body.theme-apple .tuile-course.etat-accelere { background: #d70015; }
+body.theme-apple .tuile-course.etat-ralentis { background: #0071a4; }
+body.theme-apple .tuile-course.etat-fin { background: #48484a; }
+body.theme-apple .bouton-depart { background: var(--a-vert); border-radius: 22px; box-shadow: 0 4px 14px color-mix(in srgb, var(--a-vert) 40%, transparent); font-weight: 800; }
+body.theme-apple .bouton-depart:active { box-shadow: 0 1px 4px color-mix(in srgb, var(--a-vert) 30%, transparent); }
+body.theme-apple :is(.chrono-test, .pf-chrono, .tc-plots b, .pf-temps, .code-eleve) { font-variant-numeric: tabular-nums; }
+
+/* Tournoi : chaque lieu garde sa couleur, en liseré fin plutôt qu'en bordure épaisse */
+body.theme-apple :is(.tn-lieu, .tn-lieu.enjeu, .tn-lieu.manque, .tn-lieu.libre) {
+  border: 0;
+  border-radius: 20px;
+  background: var(--a-carte);
+  box-shadow: var(--a-ombre), inset 0 0 0 3px var(--lieu, var(--a-separateur));
+}
+body.theme-apple .tn-lieu.libre { box-shadow: var(--a-ombre), inset 0 0 0 2px color-mix(in srgb, var(--lieu, var(--a-separateur)) 55%, transparent); }
+body.theme-apple .tn-lieu-nom { font-weight: 700; }
+body.theme-apple .tn-case-arbre { border-width: 1.5px; box-shadow: 0 1px 3px rgba(0, 0, 0, .06); }
+body.theme-apple .tn-case-arbre.enjeu { border-width: 2.5px; }
+body.theme-apple .tn-case-arbre.fini { border-color: var(--a-violet); }
+
+/* Fenêtres : feuille translucide sur fond assombri */
+body.theme-apple .fenetre-fond { background: rgba(0, 0, 0, .35); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+body.theme-apple .fenetre { border: 0; border-radius: 22px; box-shadow: 0 20px 60px rgba(0, 0, 0, .25); animation: a-feuille .32s var(--a-ressort); }
+body.theme-apple .fenetre h2 { font-weight: 700; letter-spacing: -.015em; }
+@keyframes a-feuille { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+
+/* Bandeaux et cartes à liseré de couleur */
+body.theme-apple .bandeau-eleve { box-shadow: var(--a-ombre), inset 0 0 0 2px color-mix(in srgb, var(--a-turquoise) 45%, transparent); }
+body.theme-apple .secours > summary { font-weight: 600; }
+body.theme-apple .carte-serveur { box-shadow: var(--a-ombre), inset 0 0 0 2px color-mix(in srgb, var(--a-vert) 55%, transparent); }
+body.theme-apple .carte-serveur.hors-ligne { box-shadow: var(--a-ombre), inset 0 0 0 2px color-mix(in srgb, var(--a-orange) 60%, transparent); }
+
 /* ---------- Accessibilité ---------- */
 @media (prefers-reduced-motion: reduce) {
   body.theme-apple *, body.theme-apple *::before, body.theme-apple *::after { animation: none !important; transition-duration: .01ms !important; }
-  body.theme-apple :is(.btn, .btn-mini, .onglet, .pastille, .critere, .btn-retour):active:not(:disabled) { transform: none; }
+  body.theme-apple :is(.btn, .btn-mini, .onglet, .pastille, .critere, .btn-retour, .grande-carte, .tuile-apsa, .tuile-menu, .carte-espace, .choix-sport, .tn-apsa-choix, .tn-formule, .cq-puce, .tuile-course, .bouton-depart, .bouton-repere, .pf-rang, .btn-rond):active:not(:disabled) { transform: none; }
 }
 @media (prefers-reduced-transparency: reduce) {
   body.theme-apple :is(#entete, .bulle) { background: var(--a-carte); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  body.theme-apple .fenetre-fond { background: rgba(0, 0, 0, .55); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 @media (prefers-contrast: more) {
-  body.theme-apple :is(.carte, .colonne-equipe, #entete) { box-shadow: none; border: 2px solid var(--a-texte); }
+  body.theme-apple :is(.carte, .colonne-equipe, #entete, .grande-carte, .tuile-apsa, .tuile-menu, .carte-espace, .fenetre) { box-shadow: none; border: 2px solid var(--a-texte); }
 }

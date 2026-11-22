@@ -275,8 +275,8 @@ definirDessin(() => {
   document.body.classList.toggle('sombre', etat.affichage.sombre);
   document.body.classList.toggle('grands', etat.affichage.grandsBoutons);
   document.body.classList.toggle('ecran-choix', vue.ecran === 'choix');
-  /* Essai de design « Apple » : seulement dans l'APSA Handball (voir styles/apple.css). */
-  document.body.classList.toggle('theme-apple', vue.ecran === 'champ4' && etat.apsa === 'Handball');
+  /* Design « Apple » sur toute l'application (voir styles/apple.css). Pour revenir : remplacer true par false. */
+  document.body.classList.toggle('theme-apple', true);
   /* La zone autour de l'application (barre d'état de l'iPad) suit le fond, clair ou sombre. */
   const apple = document.body.classList.contains('theme-apple');
   const couleurFond = etat.affichage.sombre ? (apple ? '#000000' : '#0f172a') : apple ? '#f2f2f7' : '#e8f4fd';

@@ -1,5 +1,5 @@
 /*
- * ESSAI DE DESIGN « APPLE » (Handball seulement) : retours immédiats et discrets.
+ * DESIGN « APPLE » (toute l'application) : retours immédiats et discrets.
  * - un appui sur un observable donne une très courte vibration (Android) au même instant que l'enfoncement visuel ;
  * - un score qui change « grandit » brièvement, pour qu'on voie tout de suite ce qui a bougé.
  * Rien ne se passe en dehors de body.theme-apple. Pour revenir comme avant : retirer l'import dans main.js.

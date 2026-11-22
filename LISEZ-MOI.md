@@ -88,9 +88,9 @@ Sur l'écran du match (toutes les APSA), chaque cadre d'équipe ou de joueur a u
 
 Badminton, tennis de table (terrain à zones) et lutte. Lutte (`src/champ4/contenu/apsa.js`) : combat à deux, points comptés comme un duel : amenée au sol 2, retournement 2, immobilisation (3 s) 3, sortie de l'adversaire hors de l'aire 1 ; une faute ou un avertissement de passivité donne 1 point à l'adversaire ; « attaque tentée » et « dégagement réussi » s'observent sans point. Critères, fiche et projets se modifient dans Observables par APSA.
 
-## Essai de design « Apple » (Handball)
+## Design « Apple » (toute l'application, depuis la v43)
 
-Seulement dans l'APSA Handball : couleurs et police système, en-tête translucide, onglets en contrôle segmenté, cartes sans bordure, boutons qui s'enfoncent dès l'appui, petite vibration sur les observables (Android), score qui grandit brièvement quand il change. Le mouvement réduit, la transparence réduite et le contraste élevé de la tablette sont respectés. Fichiers : styles/apple.css et src/noyau/apple.js ; la classe 	heme-apple est posée dans src/main.js. Pour revenir comme avant : retirer la ligne pple.css de index.html, l'import ./noyau/apple.js et la ligne 	heme-apple de src/main.js. Pour l'étendre à toute l'app : poser 	heme-apple sur tous les écrans.
+Essayé d'abord en Handball (v42), puis étendu à toute l'app : couleurs et police système, en-tête translucide, onglets en contrôle segmenté, cartes sans bordure, boutons qui s'enfoncent dès l'appui, petite vibration sur les observables (Android), score qui grandit brièvement quand il change. Le mouvement réduit, la transparence réduite et le contraste élevé de la tablette sont respectés. Fichiers : `styles/apple.css` et `src/noyau/apple.js` ; la classe `theme-apple` est posée dans `src/main.js`. Pour revenir comme avant : retirer la ligne `apple.css` de `index.html`, l'import `./noyau/apple.js` et remplacer `true` par `false` dans la ligne `theme-apple` de `src/main.js`.
 
 ## Utilitaires : Vidéo laps
 
