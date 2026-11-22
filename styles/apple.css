@@ -273,6 +273,8 @@ body.theme-apple .fenetre h2 { font-weight: 700; letter-spacing: -.015em; }
 body.theme-apple .bandeau-eleve { box-shadow: var(--a-ombre), inset 0 0 0 2px color-mix(in srgb, var(--a-turquoise) 45%, transparent); }
 body.theme-apple .secours > summary { font-weight: 600; }
 body.theme-apple .carte-serveur { box-shadow: var(--a-ombre), inset 0 0 0 2px color-mix(in srgb, var(--a-vert) 55%, transparent); }
+body.theme-apple .cq-bandeau { box-shadow: var(--a-ombre), inset 0 0 0 2px color-mix(in srgb, var(--a-orange) 60%, transparent); }
+body.theme-apple .tn-annonce { box-shadow: var(--a-ombre), inset 0 0 0 2px color-mix(in srgb, var(--a-vert) 60%, transparent); }
 body.theme-apple .carte-serveur.hors-ligne { box-shadow: var(--a-ombre), inset 0 0 0 2px color-mix(in srgb, var(--a-orange) 60%, transparent); }
 
 /* ---------- Accessibilité ---------- */

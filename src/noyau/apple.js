@@ -5,6 +5,7 @@
  * Rien ne se passe en dehors de body.theme-apple. Pour revenir comme avant : retirer l'import dans main.js.
  */
 import { apresDessin } from './interface.js';
+import { matchCourant } from '../champ4/reglages.js';
 
 const actif = () => document.body.classList.contains('theme-apple');
 const mouvementReduit = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -25,7 +26,7 @@ document.addEventListener(
   { passive: true },
 );
 
-/* Après chaque dessin : on compare les scores affichés avec ceux d'avant. */
+/* Après chaque dessin : on compare les scores affichés avec ceux d'avant, pour le même match seulement. */
 let avant = new Map();
 apresDessin(() => {
   if (!actif()) {
@@ -33,8 +34,9 @@ apresDessin(() => {
     return;
   }
   const maintenant = new Map();
+  const match = matchCourant()?.id ?? '';
   document.querySelectorAll('.score-a, .score-b, .score-equipe').forEach((el, i) => {
-    const cle = `${el.className.split(' ')[0]}-${i}`;
+    const cle = `${match}-${el.className.split(' ')[0]}-${i}`;
     maintenant.set(cle, el.textContent);
     if (!mouvementReduit() && avant.has(cle) && avant.get(cle) !== el.textContent) el.classList.add('score-change');
   });
