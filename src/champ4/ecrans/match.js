@@ -3,7 +3,7 @@ import { declarerActions, notifier, rafraichir } from '../../noyau/interface.js'
 import { esc, formatChrono } from '../../noyau/outils.js';
 import { observateur } from '../../noyau/espace.js';
 import { APSA, NIVEAUX_PROJET } from '../contenu/apsa.js';
-import { compte, coupPossible, libelleDe, possesseur, score, tempsEcoule } from '../calculs/match.js';
+import { compte, coupPossible, libelleDe, score, tempsEcoule } from '../calculs/match.js';
 import { contratDuMatch, membresDuCote } from '../calculs/progression.js';
 import { projetPrecedent } from '../calculs/suivi.js';
 import { nouveauMatch } from '../donnees/modele.js';
@@ -13,8 +13,6 @@ import { terrain } from './terrain.js';
 let zoneChoisie = null;
 let panneauOuvert = false;
 let matchDuPanneau = null;
-let positionBalle = 50;
-let matchDeLaBalle = null;
 let minuteurRetour;
 let verrouEcran = null;
 
@@ -209,26 +207,6 @@ function vueMatchLibre() {
     <p class="aide centre">Pour un match de poule, ouvre l'onglet Poules.</p>`;
 }
 
-function barrePossession(m) {
-  const qui = possesseur(m);
-  const cible = qui == null ? 50 : qui ? 88 : 12;
-  if (matchDeLaBalle !== m.id) {
-    matchDeLaBalle = m.id;
-    positionBalle = cible;
-  }
-  const depart = positionBalle;
-  positionBalle = cible;
-  setTimeout(() => {
-    const balle = document.querySelector('#balle');
-    if (balle) balle.style.left = `${cible}%`;
-  }, 40);
-  return `<div class="possession">
-    <small>${esc(nomCote(m, 0))}</small>
-    <div class="possession-rail"><span class="balle" id="balle" style="left:${depart}%">${APSA[m.apsa].icone}</span></div>
-    <small>${esc(nomCote(m, 1))}</small>
-  </div>`;
-}
-
 function carteContrats(m) {
   const manieres = criteresDuMatch(m).filter((c) => c.points > 0);
   const lignes = COTES.flatMap((cote) => membresDuCote(etat, m, cote)).map((id) => {
@@ -416,7 +394,6 @@ export function vueMatch() {
     <div class="carte tableau-score">
       <div class="score"><span class="score-a">${score(m, 0)}</span><span class="score-tiret">–</span><span class="score-b">${score(m, 1)}</span></div>
       <p class="chrono" id="chrono">${formatChrono(tempsEcoule(m))}</p>
-      ${barrePossession(m)}
       <div class="rangee centre-rangee">
         <button class="btn secondaire" data-action="match-chrono">${m.departChrono ? '⏸ Pause' : '▶ Chrono'}</button>
         <button class="btn secondaire" data-action="match-annuler" ${m.termine || !m.evenements.length ? 'disabled' : ''}>↩ Annuler le dernier</button>

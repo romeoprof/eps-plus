@@ -138,10 +138,6 @@ body.theme-apple .chrono { color: var(--a-doux); font-weight: 600; letter-spacin
 body.theme-apple .score-change { animation: a-pop .45s var(--a-ressort); }
 @keyframes a-pop { 0% { transform: scale(1); } 30% { transform: scale(1.18); } 100% { transform: scale(1); } }
 
-body.theme-apple .possession small:first-child { color: var(--a-equipe-a); }
-body.theme-apple .possession small:last-child { color: var(--a-equipe-b); }
-body.theme-apple .possession-rail { height: 40px; background: var(--a-remplissage); }
-body.theme-apple .balle { transition: left .55s var(--a-ressort); filter: drop-shadow(0 3px 4px rgba(0, 0, 0, .18)); }
 
 /* ---------- Match : une colonne par équipe ---------- */
 body.theme-apple .colonne-equipe { --couleur-equipe: var(--a-equipe-a); padding: 0 10px 10px; background: var(--a-carte); border: 0; border-radius: 22px; box-shadow: var(--a-ombre), inset 0 0 0 2px color-mix(in srgb, var(--couleur-equipe) 35%, transparent); }

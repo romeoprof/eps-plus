@@ -327,13 +327,6 @@ td.ligne-barres { text-align: left; font-weight: 700; }
 .score-tiret { color: var(--texte-doux); }
 .chrono { margin: 2px 0 8px; color: var(--texte-doux); font-size: 1.4rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 
-.possession { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
-.possession small { flex: 0 0 22%; font-weight: 800; overflow-wrap: anywhere; }
-.possession small:first-child { color: var(--bleu); text-align: left; }
-.possession small:last-child { color: var(--orange); text-align: right; }
-.possession-rail { position: relative; flex: 1; height: 46px; background: var(--gris); border-radius: 23px; }
-.balle { position: absolute; top: 50%; font-size: 30px; line-height: 1; transform: translate(-50%, -50%); transition: left .7s ease; }
-.balle svg { display: block; width: 32px; height: 32px; }
 
 .colonnes-equipes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex: 1; min-width: 0; margin-bottom: 14px; }
 /* Écran du match : chaque équipe (ou joueur) dans un grand cadre à sa couleur, nom en valeur, boutons dedans. */
@@ -731,8 +724,6 @@ body.grands .plateau-raquette .critere { min-height: 80px; }
   .tableau-score { display: flex; flex-wrap: wrap; align-items: center; column-gap: 16px; row-gap: 8px; padding: 10px 16px; }
   .tableau-score .score { font-size: 2rem; }
   .tableau-score .chrono { margin: 0; font-size: 1.2rem; }
-  .tableau-score .possession { flex: 1 1 280px; margin: 0; }
-  .tableau-score .possession-rail { height: 38px; }
   .tableau-score .centre-rangee { flex: 1 1 100%; }
   .critere { min-height: 64px; }
 }
