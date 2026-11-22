@@ -128,8 +128,7 @@ body.theme-apple .pastille:has(input:checked) { background: color-mix(in srgb, v
 body.theme-apple :is(th, td) { border-bottom: 1px solid var(--a-separateur); }
 
 /* ---------- Match : tableau de score ---------- */
-body.theme-apple .tableau-score { padding-top: 18px; }
-body.theme-apple .score { gap: 18px; font-size: 3.4rem; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+body.theme-apple .score { gap: 14px; font-size: 2.6rem; font-weight: 800; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
 body.theme-apple .score-a { color: var(--a-equipe-a); }
 body.theme-apple .score-b { color: var(--a-equipe-b); }
 body.theme-apple .score-tiret { color: var(--a-separateur); font-weight: 300; }

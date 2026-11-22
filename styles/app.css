@@ -320,7 +320,11 @@ td.ligne-barres { text-align: left; font-weight: 700; }
 .courbe text { fill: var(--texte); }
 
 /* Match */
-.tableau-score { text-align: center; }
+/* Score, temps et boutons sur une seule ligne (repassent à la ligne si l'écran est trop étroit). */
+.tableau-score { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; column-gap: 16px; row-gap: 8px; padding: 10px 16px; text-align: center; }
+.tableau-score .score { font-size: 2.2rem; }
+.tableau-score .chrono { margin: 0; font-size: 1.2rem; }
+.tableau-score .centre-rangee { flex: 0 1 auto; margin-left: auto; }
 .score { display: flex; justify-content: center; align-items: center; gap: 14px; font-size: 2.6rem; font-weight: 900; line-height: 1.1; }
 .score-a { color: var(--bleu); }
 .score-b { color: var(--orange); }
@@ -720,11 +724,7 @@ body.grands .plateau-raquette .critere { min-height: 80px; }
 }
 
 @media (orientation: landscape) and (min-width: 700px) {
-  /* Tablette à l'horizontale : score compact pour garder les boutons à l'écran. */
-  .tableau-score { display: flex; flex-wrap: wrap; align-items: center; column-gap: 16px; row-gap: 8px; padding: 10px 16px; }
-  .tableau-score .score { font-size: 2rem; }
-  .tableau-score .chrono { margin: 0; font-size: 1.2rem; }
-  .tableau-score .centre-rangee { flex: 1 1 100%; }
+  /* Tablette à l'horizontale : observables un peu moins hauts pour garder les boutons à l'écran. */
   .critere { min-height: 64px; }
 }
 

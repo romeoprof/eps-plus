@@ -1,7 +1,7 @@
 /* Fonctionnement hors connexion : rÃ©seau d'abord, copie locale si pas de rÃ©seau.
    Ajouter ici tout nouveau fichier de l'application, et changer VERSION. */
 const PREFIXE = 'eps-plus-';
-const VERSION = `${PREFIXE}45`;
+const VERSION = `${PREFIXE}46`;
 const FICHIERS = [
   './',
   'index.html',
