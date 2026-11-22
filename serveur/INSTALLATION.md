@@ -15,13 +15,14 @@ Le serveur est un PC Windows de l'établissement, allumé pendant les cours. Il 
 2. **Installer Node.js** (gratuit) : https://nodejs.org → version « LTS » → installer avec les choix proposés.
 3. **Demander une adresse IP fixe** pour ce PC au service informatique (sinon le certificat est à refaire quand l'adresse change).
 4. **Créer le certificat https** : double-clic sur `serveur\creer-certificat.cmd`. Il fabrique :
-   - `serveur\certificats\eps-plus-autorite.cer` : à installer sur chaque tablette (étape 6) ;
+   - `serveur\certificats\eps-plus-autorite.cer` : à installer sur chaque tablette (étape 7) ;
    - `serveur\certificats\serveur.pfx` et `mot-de-passe.txt` : restent sur le PC, ne jamais les copier ailleurs.
-5. **Démarrer le serveur** : double-clic sur `serveur\demarrer-serveur.cmd`. La fenêtre affiche les adresses, par exemple `https://192.168.1.20:8443/`. Si Windows demande l'accès au réseau, autoriser les **réseaux privés**. Laisser la fenêtre ouverte.
-6. **Sur chaque tablette** (une seule fois) : copier `eps-plus-autorite.cer` (clé USB, Drive, e-mail) puis :
+5. **Choisir le code enseignant du serveur** : double-clic sur `serveur\definir-code.cmd`, taper le **même code que dans l'application** (6 caractères au moins ; lettres et chiffres mélangés, c'est mieux). Il est gardé sous forme d'empreinte dans `serveur\donnees\code-enseignant.json`, jamais servie aux tablettes. Sans cette étape, l'espace enseignant ne peut pas se connecter au serveur.
+6. **Démarrer le serveur** : double-clic sur `serveur\demarrer-serveur.cmd`. La fenêtre affiche les adresses, par exemple `https://192.168.1.20:8443/`. Si Windows demande l'accès au réseau, autoriser les **réseaux privés**. Laisser la fenêtre ouverte.
+7. **Sur chaque tablette** (une seule fois) : copier `eps-plus-autorite.cer` (clé USB, Drive, e-mail) puis :
    - Android : Paramètres → Sécurité → Chiffrement et identifiants → Installer un certificat → **Certificat CA** → choisir le fichier.
    - iPad : ouvrir le fichier → Réglages → Profil téléchargé → Installer ; puis Réglages → Général → Informations → Réglages des certificats → activer « EPS+ Autorite locale ».
-7. **Ouvrir l'application** dans Chrome (Android) ou Safari (iPad) à l'adresse affichée par le serveur, puis menu → « Ajouter à l'écran d'accueil ».
+8. **Ouvrir l'application** dans Chrome (Android) ou Safari (iPad) à l'adresse affichée par le serveur, puis menu → « Ajouter à l'écran d'accueil ».
 
 ## Première mise en route
 
@@ -53,7 +54,7 @@ Pour effacer sur le serveur : sur le PC serveur, ouvrir **http://localhost:8080/
 - L'enseignant peut aussi télécharger une sauvegarde : Serveur et échanges → « Sauvegarde du serveur ».
 - Le serveur ne sert jamais les dossiers `serveur` et `outils` : les données et le certificat ne sont pas accessibles depuis les tablettes.
 - Un code élève faux 5 fois de suite bloque les essais 5 minutes (20 erreurs depuis une même tablette aussi) : un code à 4 chiffres ne peut pas être deviné en essayant tout.
-- Le code enseignant est le même que dans l'application ; le changer dans Code d'accès puis « Publier la configuration ».
+- Le code enseignant du serveur est choisi avec `serveur\definir-code.cmd` (le même que dans l'application). Pour le changer : changer le code dans l'application (Code d'accès, puis « Publier la configuration »), puis relancer `definir-code.cmd` avec le nouveau code. Le serveur n'accepte jamais l'empreinte de `config.json`, publique sur internet.
 - La liste des élèves (prénom, initiale, classe) est visible des tablettes du réseau de l'établissement ; les codes ne le sont jamais (seulement leur empreinte, sur le serveur).
 
 ## Ports

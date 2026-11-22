@@ -22,8 +22,8 @@ import { lireSauvegarde } from '../src/champ4/donnees/migration.js';
 import { remplacerListe } from '../src/champ4/donnees/doublons.js';
 import { dossierEleve } from '../src/champ4/donnees/dossier.js';
 import { observateursDuMatch } from '../src/champ4/calculs/progression.js';
-import { empreinte } from '../src/noyau/outils.js';
 import { cleCode } from '../src/noyau/cle-code.js';
+import { verifierCodeEnseignant } from './code-enseignant.js';
 
 const ICI = dirname(fileURLToPath(import.meta.url));
 const APP = resolve(ICI, '..');
@@ -31,7 +31,6 @@ const DONNEES = process.env.EPS_DONNEES || join(ICI, 'donnees');
 const CERTIFICATS = process.env.EPS_CERTIFICATS || join(ICI, 'certificats');
 const PORT_HTTPS = Number(process.env.EPS_PORT_HTTPS || 8443);
 const PORT_HTTP = Number(process.env.EPS_PORT_HTTP || 8080);
-const EMPREINTE_PAR_DEFAUT = '74id85'; // même code de départ que l'application
 const TAILLE_MAX = 8 * 1024 * 1024;
 
 mkdirSync(join(DONNEES, 'sauvegardes'), { recursive: true });
@@ -235,7 +234,10 @@ async function api(requete, reponse, chemin) {
     const cle = `${role}:${eleveId || '-'}:${ip}`;
     if (bloque(cle) || bloque(`ip:${ip}`)) return json(reponse, 429, { erreur: 'Trop d’essais : réessaie dans 5 minutes.' });
     if (role === 'enseignant') {
-      if (empreinte(String(code || '')) !== (config.reglages?.codeEmpreinte || EMPREINTE_PAR_DEFAUT)) {
+      /* Jamais l'empreinte de config.json : elle est publique et se retrouve en quelques minutes. */
+      const ok = verifierCodeEnseignant(String(code || ''));
+      if (ok === null) return json(reponse, 503, { erreur: 'Code enseignant du serveur pas encore choisi : sur le PC serveur, double-clic sur serveur\\definir-code.cmd.' });
+      if (!ok) {
         echec(cle);
         echec(`ip:${ip}`);
         return json(reponse, 401, { erreur: 'Code incorrect.' });
@@ -259,7 +261,7 @@ async function api(requete, reponse, chemin) {
   if (chemin === '/api/resultats' && methode === 'POST') {
     const paquet = await lireCorps(requete);
     if (paquet?.type !== 'eps-resultats') return json(reponse, 400, { erreur: 'Ce ne sont pas des résultats EPS +.' });
-    const bilan = fusionnerResultats(etat, paquet);
+    const bilan = fusionnerResultats(etat, paquet, { garderTout: true });
     enregistrer();
     return json(reponse, 200, bilan);
   }
@@ -391,5 +393,6 @@ if (existsSync(pfx)) {
   });
 }
 console.log(`Données : ${DONNEES}`);
+if (verifierCodeEnseignant('') === null) console.log('ATTENTION : code enseignant du serveur pas encore choisi : double-clic sur serveur\\definir-code.cmd.');
 console.log(`Gestion des données (sur ce PC seulement) : http://localhost:${PORT_HTTP}/admin`);
 console.log('Laisser cette fenêtre ouverte pendant les cours. Ctrl+C pour arrêter.');
