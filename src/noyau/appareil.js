@@ -2,13 +2,37 @@
 let contexteAudio = null;
 let verrouEcran = null;
 
-export function bip(frequence = 1000, duree = 0.12, volume = 0.22) {
+/* Les tablettes n'autorisent le son qu'après un toucher : à chaque appui, le son est créé ou réveillé.
+   Sans cela, un bip lancé par un minuteur (sans toucher) reste muet. */
+function contexte() {
+  contexteAudio = contexteAudio || new (window.AudioContext || window.webkitAudioContext)();
+  if (contexteAudio.state !== 'running') contexteAudio.resume?.().catch?.(() => {});
+  return contexteAudio;
+}
+document.addEventListener(
+  'pointerdown',
+  () => {
+    try {
+      const ctx = contexte();
+      /* Un son vide joué pendant le toucher débloque l'audio (Chrome Android, Safari). */
+      const vide = ctx.createBufferSource();
+      vide.buffer = ctx.createBuffer(1, 1, 22050);
+      vide.connect(ctx.destination);
+      vide.start(0);
+    } catch {
+      /* son non disponible */
+    }
+  },
+  true,
+);
+
+export function bip(frequence = 1000, duree = 0.12, volume = 0.22, forme = 'sine') {
   try {
-    contexteAudio = contexteAudio || new (window.AudioContext || window.webkitAudioContext)();
-    contexteAudio.resume?.();
+    contexte();
     const debut = contexteAudio.currentTime;
     const oscillateur = contexteAudio.createOscillator();
     const gain = contexteAudio.createGain();
+    oscillateur.type = forme;
     oscillateur.frequency.value = frequence;
     gain.gain.setValueAtTime(0.0001, debut);
     gain.gain.exponentialRampToValueAtTime(volume, debut + 0.01);

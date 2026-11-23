@@ -56,7 +56,8 @@ function lignesMulti() {
   return mt.multi;
 }
 
-const son = (frequence, duree, volume) => reglages().son && bip(frequence, duree, volume);
+/* Son « carré » et fort : il s'entend sur le haut-parleur d'une tablette, dans un gymnase. */
+const son = (frequence, duree, volume = 0.45) => reglages().son && bip(frequence, duree, volume, 'square');
 const lancer = (c) => {
   demarrer(c);
   garderEcranAllume();
@@ -87,7 +88,7 @@ function surveillerIntervalles() {
     arreter(c);
     c.cumul = dureeTotale(r.intervalles);
     mt.int.rang = p.rang;
-    son(880, 0.9, 0.3);
+    son(880, 0.9);
     vibrer([300, 120, 300]);
     return true;
   }
@@ -95,7 +96,7 @@ function surveillerIntervalles() {
   if (p.rang !== mt.int.rang) {
     mt.int.rang = p.rang;
     mt.int.bip = -1;
-    son(p.phase === 'travail' ? 1320 : 660, 0.45, 0.3);
+    son(p.phase === 'travail' ? 1320 : 660, 0.45);
     vibrer(p.phase === 'travail' ? 200 : 80);
     change = true;
   }
@@ -116,7 +117,7 @@ function surveillerMinuteur() {
     arreter(c);
     c.cumul = duree;
     mt.minu.fini = true;
-    [0, 350, 700].forEach((d) => setTimeout(() => son(1100, 0.3, 0.3), d));
+    [0, 350, 700].forEach((d) => setTimeout(() => son(1100, 0.3), d));
     vibrer([400, 150, 400, 150, 400]);
     return true;
   }
@@ -244,7 +245,7 @@ declarerActions({
   'mt-minu': () => {
     if (mt.minu.fini) mt.minu = { c: chronoVide(), bip: -1, fini: false };
     basculer(mt.minu.c);
-    if (mt.minu.c.debut != null) son(990, 0.08, 0.15); // débloque aussi le son sur la tablette
+    if (mt.minu.c.debut != null) son(990, 0.08, 0.2);
     rafraichir();
   },
   'mt-minu-zero': () => {
