@@ -42,6 +42,7 @@ export const FAMILLES = [
     activites: [
       { nom: 'Vidéo laps', icone: '🎥', module: 'videolaps' },
       { nom: 'Tournoi', icone: '🏆', module: 'tournoi' },
+      { nom: 'Multi-timer', icone: '⏱️', module: 'multitimer' },
     ],
   },
 ];

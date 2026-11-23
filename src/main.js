@@ -21,6 +21,7 @@ import { coursePfEnCours, photofinishEnAttente, vuePhotofinish } from './photofi
 import { ONGLETS_CIRQUE, vueCirque } from './cirque/ecran.js';
 import { vueVideolaps } from './utilitaires/videolaps.js';
 import { vueTournois } from './tournoi/ecran.js';
+import { vueMultitimer } from './utilitaires/multitimer.js';
 import { chargerListe, connecterEnseignant, deconnecterServeur, demarrerSynchro, pastilleServeur, recupererTout, serveur } from './reseau/serveur.js';
 import { remplacerListe } from './champ4/donnees/doublons.js';
 import './noyau/apple.js'; // essai de design « Apple » (Handball seulement)
@@ -178,7 +179,7 @@ function libelleEspace() {
 }
 
 function dessinerEnTete() {
-  const titres = { demifond: ['Demi-fond', '🏃'], testvma: ['Test VMA', '📈'], photofinish: ['PhotoFinish', '📸'], cirque: ['Arts du cirque', '🎪'], videolaps: ['Vidéo laps', '🎥'], tournoi: ['Tournoi', '🏆'] };
+  const titres = { demifond: ['Demi-fond', '🏃'], testvma: ['Test VMA', '📈'], photofinish: ['PhotoFinish', '📸'], cirque: ['Arts du cirque', '🎪'], videolaps: ['Vidéo laps', '🎥'], tournoi: ['Tournoi', '🏆'], multitimer: ['Multi-timer', '⏱️'] };
   const [titre, icone] =
     vue.ecran === 'champ4' ? [esc(etat.apsa), APSA[etat.apsa].icone] : titres[vue.ecran] || [libelleEspace(), estEnseignant() ? '🎓' : '🏅'];
   const sousTitre = titres[vue.ecran] || vue.ecran === 'champ4' ? `${titre} · ${libelleEspace()}` : titre;
@@ -206,7 +207,7 @@ function dessinerNavigation() {
     barre.innerHTML = pageEnseignantCourante() === 'menu' ? '' : retour('menu-enseignant', 'Menu enseignant');
   } else if (vue.ecran === 'accueil') {
     barre.innerHTML = estEnseignant() ? retour('menu-enseignant', 'Menu enseignant') : '';
-  } else if (vue.ecran === 'testvma' || vue.ecran === 'videolaps' || vue.ecran === 'tournoi' || ECRANS_ELEVE.includes(vue.ecran)) {
+  } else if (vue.ecran === 'testvma' || vue.ecran === 'videolaps' || vue.ecran === 'tournoi' || vue.ecran === 'multitimer' || ECRANS_ELEVE.includes(vue.ecran)) {
     barre.innerHTML = versMenu;
   } else if (vue.ecran === 'champ4') {
     barre.innerHTML = `${retour('menu-principal', 'Menu principal')}
@@ -256,6 +257,8 @@ function contenu() {
       return vueVideolaps();
     case 'tournoi':
       return vueTournois();
+    case 'multitimer':
+      return vueMultitimer();
     default:
       return ONGLETS.find((o) => o.id === vue.onglet).vue();
   }

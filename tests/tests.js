@@ -73,6 +73,7 @@ import {
 } from '../src/tournoi/calculs.js';
 import { aRetirer, bornerEcart, rangAAfficher, remplissage } from '../src/utilitaires/differe.js';
 import { angleDegres, brasPropose, deplacer, poigneeTouchee, traceTouche } from '../src/utilitaires/dessin.js';
+import { arreter as arreterChrono, borner, chronoVide, demarrer as demarrerChrono, dureeTotale, ecoule, formatDuree, phaseIntervalles, resteSecondes } from '../src/utilitaires/minuteurs.js';
 import {
   ajouterMembre,
   carnetVide,
@@ -1038,6 +1039,26 @@ test('Vidéo laps : l’image montrée est celle filmée « écart » secondes p
   egal(remplissage(images, 3000, 6), 0.5);
   egal(aRetirer(images, 5000, 2, 1), 2); // on garde à partir de 2 s
   egal([bornerEcart(-3), bornerEcart(7.3), bornerEcart(99), bornerEcart('abc')], [0, 7.5, 30, 0]);
+});
+
+test('Multi-timer : chrono avec pause, affichage, intervalles et compte à rebours', () => {
+  const c = chronoVide();
+  demarrerChrono(c, 1000);
+  arreterChrono(c, 4000); // 3 s
+  demarrerChrono(c, 10000);
+  egal(ecoule(c, 10500), 3500); // la pause n'est pas comptée
+  egal([formatDuree(83456), formatDuree(3723400), formatDuree(59999, { dixiemes: false }), formatDuree(-5)], ['01:23,4', '1:02:03,4', '00:59', '00:00,0']);
+  const cfg = { prepa: 10, travail: 20, repos: 10, series: 3 };
+  egal(dureeTotale(cfg), 10000 + 3 * 20000 + 2 * 10000); // pas de repos après la dernière série
+  const p = phaseIntervalles(cfg, 0);
+  egal([p.phase, p.serie, p.reste], ['prepa', 0, 10000]);
+  egal([phaseIntervalles(cfg, 10000).phase, phaseIntervalles(cfg, 10000).serie], ['travail', 1]);
+  egal([phaseIntervalles(cfg, 35000).phase, phaseIntervalles(cfg, 35000).reste], ['repos', 5000]);
+  egal([phaseIntervalles(cfg, 89999).phase, phaseIntervalles(cfg, 89999).serie], ['travail', 3]);
+  egal(phaseIntervalles(cfg, 90000).fini, true);
+  egal(phaseIntervalles({ travail: 30, repos: 0, series: 2 }, 30000).serie, 2); // sans préparation ni repos
+  egal([resteSecondes(5000, 0), resteSecondes(5000, 2001), resteSecondes(5000, 6000)], [5, 3, 0]);
+  egal([borner('45', 1, 3600, 30), borner('abc', 1, 3600, 30), borner('-4', 0, 120, 10), borner('7,6', 1, 99, 8)], [45, 30, 0, 8]);
 });
 
 test('Vidéo laps : ouverture d’un angle et modification des tracés', () => {
