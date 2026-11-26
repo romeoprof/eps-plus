@@ -21,7 +21,7 @@ Le serveur est un PC Windows de l'établissement, allumé pendant les cours. Il 
 6. **Démarrer le serveur** : double-clic sur `serveur\demarrer-serveur.cmd`. La fenêtre affiche les adresses, par exemple `https://192.168.1.20:8443/`. Si Windows demande l'accès au réseau, autoriser les **réseaux privés**. Laisser la fenêtre ouverte.
 7. **Sur chaque tablette** (une seule fois) : copier `eps-plus-autorite.cer` (clé USB, Drive, e-mail) puis :
    - Android : Paramètres → Sécurité → Chiffrement et identifiants → Installer un certificat → **Certificat CA** → choisir le fichier.
-   - iPad : ouvrir le fichier → Réglages → Profil téléchargé → Installer ; puis Réglages → Général → Informations → Réglages des certificats → activer « EPS+ Autorite locale ».
+   - iPad : ouvrir le fichier → Réglages → Profil téléchargé → Installer ; puis Réglages → Général → Informations → Réglages des certificats → activer « EPS Plus Autorite locale ».
 8. **Ouvrir l'application** dans Chrome (Android) ou Safari (iPad) à l'adresse affichée par le serveur, puis menu → « Ajouter à l'écran d'accueil ».
 
 ## Première mise en route

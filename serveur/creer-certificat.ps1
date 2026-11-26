@@ -6,9 +6,9 @@ $ErrorActionPreference = 'Stop'
 $dossier = Join-Path $PSScriptRoot 'certificats'
 New-Item -ItemType Directory -Force $dossier | Out-Null
 
-$autorite = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Subject -eq 'CN=EPS+ Autorite locale' -and $_.NotAfter -gt (Get-Date).AddMonths(6) } | Select-Object -First 1
+$autorite = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Subject -eq 'CN=EPS Plus Autorite locale' -and $_.NotAfter -gt (Get-Date).AddMonths(6) } | Select-Object -First 1
 if (-not $autorite) {
-  $autorite = New-SelfSignedCertificate -Subject 'CN=EPS+ Autorite locale' -FriendlyName 'EPS+ Autorite locale' `
+  $autorite = New-SelfSignedCertificate -Subject 'CN=EPS Plus Autorite locale' -FriendlyName 'EPS Plus Autorite locale' `
     -KeyUsage CertSign, CRLSign, DigitalSignature -KeyExportPolicy Exportable -KeyLength 2048 -HashAlgorithm SHA256 `
     -CertStoreLocation Cert:\CurrentUser\My -NotAfter (Get-Date).AddYears(10) `
     -TextExtension @('2.5.29.19={critical}{text}ca=true&pathlength=0')
